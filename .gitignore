@@ -1,0 +1,9 @@
+node_modules/
+.pnpm-store/
+dist/
+.DS_Store
+*.tsbuildinfo
+.tmp/
+.nuxt/
+.output/
+.data/

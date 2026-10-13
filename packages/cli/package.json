@@ -1,0 +1,31 @@
+{
+  "name": "@mografy/cli",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@mografy/core": "workspace:*",
+    "@mografy/server": "workspace:*",
+    "@mografy/render": "workspace:*"
+  },
+  "bin": {
+    "mografy": "./bin/mografy.js"
+  }
+}

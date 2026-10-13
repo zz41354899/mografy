@@ -1,0 +1,101 @@
+# Architecture
+
+Design plan: [Mografy rebuild plan](https://claude.ai/code/artifact/41f66790-af5d-4c2f-9f0f-9e7278ae2aba).
+
+## Principles
+
+- Animation content lives only in scene modules. `mografy.json` stores settings, never layers or keyframes.
+- Scenes are pure functions of time: `renderFrame(ctx, time, params)` draws from time, params, and data prepared by setup.
+- The Server is the application's single project writer. After Claude or Codex edits a scene file, the same Server queue compiles, trial-renders in headless Chromium, and publishes it.
+- Scene code runs only in the browser, either the player or headless Chromium; the Server's Node process never executes it.
+- The player and exports load the same compiled scene, runtime, and post-processing code.
+
+## Agent guidance and storyboards
+
+`packages/core/src/guide.ts` owns the English scene contract, storyboard workflow, twelve animation principles, and short Skill/project entrypoints. One shared Skill, `mografy`, lives in the outer repository folder `.agents/skills/mografy/`, with local scene-authoring, built-in-component, intro, storyboard, animation-principle, and project references. Product development, scenes, and shot planning all use this entrypoint.
+
+Root `AGENTS.md` routes Codex to the Skill. Root `CLAUDE.md` imports the same Skill, and `.claude/skills/mografy` is a relative symlink to `.agents/skills/mografy` for Claude discovery. Both hosts read the same physical files. Animation subprojects receive only `AGENTS.md` and `CLAUDE.md` pointers through `queueProjectWrite` and `atomicWrite`; they never create Skill folders. Exact generated guides migrate while custom instructions remain intact.
+
+After a build, `pnpm sync:skills` regenerates the shared Skill, removes exact generated files from the former standalone storyboard Skill, ensures the Claude link, and migrates local examples and projects. All mutations run through the write queue; generated text uses `atomicWrite`.
+
+Storyboards are project-specific planning artifacts under `storyboards/`, separate from scene execution and `mografy.json`. Codex invokes available image generation; Claude invokes Artifacts when available or writes a local HTML/Canvas preview. The Skill reports unavailable tools honestly. Motion principles translate into deterministic scene functions, never a runtime physics loop. Generated boards do not replace Chromium validation and actual frame review.
+
+## Drawing interface
+
+`FrameContext.draw` is created once per runtime and wraps common Canvas shapes, text, images, opacity, and transforms. Every method uses the same logical-coordinate context. There is no additional draw loop or global animation state; the scene remains `renderFrame(ctx, time, params)`.
+
+The recommended local name is `const mografy = ctx.draw`, with calls such as `mografy.fill()`. Time is measured in seconds; use `const canvas = ctx.canvas` for the native context. Advanced effects and clipping use `ctx.shadow`, `ctx.blur`, `ctx.vignette`, `ctx.clip`, and `ctx.withCanvas`. Native Canvas operations remain available.
+
+The API tracks fill/stroke switches. `push`/`pop` preserve both switches and native Canvas state. Each frame resets the switches and API stack after resetting the Canvas so out-of-order seeking or unbalanced pushes cannot contaminate the next frame. Methods can be destructured; the API object is not recreated per frame.
+
+`ctx.canvas` retains native drawing and resolution scaling and can be mixed with the API. Do not cross-pair native save/restore with API push/pop. Use native operations for batched paths and complex clipping. This is a Mografy drawing wrapper, not full p5.js compatibility. The scene contract remains in `packages/core/src/guide.ts`.
+
+## Data flow
+
+```text
+Claude/Codex + Skill -- edit scene files --> Project folder -- watch --+
+Player -- HTTP (params, playhead, exports) ---------------------------+
+CLI check/review/export ---------------------------------------------+
+                                                                     v
+                                                       Mografy Server / Project
+                                                     Compile -> trial -> publish
+                                                           |              |
+                                                     WebSocket     Headless Chromium
+                                                           v              v
+                                                         Player    raw RGBA -> FFmpeg (MP4)
+                                                                   PNG -> Lottie / SVGA 2
+```
+
+## Versions
+
+The version is the first 16 characters of a hash of the compiled scene, its imported modules, and all files under `assets/`. Builds are stored at `.mografy/builds/<version>.js`; the player loads `/__mografy/scene/<version>.js`.
+
+## Parameters
+
+The scene defines `params`; `mografy.json` stores only user overrides. When a scene changes, incompatible names, types, or ranges are removed from saved values and reported in player state.
+
+## Trial rendering
+
+Headless Chromium renders d/2, 0, d, d/4, and d/2 again. Both d/2 pixel hashes must match; otherwise `renderFrame` depends on previous calls and publication is rejected. `Math.random`, `Date.now`, and `performance.now` throw inside `renderFrame`.
+
+## File watching
+
+Recursive `fs.watch` reacts promptly. A file-fingerprint poll once per second catches missed events, including atomic file replacements on some platforms. Ignore `.mografy/`, `renders/`, `node_modules/`, and dot-prefixed files.
+
+## HTTP API (127.0.0.1, same origin)
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /__mografy/snapshot` | Current state |
+| `WS /__mografy/events` | State and seek events |
+| `GET /__mografy/source`, `POST /__mografy/source` | Read/submit scene source; validate before writing |
+| `PATCH /__mografy/project` | Params, seed, audio, render and review settings |
+| `PATCH /__mografy/state`, `POST /__mografy/seek` | Playhead position |
+| `GET /__mografy/still?t=&kind=raw\|output` | Single PNG frame |
+| `POST /__mografy/sheet` | PNG contact sheet |
+| `POST /__mografy/render`, `POST /__mografy/render/cancel`, `POST /__mografy/review` | Export/cancel MP4, Lottie, SVGA, and generate review artifacts |
+| `GET /__mografy/scene/<version>.js`, `GET /__mografy/files/<path>` | Compiled scene and project files |
+
+## Export jobs
+
+`POST /__mografy/render` freezes the version, params, seed, and output settings at job start. Render overrides do not write back to `mografy.json`. MP4 capture and encoding run in system temporary storage; Lottie/SVGA are packaged in memory. Finished outputs return to the Project write queue and use `atomicWrite` under `renders/`.
+
+`POST /__mografy/render/cancel` cancels capture or FFmpeg by job ID. State becomes `cancelling`, then `cancelled` after cleanup. Closing a project also cancels jobs and awaits cleanup without publishing partial files. `mografy dev` observes Project snapshots directly, so player exports also report progress in the terminal.
+
+Canvas scenes have no vector timeline. Lottie uses visible per-frame image layers and base64 PNGs; SVGA uses PNG images and alpha visibility tables inside zlib-compressed MovieEntity data. Neither executes scenes in Node or introduces SVG/GSAP. Identical PNGs are deduplicated, with limits on frames, pixels, and PNG bytes.
+
+The player keeps a lightweight raw live preview. All three export formats share `renderOutputFrame`, multisample blending, and post-processing. The Final frame UI was removed; inspect finished frames using output review sheets from `mografy review`.
+
+## Built-in animation components
+
+The Skill uses [the component reference](../.agents/skills/mografy/references/built-in-components.md) as a catalog of all sixteen source entries, their reusable functions, and adaptation/review rules. [The intro reference](../.agents/skills/mografy/references/intro.md) documents the twelve-second multi-shot example and its actual assets, timing, and review settings. Both are generated from `guide.ts`; agents read the referenced scene code before adapting it.
+
+Starter `scenes/components.ts` and `scenes/social-components.ts` contain pure time functions copied into new projects. `scenes/showcase.ts` retains the gallery. Sixteen independent scene entries share full-frame scopes in `scenes/component-frame.ts`, without presentation labels or borders. Logo reveal draws original brand paths from `scenes/brand-logo.ts` with Canvas Path2D. The runtime provides drawing and synchronous scopes, with no stored component animation state.
+
+First launch creates 16 projects at `library/.components/{id}`: six basic animations and ten social/UI components. They appear in the component group, with Stagger text selected by default. Current or last-used projects still take priority. Initialization and live updates share the path queue in `project.ts`, use `atomicWrite`, and publish the manifest last.
+
+After source or param changes, Chromium captures 480px PNG thumbnails and the Project queue atomically replaces `.mografy/thumb.png`. If the version or settings change during capture, discard the stale result. Publish the thumbnail hash only after writing; the player then refreshes the project list and thumbnail URL.
+
+## License
+
+Mografy source code and documentation use the root [MIT License](../LICENSE), with `license: "MIT"` in the workspace and all six package manifests. Third-party assets and dependencies keep their original terms, including the bundled ABeeZee font's SIL Open Font License.

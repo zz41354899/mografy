@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "Pop card",
+  "scene": "scenes/main.ts",
+  "seed": 1,
+  "params": {},
+  "fonts": [
+    {
+      "family": "ABeeZee",
+      "path": "assets/ABeeZee-Regular.ttf",
+      "weight": 400
+    }
+  ],
+  "review": {
+    "times": [
+      0,
+      0.8,
+      2,
+      3.5,
+      4.8,
+      6
+    ],
+    "transitions": []
+  }
+}

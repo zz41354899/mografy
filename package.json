@@ -1,0 +1,32 @@
+{
+  "name": "mografy-workspace",
+  "version": "0.1.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.18.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "bin": {
+    "mografy": "./packages/cli/bin/mografy.js"
+  },
+  "scripts": {
+    "build": "pnpm --filter './packages/**' -r --workspace-concurrency=1 build",
+    "typecheck": "pnpm --filter './packages/**' -r typecheck",
+    "sync:skills": "node --import tsx scripts/sync-agent-docs.ts",
+    "test": "pnpm --filter './packages/**' -r --workspace-concurrency=1 test",
+    "test:browser": "pnpm --filter './packages/**' -r --workspace-concurrency=1 --if-present test:browser",
+    "check": "pnpm build && pnpm typecheck && pnpm test",
+    "mografy": "node packages/cli/bin/mografy.js",
+    "install:tool": "pnpm install --filter mografy-workspace --filter './packages/**'",
+    "bootstrap": "pnpm install:tool && pnpm build && pnpm exec playwright install chromium && pnpm install-command",
+    "install-command": "node packages/cli/bin/mografy.js install-command"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "tsx": "4.23.15",
+    "@types/node": "26.6.5",
+    "playwright": "1.64.0"
+  }
+}
