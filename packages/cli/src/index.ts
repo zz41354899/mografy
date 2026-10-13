@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { access, chmod, constants, mkdir, writeFile } from 'node:fs/promises';
 import { delimiter } from 'node:path';
 import { homedir, platform } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { exportFormatSchema } from '@mografy/core';
@@ -13,8 +13,21 @@ import type { ReviewResult } from '@mografy/render';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
+const workspaceRoot = resolve(packageRoot, '..', '..');
 const BIN = join(packageRoot, 'bin', 'mografy.js');
 const VERSION = '0.1.0';
+
+/** Keep terminal output useful without exposing the user's absolute home path. */
+export function displayPath(value: string) {
+  const absolute = resolve(value);
+  const fromWorkspace = relative(workspaceRoot, absolute);
+  if (fromWorkspace === '') return '.';
+  if (fromWorkspace !== '..' && !fromWorkspace.startsWith(`..${sep}`) && !isAbsolute(fromWorkspace)) return fromWorkspace;
+  const fromHome = relative(homedir(), absolute);
+  if (fromHome === '') return '~';
+  if (fromHome !== '..' && !fromHome.startsWith(`..${sep}`) && !isAbsolute(fromHome)) return join('~', fromHome);
+  return absolute;
+}
 
 const HELP = `Mografy ${VERSION} — AI writes animation; Mografy previews, checks, and exports it
 
@@ -100,7 +113,7 @@ async function confirm(question: string) {
 }
 
 async function requireProject(dir: string) {
-  if (!await hasProject(dir)) throw new Error(`${dir} has no mografy.json. Run \`mografy init ${dir}\` first.`);
+  if (!await hasProject(dir)) throw new Error(`${displayPath(dir)} has no mografy.json. Run \`mografy init ${displayPath(dir)}\` first.`);
 }
 
 async function dev(dir: string, flags: Flags) {
@@ -108,7 +121,7 @@ async function dev(dir: string, flags: Flags) {
     const server = await startServer(dir, flags.port === undefined ? {} : { port: flags.port });
     const snapshot = server.project.snapshot();
     console.log(`Mografy dev server: ${server.url}`);
-    console.log(`Project: ${dir}`);
+    console.log(`Project: ${displayPath(dir)}`);
     console.log(snapshot.scene
       ? `Scene ${snapshot.scene.version} (${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s)`
       : `Scene failed to load:\n${snapshot.error?.message ?? ''}`);
@@ -135,7 +148,7 @@ async function responseJson<T>(response: Response): Promise<T> {
 
 async function checkProject(dir: string) {
   await requireProject(dir);
-  console.log(`Checking ${dir}`);
+  console.log(`Checking ${displayPath(dir)}`);
   const project = await Project.open(dir);
   try {
     const snapshot = project.snapshot();
@@ -146,8 +159,8 @@ async function checkProject(dir: string) {
 
 function printReview(result: ReviewResult) {
   console.log('✓ Visual review created');
-  for (const file of result.files) console.log(`  ${file}`);
-  console.log(`  ${result.report}`);
+  for (const file of result.files) console.log(`  ${displayPath(file)}`);
+  console.log(`  ${displayPath(result.report)}`);
   if (result.comparisons.length) console.log(`  PSNR: ${result.comparisons.map(c => `#${c.frame} ${c.psnr}dB`).join(', ')}`);
 }
 
@@ -220,14 +233,14 @@ function monitorDevExports(server: Awaited<ReturnType<typeof startServer>>) {
     if (status.id !== id) {
       id = status.id; report = progressReporter(status.format); cancelling = false;
       console.log(`\nExporting ${formatName(status.format)} from the player…`);
-      console.log(`  Project: ${server.project.dir}`);
-      console.log(`  Output:  ${status.output}`);
+      console.log(`  Project: ${displayPath(server.project.dir)}`);
+      console.log(`  Output:  ${displayPath(status.output)}`);
     }
     if (!status.cancelling) report?.update(status);
     if (status.cancelling && !cancelling) { report?.stop(); console.log('Cancelling export…'); cancelling = true; }
     if (status.state === 'running') return;
     complete = status.id;
-    if (status.state === 'done') { report?.finish(status); console.log(`✓ ${formatName(status.format)} export complete: ${status.output}`); }
+    if (status.state === 'done') { report?.finish(status); console.log(`✓ ${formatName(status.format)} export complete: ${displayPath(status.output)}`); }
     else if (status.state === 'cancelled') { report?.stop(); console.log('Export cancelled.'); }
     else { report?.stop(); console.error(`Export failed: ${status.error ?? 'Unknown error'}`); }
   };
@@ -250,7 +263,7 @@ async function cancelExport(dir: string) {
     const current = (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
     if (!current || current.id !== before.id) throw new Error('The export job disappeared.');
     if (current.state === 'cancelled') { console.log('Export cancelled.'); return; }
-    if (current.state === 'done') { console.log(`Export already completed: ${current.output}`); return; }
+    if (current.state === 'done') { console.log(`Export already completed: ${displayPath(current.output)}`); return; }
     if (current.state === 'failed') throw new Error(current.error ?? 'Export failed while it was being cancelled.');
     await delay(100);
   }
@@ -282,8 +295,8 @@ async function exportProject(dir: string, flags: Flags) {
   }
 
   console.log(`Exporting ${formatName(format)}…`);
-  console.log(`  Project: ${dir}`);
-  console.log(`  Output:  ${status.output}`);
+  console.log(`  Project: ${displayPath(dir)}`);
+  console.log(`  Output:  ${displayPath(status.output)}`);
   const report = progressReporter(format);
   let interrupted = false, cancelError: unknown;
   const interrupt = () => {
@@ -304,7 +317,7 @@ async function exportProject(dir: string, flags: Flags) {
       }
       if (latest.state === 'done') {
         report.finish(latest);
-        console.log(`✓ ${formatName(format)} export complete: ${latest.output}`);
+        console.log(`✓ ${formatName(format)} export complete: ${displayPath(latest.output)}`);
         return;
       }
       await delay(200);
@@ -358,9 +371,9 @@ export async function main(argv = process.argv.slice(2)) {
   switch (command) {
     case 'dev': {
       if (!await hasProject(dir)) {
-        if (explicit && !flags.yes && !await confirm(`${dir} is not a Mografy project. Create a starter project here?`)) return;
+        if (explicit && !flags.yes && !await confirm(`${displayPath(dir)} is not a Mografy project. Create a starter project here?`)) return;
         await createProject(dir);
-        console.log(`Created starter project: ${dir}`);
+        console.log(`Created starter project: ${displayPath(dir)}`);
       } else await ensureAgentFiles(dir);
       await rememberProject(dir);
       const running = await findServer(dir);
@@ -371,7 +384,7 @@ export async function main(argv = process.argv.slice(2)) {
     }
     case 'init':
       await createProject(dir);
-      console.log(`Created starter project: ${dir}\nRun \`mografy dev ${dir}\` to open it.`);
+      console.log(`Created starter project: ${displayPath(dir)}\nRun \`mografy dev ${displayPath(dir)}\` to open it.`);
       return;
     case 'check': return checkProject(dir);
     case 'review': return reviewProject(dir, flags.video);
