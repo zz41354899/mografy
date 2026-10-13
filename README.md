@@ -1,14 +1,27 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/mografy-logo-inverse.svg">
+    <img src="docs/brand/mografy-logo.svg" alt="Mografy" width="460">
+  </picture>
+</p>
+
 # Mografy
 
 Mografy is a local Canvas animation tool for Claude Code and Codex. One shared `mografy` Skill helps the agent plan storyboards, adapt working examples, write scenes, review frames, and export the result. The browser player provides playback, scrubbing, subtitles, colors, effects, and audio controls.
 
 Describe the animation in your agent, then watch it in `mografy dev`. The agent edits scene files; Mografy compiles and trial-renders them in Chromium before updating the player at the same time position.
 
+[![Watch the twelve-second Mografy intro](https://github.com/zz41354899/mografy/blob/main/docs/media/mografy-intro.gif)](https://github.com/zz41354899/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4)
+
+[Watch the intro with audio (MP4)](https://github.com/zz41354899/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4).
+
 ## Get started
 
-Requires Node.js 22.12 or later and pnpm. Run these commands from the repository root:
+Requires Node.js 22.12 or later and pnpm. Clone the repository, then run setup in its root:
 
 ```sh
+git clone https://github.com/zz41354899/mografy.git
+cd mografy
 pnpm install
 pnpm build
 pnpm sync:skills
@@ -17,9 +30,9 @@ pnpm install-command
 mografy dev
 ```
 
-`install-command` installs a launcher into a writable PATH directory. Mografy currently runs from this source workspace. After pulling source changes, repeat `pnpm install`, `pnpm build`, and `pnpm sync:skills`.
+`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, repeat `pnpm install`, `pnpm build`, and `pnpm sync:skills`.
 
-The player opens the current project when the folder contains `mografy.json`, otherwise the last project used. First launch opens Stagger text and initializes the sixteen independent built-in animations.
+The player opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. Each installation keeps separate recent-project and active-player state under `~/.mografy/installations/`; the former shared history is not imported. First launch in a new checkout opens Stagger text and initializes the sixteen independent built-in animations.
 
 Create an animation or open the bundled intro:
 
@@ -30,22 +43,31 @@ mografy dev ./examples/mografy-intro
 
 Source installations create projects under `projects/` by default. Set `MOGRAFY_HOME` to choose another library directory. The Projects panel switches between projects and built-in animations in the same player.
 
+All paths are resolved on the user's computer. Explicit project arguments resolve from the terminal's current folder; exports go to that project's `renders/`. To choose your own library and project:
+
+```sh
+export MOGRAFY_HOME="$HOME/Animations"
+mografy dev "$MOGRAFY_HOME/my-animation" --yes
+```
+
+`MOGRAFY_STATE` optionally selects a state directory. Using the same override for several installations intentionally shares their history and active player.
+
 ## One Skill for Codex and Claude
 
-The Skill lives at [`.agents/skills/mografy/SKILL.md`](.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](CLAUDE.md) imports it. Both hosts read one maintained copy.
+The Skill lives at [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) imports it. Both hosts read one maintained copy.
 
 Its English references cover:
 
 | Reference | Use |
 | --- | --- |
-| [Project](.agents/skills/mografy/references/project.md) | Repository sources, architecture, and development checks |
-| [Scene authoring](.agents/skills/mografy/references/scene-authoring.md) | Scene contract, drawing API, validation, review, and export |
-| [Built-in components](.agents/skills/mografy/references/built-in-components.md) | All sixteen working component scenes and how to adapt them |
-| [Intro](.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
-| [Storyboards](.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
-| [Animation principles](.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
+| [Project](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/project.md) | Repository sources, architecture, and development checks |
+| [Scene authoring](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) | Scene contract, drawing API, validation, review, and export |
+| [Built-in components](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) | All sixteen working component scenes and how to adapt them |
+| [Intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
+| [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
+| [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
 
-[packages/core/src/guide.ts](packages/core/src/guide.ts) owns the generated entrypoint and references. After editing it, run `pnpm build` and `pnpm sync:skills`. Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
+[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) owns the generated entrypoint and references. After editing it, run `pnpm build` and `pnpm sync:skills`. Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
 
 ## Working examples
 
@@ -56,11 +78,11 @@ The sixteen built-in animations are authoring references as well as playable exa
 - **Interactions:** YouTube subscribe, AI chat, Like burst, Notification toast, Toggle switch.
 - **Indicators:** Progress bar, Pulse dots, Audio wave.
 
-Reusable functions live in [components.ts](packages/server/template/scenes/components.ts) and [social-components.ts](packages/server/template/scenes/social-components.ts). Each example has its own scene entry, controls, preview, and export. Source copies live under `packages/server/template/scenes/`; editable installed projects live under the library's `.components/{id}/` directory. New projects include the reusable modules and scene entries.
+Reusable functions live in [components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/components.ts) and [social-components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/social-components.ts). Each example has its own scene entry, controls, preview, and export. Source copies live under `packages/server/template/scenes/`; editable installed projects live under the library's `.components/{id}/` directory. New projects include the reusable modules and scene entries.
 
-The [component reference](.agents/skills/mografy/references/built-in-components.md) links every entry and explains layout, timing, local imports, and review. Ask the agent to adapt the relevant component to your project's own assets and style.
+The [component reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) links every entry and explains layout, timing, local imports, and review. Ask the agent to adapt the relevant component to your project's own assets and style.
 
-The [Mografy intro](examples/mografy-intro/scenes/main.ts) is a 1920 × 1080, twelve-second, 30fps example: code introduces the idea, a preview plays and scrubs, an external edit updates the picture, and the original logo completes the sequence. Its [reference](.agents/skills/mografy/references/intro.md) documents the four beats, fonts, music, captions, and transition sampling.
+The [Mografy intro](https://github.com/zz41354899/mografy/blob/main/examples/mografy-intro/scenes/main.ts) is a 1920 × 1080, twelve-second, 30fps example: code introduces the idea, a preview plays and scrubs, an external edit updates the picture, and the original logo completes the sequence. Its [reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) documents the four beats, fonts, music, captions, and transition sampling.
 
 ## Storyboards and motion direction
 
@@ -94,7 +116,7 @@ export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Re
 }
 ```
 
-Use `ctx.draw` for common drawing, `ctx.canvas` for native Canvas operations, and `ctx.withCanvas` or `ctx.clip` for isolated scopes. Scenes run only in the browser and must render deterministically when seeking in any order. The player and exports share the same runtime and post-processing. See the [scene-authoring reference](.agents/skills/mografy/references/scene-authoring.md) for the full contract.
+Use `ctx.draw` for common drawing, `ctx.canvas` for native Canvas operations, and `ctx.withCanvas` or `ctx.clip` for isolated scopes. Scenes run only in the browser and must render deterministically when seeking in any order. The player and exports share the same runtime and post-processing. See the [scene-authoring reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) for the full contract.
 
 After editing a scene:
 
@@ -182,8 +204,8 @@ pnpm test:browser
 pnpm --filter @mografy/web dev
 ```
 
-Read [architecture](docs/architecture.md) for the data flow and invariants, [status](docs/STATUS.md) for completed work and remaining tasks, and [AGENTS.md](AGENTS.md) before repository changes.
+Read [architecture](https://github.com/zz41354899/mografy/blob/main/docs/architecture.md) for the data flow and invariants, [status](https://github.com/zz41354899/mografy/blob/main/docs/STATUS.md) for completed work and remaining tasks, and [AGENTS.md](https://github.com/zz41354899/mografy/blob/main/AGENTS.md) before repository changes.
 
 ## License
 
-Mografy source code and documentation use the [MIT License](LICENSE), following the [standard MIT text](https://opensource.org/license/mit). Package manifests declare `MIT`. Third-party dependencies and bundled assets retain their original terms; the bundled ABeeZee font uses the [SIL Open Font License](packages/server/template/assets/OFL.txt).
+Mografy source code and documentation use the [MIT License](https://github.com/zz41354899/mografy/blob/main/LICENSE), following the [standard MIT text](https://opensource.org/license/mit). Package manifests declare `MIT`. Third-party dependencies and bundled assets retain their original terms; the bundled ABeeZee font uses the [SIL Open Font License](https://github.com/zz41354899/mografy/blob/main/packages/server/template/assets/OFL.txt).

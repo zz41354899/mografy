@@ -158,7 +158,8 @@ export function isLegacyAgentFile(contents: string, kind: 'guide' | 'skill', rep
   return contents === previous || contents === previous.replace(cancellation, '') ||
     contents === (kind === 'guide' ? LEGACY_PROJECT_GUIDE : LEGACY_REPOSITORY_SKILL) ||
     (kind === 'guide' && contents === LEGACY_USER_SCOPE_GUIDE) ||
-    (kind === 'guide' && repository !== undefined && contents === legacySharedProjectGuide(repository));
+    (kind === 'guide' && repository !== undefined && contents === legacySharedProjectGuide(repository)) ||
+    (kind === 'guide' && isPreviousProjectPointer(contents));
 }
 
 const STORYBOARD = `# Storyboard planning for Mografy
@@ -337,7 +338,7 @@ Read the project's \`mografy.json\`, configured scene entry, imported local modu
 - For a storyboard or a new animation that needs shot planning, read [references/storyboard.md](references/storyboard.md). Codex uses image generation; Claude uses Artifacts when available, with an explicit local HTML fallback in Claude Code.
 - When creating an animation, choosing storyboard motifs, or reusing examples, read [references/built-in-components.md](references/built-in-components.md) for the sixteen scene components and [references/intro.md](references/intro.md) for the existing twelve-second intro. Inspect the relevant original scene code before adapting it.
 - For new motion or animation polish, read [references/animation-principles.md](references/animation-principles.md) and apply the relevant principles.
-- When developing Mografy itself, read [references/project.md](references/project.md) for this installation's repository path, owning sources, and required checks.
+- When developing Mografy itself, read [references/project.md](references/project.md) for the GitHub sources and required checks. Inspect the current checkout's local files before editing.
 
 Animation content belongs only in scene modules, never in \`mografy.json\`. Render synchronously from absolute \`time\`, resolved params, and prepared assets; do not use GSAP, SVG scene layers, resvg, clocks, or previous-frame state. Scene code executes only in the browser. Write plans and prompts in English; preserve supplied copy unless translation is requested.
 
@@ -384,10 +385,10 @@ Save the written plan and visual output links under \`storyboards/\`. Keep all p
 `;
 
 /** Both hosts read one Mografy Skill from the outer .agents folder. */
-export function sharedSkillFiles(repository: string) {
+function skillFilesWithRepositoryLinks(repository: string, introduction = `This skill was generated for the Mografy repository at \`${repository}\`. Use the current checkout's instructions when another checkout is explicitly selected. For an animation project elsewhere, read that project's settings and assets; do not assume it is inside this repository.`): { mografy: Record<string, string> } {
   const project = `# Mografy project reference
 
-This skill was generated for the Mografy repository at \`${repository}\`. Use the current checkout's instructions when another checkout is explicitly selected. For an animation project elsewhere, read that project's settings and assets; do not assume it is inside this repository.
+${introduction}
 
 Before product changes, read [AGENTS.md](${repository}/AGENTS.md), [architecture](${repository}/docs/architecture.md), [status](${repository}/docs/STATUS.md), and [usage](${repository}/README.md).
 
@@ -408,6 +409,20 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
   return {
     mografy: { 'SKILL.md': SKILL, ...references },
   };
+}
+
+const GITHUB_SOURCE = 'https://github.com/zz41354899/mografy/blob/main';
+
+/** Published guidance is identical in every checkout and never embeds a developer's disk paths. */
+export function sharedSkillFiles(_repository?: string) {
+  const files = skillFilesWithRepositoryLinks(GITHUB_SOURCE,
+    'Canonical sources are on [GitHub](https://github.com/zz41354899/mografy). Resolve local files from the current checkout, never from a path in another installation. For an animation project elsewhere, read that project\'s settings and assets; do not assume it is inside this repository.',
+  );
+  for (const [file, contents] of Object.entries(files.mografy)) {
+    const base = `${GITHUB_SOURCE}/.agents/skills/mografy/${file}`;
+    files.mografy[file] = contents.replace(/\]\(([^)]+)\)/g, (_, link: string) => `](${new URL(link, base).href})`);
+  }
+  return files;
 }
 
 const LEGACY_USER_SCOPE_GUIDE = `# Mografy project instructions
@@ -450,15 +465,26 @@ Codex storyboards use image generation; Claude uses Artifacts when available, ot
 Open the player with \`mografy dev\`. After scene edits, run \`mografy check\` and \`mografy review\`, then inspect the generated PNGs. Export with \`mografy export --format mp4|lottie|svga\` when requested.
 `;
 
-export function projectGuide(repository: string) {
+function previousProjectGuide(repository: string) {
   return GUIDE + `
 Shared Skill: [Mografy](${repository}/.agents/skills/mografy/SKILL.md). If missing, run \`pnpm build\` and \`pnpm sync:skills\` from \`${repository}\`.
 `;
 }
 
+function isPreviousProjectPointer(contents: string) {
+  const match = contents.match(/\nShared Skill: \[Mografy\]\((.+)\/\.agents\/skills\/mografy\/SKILL\.md\)\. If missing, run/);
+  return !!match && contents === previousProjectGuide(match[1]!);
+}
+
+export function projectGuide(_repository?: string) {
+  return GUIDE + `
+Shared Skill: [Mografy](${GITHUB_SOURCE}/.agents/skills/mografy/SKILL.md). For local work, use the current installation's outer \`.agents/skills/mografy/\` folder. If missing, run \`pnpm build\` and \`pnpm sync:skills\` from your Mografy checkout.
+`;
+}
+
 /** Exact previous generated files, used only to remove the former separate storyboard Skill. */
 export function obsoleteStoryboardFiles(repository: string): Record<string, string> {
-  const files: Record<string, string> = { ...sharedSkillFiles(repository).mografy, 'SKILL.md': LEGACY_STORYBOARD_SKILL };
+  const files: Record<string, string> = { ...skillFilesWithRepositoryLinks(repository).mografy, 'SKILL.md': LEGACY_STORYBOARD_SKILL };
   delete files['references/built-in-components.md'];
   delete files['references/intro.md'];
   files['references/project.md'] = files['references/project.md']!.replace(

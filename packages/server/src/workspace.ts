@@ -1,6 +1,7 @@
 // Projects on this computer: where new ones go, which were opened recently, bundled examples,
 // and which Mografy server is currently showing the player (so other tools can switch it).
 import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { access, mkdir, readdir, readFile, realpath, rmdir, stat, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -22,8 +23,12 @@ export const EXAMPLES_DIR = join(REPO_ROOT, 'examples');
  * when running from source, else ~/Mografy.
  */
 export const libraryDir = () => resolve(process.env.MOGRAFY_HOME ?? (FROM_SOURCE ? join(REPO_ROOT, 'projects') : join(homedir(), 'Mografy')));
-/** Per-user state: $MOGRAFY_STATE or ~/.mografy. */
-export const stateDir = () => resolve(process.env.MOGRAFY_STATE ?? join(homedir(), '.mografy'));
+/** Separate each installation's recent projects and active player; an override is explicit shared state. */
+export function installationStateDir(repository: string) {
+  const id = createHash('sha256').update(resolve(repository)).digest('hex').slice(0, 16);
+  return join(homedir(), '.mografy', 'installations', id);
+}
+export const stateDir = () => resolve(process.env.MOGRAFY_STATE ?? installationStateDir(REPO_ROOT));
 export const COMPONENT_PRESETS = [
   { id: 'stagger-text', name: 'Stagger text' },
   { id: 'typewriter', name: 'Typewriter' },
@@ -73,7 +78,7 @@ async function writeAgentFiles(dir: string) {
   const agents = join(dir, 'AGENTS.md');
   const current = await readFile(agents, 'utf8').catch(() => '');
   // Upgrade only the old generated guide. Preserve every custom AGENTS.md.
-  if (!current || isLegacyAgentFile(current, 'guide', REPO_ROOT) || (current.startsWith('# Mografy 場景撰寫指南') && current.includes('## 工作流程（MCP）'))) await atomicWrite(agents, projectGuide(REPO_ROOT));
+  if (!current || isLegacyAgentFile(current, 'guide', REPO_ROOT) || (current.startsWith('# Mografy 場景撰寫指南') && current.includes('## 工作流程（MCP）'))) await atomicWrite(agents, projectGuide());
   const claude = join(dir, 'CLAUDE.md');
   if (!await exists(claude)) await atomicWrite(claude, '@AGENTS.md\n');
   await removeGeneratedProjectSkills(dir);

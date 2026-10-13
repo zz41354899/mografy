@@ -2,6 +2,14 @@
 
 Updated: 2026-10-13
 
+## Portable installation paths and GitHub documentation (2026-10-13)
+
+- The CLI launcher now prefers the nearest Mografy checkout from the terminal's current folder, including animation subfolders. A launcher installed by another clone uses the current checkout's build; an unbuilt checkout reports install/build instructions. Installing the launcher no longer initializes a project.
+- Recent projects and active-player state are separated per installation under `~/.mografy/installations/<root-hash>/`. The old shared history is preserved but no longer resumed automatically. Project arguments resolve from the user's current folder, exports remain in the opened project's `renders/`, and `MOGRAFY_HOME` / `MOGRAFY_STATE` provide explicit overrides.
+- README, generated Skill/reference links, and project instruction pointers use canonical GitHub URLs. Generated guidance is identical across checkout locations. Exact old project pointers migrate even when committed from another computer; custom instructions remain intact.
+- README includes the existing twelve-second intro as a GIF preview and an MP4 with audio under `docs/media/`. Its dark-theme logo uses white ink and the original teal ribbon; light mode uses the original logo. Both desktop and 390px layouts were visually reviewed.
+- Validation covers cross-clone CLI selection, paths with spaces, missing builds, installation state separation, portable guidance, reference targets, and safe migration. `pnpm check` passed 54 tests and `pnpm test:browser` passed 17 checks with real Chromium and FFmpeg, using `--config.verifyDepsBeforeRun=false` with the installed dependency tree.
+
 ## Export frame-rate limits (2026-10-13)
 
 - MP4 exports now allow at most 60 fps; Lottie and SVGA exports allow at most 30 fps. SVGA's 60 fps option was removed at the user's request. Core owns the limits and shared validation used by the request schema, resolved Server settings, and direct render functions.

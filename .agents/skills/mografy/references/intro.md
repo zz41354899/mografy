@@ -1,6 +1,6 @@
 # Mografy intro reference
 
-Use the existing intro as a reference for multi-shot storytelling, deterministic transitions, responsive text layout, and a branded ending. Read [the project settings](/Users/zz41354899/Desktop/mografy/examples/mografy-intro/mografy.json), [scenes/main.ts](/Users/zz41354899/Desktop/mografy/examples/mografy-intro/scenes/main.ts), and [scenes/logo.ts](/Users/zz41354899/Desktop/mografy/examples/mografy-intro/scenes/logo.ts) before adapting it. The current source is a 1920 × 1080, twelve-second, 30fps Canvas scene on a paper-colored background with ink and teal accents.
+Use the existing intro as a reference for multi-shot storytelling, deterministic transitions, responsive text layout, and a branded ending. Read [the project settings](https://github.com/zz41354899/mografy/blob/main/examples/mografy-intro/mografy.json), [scenes/main.ts](https://github.com/zz41354899/mografy/blob/main/examples/mografy-intro/scenes/main.ts), and [scenes/logo.ts](https://github.com/zz41354899/mografy/blob/main/examples/mografy-intro/scenes/logo.ts) before adapting it. The current source is a 1920 × 1080, twelve-second, 30fps Canvas scene on a paper-colored background with ink and teal accents.
 
 ## Four implemented beats
 
@@ -22,9 +22,9 @@ The active windows overlap deliberately during transitions. They describe this i
 
 ## Apply the reference
 
-Use its sequence structure to plan setup, demonstration, change, and payoff. Retain relevant motion principles, clear focal points, readable holds, and continuity between shots. Reuse the technique in the selected project's own scene modules, with its assets and proportions. For small reusable motifs, read [built-in-components.md](built-in-components.md).
+Use its sequence structure to plan setup, demonstration, change, and payoff. Retain relevant motion principles, clear focal points, readable holds, and continuity between shots. Reuse the technique in the selected project's own scene modules, with its assets and proportions. For small reusable motifs, read [built-in-components.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md).
 
-Save a project-specific English storyboard under `storyboards/` when requested, following [storyboard.md](storyboard.md). Codex creates visual boards with image generation; Claude uses Artifacts or a standalone local HTML/Canvas preview. A new storyboard may require longer text holds than this existing twelve-second film.
+Save a project-specific English storyboard under `storyboards/` when requested, following [storyboard.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md). Codex creates visual boards with image generation; Claude uses Artifacts or a standalone local HTML/Canvas preview. A new storyboard may require longer text holds than this existing twelve-second film.
 
 ## Validation and review
 

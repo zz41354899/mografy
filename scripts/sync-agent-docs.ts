@@ -10,7 +10,7 @@ import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (process.argv.length > 2) throw new Error('Usage: pnpm sync:skills');
-for (const [name, files] of Object.entries(sharedSkillFiles(root))) {
+for (const [name, files] of Object.entries(sharedSkillFiles())) {
   const skill = join(root, '.agents', 'skills', name);
   await queueProjectWrite(skill, async () => {
     for (const [file, contents] of Object.entries(files)) await atomicWrite(join(skill, file), contents);

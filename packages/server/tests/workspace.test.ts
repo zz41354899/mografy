@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, listProjects, rememberProject } from '../src/workspace.js';
+import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
 
 test('projects: create in the library, remember, list without duplicates', async () => {
@@ -47,6 +47,14 @@ test('projects point to the shared outer skill folder, migrate generated files, 
     await createProject(sandbox, 'Storyboard');
     assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), projectGuide(resolve(TEMPLATE_DIR, '../..', '..')));
     assert.equal(await readFile(join(sandbox, 'CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
+    // A guide committed by another machine must migrate without using its disk path.
+    const oldPointer = projectGuide().replace(/\nShared Skill:[\s\S]*$/, '\nShared Skill: [Mografy](/some/other/checkout/.agents/skills/mografy/SKILL.md). If missing, run `pnpm build` and `pnpm sync:skills` from `/some/other/checkout`.\n');
+    await writeFile(join(sandbox, 'AGENTS.md'), oldPointer);
+    await ensureAgentFiles(sandbox);
+    assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), projectGuide());
+    await writeFile(join(sandbox, 'AGENTS.md'), oldPointer + '\nCustom notes\n');
+    await ensureAgentFiles(sandbox);
+    assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), oldPointer + '\nCustom notes\n');
     for (const host of ['.agents', '.claude']) {
       await assert.rejects(access(join(sandbox, host)), { code: 'ENOENT' });
     }
@@ -79,7 +87,7 @@ test('projects point to the shared outer skill folder, migrate generated files, 
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 
-test('one shared Mografy skill contains all independently readable local references', async () => {
+test('one shared Mografy skill links GitHub sources and includes every reference locally', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-external-skills-'));
   try {
     {
@@ -90,15 +98,40 @@ test('one shared Mografy skill contains all independently readable local referen
           await mkdir(join(skillDir, file, '..'), { recursive: true });
           await writeFile(join(skillDir, file), contents);
         }
-        // Every local Markdown link resolves using this skill alone, including nested references.
+        // GitHub reference links must name files that are included in the shared Skill.
         for (const [file, contents] of Object.entries(files)) {
           for (const [, link] of contents.matchAll(/\]\(([^)]+\.md)\)/g)) {
-            if (link!.startsWith('/')) continue; // Repository pointers are installation-specific.
-            const target = join(skillDir, file, '..', link!);
+            const prefix = 'https://github.com/zz41354899/mografy/blob/main/';
+            assert.ok(link!.startsWith(prefix), `${name}/${file} -> ${link}`);
+            const repositoryPath = link!.slice(prefix.length);
+            const skillPrefix = '.agents/skills/mografy/';
+            const target = repositoryPath.startsWith(skillPrefix)
+              ? join(skillDir, repositoryPath.slice(skillPrefix.length))
+              : resolve(TEMPLATE_DIR, '../../..', repositoryPath);
             assert.ok((await readFile(target, 'utf8')).length > 0, `${name}/${file} -> ${link}`);
           }
         }
       }
     }
   } finally { await rm(sandbox, { recursive: true, force: true }); }
+});
+
+test('installation state and published guidance are portable across checkout locations', () => {
+  assert.notEqual(installationStateDir('/clones/first'), installationStateDir('/clones/second'));
+  assert.equal(installationStateDir('/clones/first/.'), installationStateDir('/clones/first'));
+  const previous = process.env.MOGRAFY_STATE;
+  try {
+    delete process.env.MOGRAFY_STATE;
+    assert.match(stateDir(), /[\\/]\.mografy[\\/]installations[\\/][a-f0-9]{16}$/);
+    process.env.MOGRAFY_STATE = '/custom/state';
+    assert.equal(stateDir(), resolve('/custom/state'));
+  } finally {
+    if (previous === undefined) delete process.env.MOGRAFY_STATE;
+    else process.env.MOGRAFY_STATE = previous;
+  }
+  const first = sharedSkillFiles('/clones/first');
+  assert.deepEqual(first, sharedSkillFiles('/clones/second'));
+  assert.doesNotMatch(JSON.stringify(first), /\/clones\//);
+  assert.match(first.mografy['references/project.md']!, /https:\/\/github.com\/zz41354899\/mografy/);
+  assert.equal(projectGuide('/clones/first'), projectGuide('/clones/second'));
 });

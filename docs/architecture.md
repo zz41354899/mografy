@@ -92,6 +92,10 @@ The player keeps a lightweight raw live preview. All three export formats share 
 
 ## Built-in animation components
 
+The CLI entrypoint resolves the nearest Mografy source checkout from the terminal's working directory before importing its build. A global PATH launcher can therefore be installed by another clone without redirecting local development to that clone. Unbuilt checkouts fail with setup instructions. Outside a source checkout, the launcher uses its own installation.
+
+Recent projects and active-server discovery are scoped to the installation root under `~/.mografy/installations/<root-hash>/`. The old shared state is left untouched and is not resumed automatically. `MOGRAFY_STATE` explicitly overrides this scope; `MOGRAFY_HOME` overrides the project library. Exports resolve inside the opened project's `renders/` directory.
+
 The Skill uses [the component reference](../.agents/skills/mografy/references/built-in-components.md) as a catalog of all sixteen source entries, their reusable functions, and adaptation/review rules. [The intro reference](../.agents/skills/mografy/references/intro.md) documents the twelve-second multi-shot example and its actual assets, timing, and review settings. Both are generated from `guide.ts`; agents read the referenced scene code before adapting it.
 
 Starter `scenes/components.ts` and `scenes/social-components.ts` contain pure time functions copied into new projects. `scenes/showcase.ts` retains the gallery. Sixteen independent scene entries share full-frame scopes in `scenes/component-frame.ts`, without presentation labels or borders. Logo reveal draws original brand paths from `scenes/brand-logo.ts` with Canvas Path2D. The runtime provides drawing and synchronous scopes, with no stored component animation state.

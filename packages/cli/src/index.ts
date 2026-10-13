@@ -351,6 +351,8 @@ export async function main(argv = process.argv.slice(2)) {
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(HELP); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
+  // Installation must not initialize components or consult a previous project's state.
+  if (command === 'install-command') return installCommand();
   const dir = explicit ? resolve(rest[0]!) : command === 'init' ? process.cwd() : await defaultProject(process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : process.cwd());
 
   switch (command) {
@@ -382,7 +384,6 @@ export async function main(argv = process.argv.slice(2)) {
       console.log(`Stopped ${running.url}`);
       return;
     }
-    case 'install-command': return installCommand();
   }
 }
 

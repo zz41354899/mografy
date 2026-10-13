@@ -31,6 +31,6 @@ function settle(time: number, start: number, duration: number, amplitude: number
 const ribbonAngle = settle(time, 0.8, 1.2, 0.12);
 ```
 
-Store motion only in scene modules. Do not add a live physics loop, unseeded randomness, a clock, or previous-frame state. Read [scene-authoring.md](scene-authoring.md) for the runtime and drawing contract.
+Store motion only in scene modules. Do not add a live physics loop, unseeded randomness, a clock, or previous-frame state. Read [scene-authoring.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) for the runtime and drawing contract.
 
 Review the start, extreme, settle, and final hold of each action, plus dense transition strips. Check repeated and out-of-order times with `mografy check`, and inspect both raw and post-processed frames with `mografy review`. When motion sampling, glow, or grain hides a pose or blurs important text, adjust the motion or output settings and review again.
