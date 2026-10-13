@@ -62,6 +62,24 @@ Examples
 const hasProject = isProject;
 const delay = (ms: number) => new Promise(resolveDelay => setTimeout(resolveDelay, ms));
 
+function isInsideWorkspace(value: string) {
+  const fromWorkspace = relative(workspaceRoot, resolve(value));
+  return fromWorkspace === '' || (fromWorkspace !== '..' && !fromWorkspace.startsWith(`..${sep}`) && !isAbsolute(fromWorkspace));
+}
+
+/**
+ * Bare project commands are convenient inside Mografy's own workspace, where
+ * the player can resume the last library project. In any unrelated repository,
+ * require an actual project context so the CLI cannot silently open a scene
+ * from another checkout.
+ */
+async function implicitProject(command: string) {
+  const cwd = process.cwd();
+  if (await hasProject(cwd)) return cwd;
+  if (isInsideWorkspace(cwd)) return defaultProject(cwd);
+  throw new Error(`No mografy.json found in ${displayPath(cwd)}. Run \`mografy ${command} <project>\` or change into a Mografy project.`);
+}
+
 /** Put a `mografy` launcher into a writable folder on PATH (no pnpm global setup needed). */
 async function installCommand() {
   const candidates = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), 'bin')];
@@ -366,7 +384,14 @@ export async function main(argv = process.argv.slice(2)) {
   if (argv.includes('--version')) { console.log(VERSION); return; }
   // Installation must not initialize components or consult a previous project's state.
   if (command === 'install-command') return installCommand();
-  const dir = explicit ? resolve(rest[0]!) : command === 'init' ? process.cwd() : await defaultProject(process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : process.cwd());
+  const configured = process.env.MOGRAFY_PROJECT;
+  const dir = explicit
+    ? resolve(rest[0]!)
+    : command === 'init'
+      ? process.cwd()
+      : configured
+        ? resolve(configured)
+        : await implicitProject(command);
 
   switch (command) {
     case 'dev': {

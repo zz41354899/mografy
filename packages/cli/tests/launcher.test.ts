@@ -41,3 +41,13 @@ test('an older PATH launcher uses the current clone and fails clearly when it is
     assert.equal(outside.stdout.trim(), '0.1.0');
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
+
+test('bare dev outside a Mografy project does not reopen an unrelated scene', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-unrelated-repo-'));
+  try {
+    const result = await run(sandbox, ['dev', '--no-open']);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /No mografy\.json found/);
+    assert.match(result.stderr, /mografy dev <project>/);
+  } finally { await rm(sandbox, { recursive: true, force: true }); }
+});
