@@ -10,6 +10,7 @@ import { projectGuide, SKILL, SKILL_REFERENCES, isLegacyAgentFile, validateScene
 import type { ProjectList, ProjectSummary } from '@mografy/core';
 import { atomicWrite, readJson } from './files.js';
 import { queueProjectWrite } from './project.js';
+import { seedComponentThumbnail } from './component-thumbnails.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** Starter project copied by createProject. */
@@ -150,13 +151,20 @@ export async function createProject(dir: string, name?: string, scene?: string) 
 }
 
 const componentCreations = new Map<string, Promise<string>>();
+const readyComponents = new Set<string>();
 async function ensureComponentProject(preset: typeof COMPONENT_PRESETS[number]) {
   const dir = join(componentRoot(), preset.id);
-  if (await isProject(dir)) { await ensureAgentFiles(dir); return dir; }
+  if (readyComponents.has(dir) && await isProject(dir)) return dir;
   let creation = componentCreations.get(dir);
   if (!creation) {
     creation = (async () => {
-    try { return await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8')); }
+    try {
+      if (await isProject(dir)) await ensureAgentFiles(dir);
+      else await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8'));
+      await seedComponentThumbnail(dir, preset.id);
+      readyComponents.add(dir);
+      return dir;
+    }
     finally { componentCreations.delete(dir); }
     })();
     componentCreations.set(dir, creation);

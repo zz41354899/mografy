@@ -68,6 +68,31 @@ test('host: output frames are identical across separate browser contexts', async
   assert.equal(hashes[0], hashes[1]);
 });
 
+test('thumbnail capture matches downsized raw artwork and remains stable after random seeks', async () => {
+  const p = await project(), page = await host.open(await buildScene(dir, p), p);
+  try {
+    const first = await page.thumb(1.5);
+    const raw = await page.png({ kind: 'raw', t: 1.5, label: '' }, p.render);
+    const comparison = await page.page.evaluate(async ({ thumbnail, raw }) => {
+      const images: HTMLImageElement[] = [];
+      for (const base64 of [thumbnail, raw]) {
+        const image = new Image(); image.src = `data:image/png;base64,${base64}`; await image.decode();
+        images.push(image);
+      }
+      const pixels = images.map(image => {
+        const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 270;
+        const ctx = canvas.getContext('2d')!; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(image, 0, 0, 480, 270);
+        return ctx.getImageData(0, 0, 480, 270).data;
+      });
+      const actual = pixels[0]!, expected = pixels[1]!;
+      return { width: images[0]!.width, height: images[0]!.height, matches: actual.every((value, i) => value === expected[i]) };
+    }, { thumbnail: first.toString('base64'), raw: raw.toString('base64') });
+    assert.deepEqual(comparison, { width: 480, height: 270, matches: true });
+    await page.thumb(0); await page.thumb(4);
+    assert.deepEqual(await page.thumb(1.5), first);
+  } finally { await page.close(); }
+});
+
 test('ffmpeg: abort stops an active encoder', async () => {
   const controller = new AbortController(), started = Date.now();
   const running = runFfmpeg(['-re', '-f', 'lavfi', '-i', 'testsrc=size=64x64:rate=30', '-t', '30', '-f', 'null', '-'], controller.signal);

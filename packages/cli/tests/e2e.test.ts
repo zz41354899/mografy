@@ -244,6 +244,15 @@ test('project panel: create a project, switch to it, switch back', { timeout: 12
   assert.deepEqual(list.projects.filter((p: { kind: string }) => p.kind === 'recent' || p.kind === 'library').map((p: { name: string }) => p.name).sort(), ['First', 'Second take']);
   const components = list.projects.filter((p: { kind: string }) => p.kind === 'component');
   assert.equal(components.length, 16);
+  assert.ok(components.every((p: { thumb: number | null }) => p.thumb !== null), 'unopened components already have bundled previews');
+  const previewUrl = new URL(`/__mografy/projects/thumb?dir=${encodeURIComponent(components[0].dir)}&v=${components[0].thumb}`, server.url);
+  const preview = await fetch(previewUrl);
+  assert.equal(preview.status, 200);
+  assert.match(preview.headers.get('cache-control')!, /immutable/);
+  const etag = preview.headers.get('etag')!;
+  assert.equal((await fetch(previewUrl, { headers: { 'if-none-match': etag } })).status, 304);
+  previewUrl.searchParams.set('v', 'old-preview');
+  assert.equal((await fetch(previewUrl)).headers.get('cache-control'), 'no-cache', 'stale URLs cannot cache changed artwork permanently');
   const versions = new Set<string>();
   for (const component of components) {
     await page.getByRole('button', { name: new RegExp(`^${component.name} `) }).click();

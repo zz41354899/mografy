@@ -102,7 +102,9 @@ Starter `scenes/components.ts` and `scenes/social-components.ts` contain pure ti
 
 First launch creates 16 projects at `library/.components/{id}`: six basic animations and ten social/UI components. They appear in the component group, with Stagger text selected by default. Current or last-used projects still take priority. Initialization and live updates share the path queue in `project.ts`, use `atomicWrite`, and publish the manifest last.
 
-After source or param changes, Chromium captures 480px PNG thumbnails and the Project queue atomically replaces `.mografy/thumb.png`. If the version or settings change during capture, discard the stale result. Publish the thumbnail hash only after writing; the player then refreshes the project list and thumbnail URL.
+Sixteen pre-rendered 480px PNGs ship under `packages/server/thumbnails/`. Component initialization seeds missing previews only when the source/asset fingerprint and raw-preview settings match the bundled capture. Existing previews and customized components are preserved. Initialization runs once per component per server process; image requests share a short-lived project catalog instead of reinitializing and rescanning the library for every image. Versioned thumbnail responses support immutable browser caching and ETags; requests with an old version bypass immutable caching.
+
+After source or param changes, Chromium captures a fresh 480px PNG after a 300ms debounce, directly downsizing the rendered Canvas without a full-resolution pixel readback. The Project queue atomically replaces `.mografy/thumb.png`. If the version or settings change during capture, discard the stale result. Publish the thumbnail hash only after writing; the player then refreshes the project list and thumbnail URL. After changing built-in scene sources or assets, run `pnpm thumbnails:generate` to update the bundled images and fingerprints through real Chromium captures.
 
 ## License
 

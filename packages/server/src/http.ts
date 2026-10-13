@@ -3,15 +3,15 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import { open, readFile, realpath, stat } from 'node:fs/promises';
 import { dirname, extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { projectFile } from '@mografy/render';
 import type { Cell } from '@mografy/render';
-import type { ExportRequest, ProjectPatch, ServerEvent } from '@mografy/core';
+import type { ExportRequest, ProjectList, ProjectPatch, ServerEvent } from '@mografy/core';
 import { ApiError, Project } from './project.js';
-import { saveAsset } from './files.js';
+import { saveAsset, sha256 } from './files.js';
 import { AlreadyRunning, ServerLock } from './lock.js';
 import { clearActive, createInLibrary, isProject, listProjects, rememberProject, writeActive } from './workspace.js';
 
@@ -77,7 +77,21 @@ export async function startServer(projectDir: string, options: StartOptions = {}
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 4096 });
   const send = (socket: WebSocket, event: ServerEvent) => { if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 4 << 20) socket.send(JSON.stringify(event)); };
   const broadcast = (event: ServerEvent) => { for (const socket of sockets.clients) send(socket, event); };
-  const listen = (p: Project) => p.on('event', event => { if (p === project) broadcast(event); });
+  // Coalesce the list request and its image requests instead of rescanning per thumbnail.
+  let catalog: { expires: number; data: Promise<ProjectList> } | undefined;
+  const getProjects = () => {
+    if (!catalog || catalog.expires <= Date.now()) {
+      const next = { expires: Date.now() + 1000, data: listProjects(project.dir) };
+      catalog = next;
+      void next.data.catch(() => { if (catalog === next) catalog = undefined; });
+    }
+    return catalog.data;
+  };
+  const listen = (p: Project) => p.on('event', event => {
+    if (p !== project) return;
+    if (event.type === 'snapshot' && ['scene', 'project', 'thumbnail'].includes(event.reason)) catalog = undefined;
+    broadcast(event);
+  });
   listen(project);
   let url = '';
 
@@ -100,6 +114,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
       next.url = url; await nextLock.write(url); next.watch();
       const old = project, oldLock = lock;
       project = next; lock = nextLock; listen(next);
+      catalog = undefined;
       await old.close(); await oldLock.release();
       await rememberProject(target);
       await writeActive({ pid: process.pid, url, token, project: target });
@@ -141,12 +156,19 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     }
     switch (route) {
       case 'GET /health': return json(response, 200, { ok: true, pid: process.pid, dir: project.dir, token });
-      case 'GET /projects': return json(response, 200, await listProjects(project.dir));
+      case 'GET /projects': return json(response, 200, await getProjects());
       case 'GET /projects/thumb': {
         const dir = url.searchParams.get('dir') ?? '';
-        if (!(await listProjects(project.dir)).projects.some(p => p.dir === dir)) throw new ApiError(404, 'NOT_FOUND', 'Unknown project');
-        const png = await readFile(join(dir, '.mografy', 'thumb.png')).catch(() => { throw new ApiError(404, 'NOT_FOUND', 'No thumbnail yet'); });
-        response.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-cache' }); response.end(png); return;
+        if (!(await getProjects()).projects.some(p => p.dir === dir)) throw new ApiError(404, 'NOT_FOUND', 'Unknown project');
+        const file = await open(join(dir, '.mografy', 'thumb.png'), 'r').catch(() => { throw new ApiError(404, 'NOT_FOUND', 'No thumbnail yet'); });
+        try {
+          // Read bytes and timestamp from the same inode across atomic replacements.
+          const info = await file.stat(), png = await file.readFile();
+          const headers = { 'content-type': 'image/png', 'etag': `"${sha256(png)}"`,
+            'cache-control': url.searchParams.get('v') === String(info.mtimeMs) ? 'private, max-age=31536000, immutable' : 'no-cache' };
+          if (request.headers['if-none-match'] === headers.etag) { response.writeHead(304, headers); response.end(); return; }
+          response.writeHead(200, headers); response.end(png); return;
+        } finally { await file.close(); }
       }
       case 'POST /projects/open': {
         const { dir } = await body<{ dir?: string }>(request);

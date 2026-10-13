@@ -12,7 +12,8 @@
   },
   "files": [
     "dist",
-    "template"
+    "template",
+    "thumbnails"
   ],
   "sideEffects": false,
   "scripts": {

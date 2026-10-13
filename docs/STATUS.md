@@ -2,6 +2,14 @@
 
 Updated: 2026-10-13
 
+## Immediate built-in thumbnails and cached image loading (2026-10-13)
+
+- All sixteen components ship 480px PNG previews under `packages/server/thumbnails/`, generated from real Chromium scenes by `pnpm thumbnails:generate`. Initialization seeds missing previews of unchanged components in the Project write queue using `atomicWrite`. Fingerprints cover scene modules, assets, seed, params, fonts and audio; customized or invalid components are preserved, along with existing captures.
+- Component initialization is reused within the process. Project list and image requests share a one-second catalog cache, invalidated by project switches and scene/settings/thumbnail changes. Versioned image URLs use immutable private caching and content ETags; stale-version URLs use revalidation. Image decoding is asynchronous.
+- Live thumbnail capture uses a 300ms debounce instead of 1200ms, directly resizing the rendered Canvas without full-resolution pixel readback. Source/version guards still reject superseded captures before atomically publishing the image and notifying the player.
+- A fresh local library showed all sixteen previews without opening the other components: first list including scaffolding took 1.55 seconds, and the next list took 3ms in one local measurement. Desktop visual review found no thumbnail placeholders. Pixel checks match the independently resized raw PNG and verify random seeking; regression coverage verifies first-launch previews, custom/invalid-project preservation, ETags, stale URLs and live updates.
+- `pnpm check` passed 56 tests and `pnpm test:browser` passed 17 checks with real Chromium and FFmpeg using `--config.verifyDepsBeforeRun=false`. The final invalid-component safeguard also passed the Server build and all eight Server tests.
+
 ## Portable installation paths and GitHub documentation (2026-10-13)
 
 - The CLI launcher now prefers the nearest Mografy checkout from the terminal's current folder, including animation subfolders. A launcher installed by another clone uses the current checkout's build; an unbuilt checkout reports install/build instructions. Installing the launcher no longer initializes a project.

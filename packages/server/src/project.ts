@@ -298,12 +298,13 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     clearTimeout(this.thumbTimer);
     this.thumbTimer = setTimeout(() => {
       void this.refreshThumbnail().catch(() => {});
-    }, 1200);
+    }, 300);
     this.thumbTimer.unref();
   }
 
   /** Capture then queue the write; discard a capture superseded by a source/parameter update. */
   async refreshThumbnail(time?: number) {
+    clearTimeout(this.thumbTimer);
     const { png, revision, version } = await this.withStillPage(async (page, _project, scene) => {
       const revision = sha256(this.raw), version = scene.version;
       return { png: await page.thumb(Math.max(0, Math.min(time ?? scene.meta.duration * .45, scene.meta.duration)), 480), revision, version };

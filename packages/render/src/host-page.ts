@@ -67,12 +67,10 @@ const host = {
   },
   /** Small raw frame as PNG, for project thumbnails. */
   async thumb(t: number, width: number, token: string) {
-    const { canvas } = need();
-    const image = rawPixels(t);
-    const full = document.createElement('canvas'); full.width = image.width; full.height = image.height;
-    full.getContext('2d')!.putImageData(image, 0, 0);
+    const { canvas, runtime } = need();
+    runtime.render(t);
     const out = document.createElement('canvas'); out.width = width; out.height = Math.round(width * canvas.height / canvas.width);
-    const c = out.getContext('2d')!; c.imageSmoothingQuality = 'high'; c.drawImage(full, 0, 0, out.width, out.height);
+    const c = out.getContext('2d')!; c.imageSmoothingQuality = 'high'; c.drawImage(canvas, 0, 0, out.width, out.height);
     await upload(token, await new Promise<Blob>((done, fail) => out.toBlob(b => b ? done(b) : fail(new Error('PNG encode failed')), 'image/png')));
   },
   /** Contact sheet with labels. Each cell is drawn from the exact raw or output pixels. */

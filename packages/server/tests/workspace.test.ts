@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
+import { seedComponentThumbnail } from '../src/component-thumbnails.js';
 
 test('projects: create in the library, remember, list without duplicates', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-ws-'));
@@ -30,6 +31,7 @@ test('projects: create in the library, remember, list without duplicates', async
     assert.deepEqual(mine.map(p => [p.name, p.kind]), [['Elsewhere', 'recent'], ['Intro', 'library'], ['Intro', 'library']]);
     assert.ok(list.projects.some(p => p.kind === 'example' && p.name === 'Mografy intro'), 'ships the intro example');
     assert.deepEqual(list.projects.filter(p => p.kind === 'component').map(p => p.name), COMPONENT_PRESETS.map(p => p.name));
+    assert.ok(list.projects.filter(p => p.kind === 'component').every(p => p.thumb !== null), 'all built-ins have previews before any is opened');
     assert.equal(new Set(await ensureComponentProjects()).size, 16);
     // A former gallery in Recent migrates to the first independent animation and stays out of the sidebar.
     await createProject(join(sandbox, 'library', '.components'), 'Animation components');
@@ -39,6 +41,35 @@ test('projects: create in the library, remember, list without duplicates', async
     await rememberProject(outside);
     assert.equal(await defaultProject(sandbox), outside, 'falls back to the last opened project');
   } finally { await rm(sandbox, { recursive: true, force: true }); delete process.env.MOGRAFY_HOME; delete process.env.MOGRAFY_STATE; }
+});
+
+test('bundled thumbnails seed unchanged existing components and preserve customized artwork', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-thumb-seed-'));
+  try {
+    const dir = join(sandbox, 'component');
+    await createProject(dir, 'Renamed example', await readFile(join(TEMPLATE_DIR, 'scenes/stagger-text.ts'), 'utf8'));
+    await seedComponentThumbnail(dir, 'stagger-text');
+    const target = join(dir, '.mografy/thumb.png');
+    const original = await readFile(target);
+    assert.equal(original.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(original.readUInt32BE(16), 480);
+    await writeFile(target, 'Existing capture');
+    await seedComponentThumbnail(dir, 'stagger-text');
+    assert.equal(await readFile(target, 'utf8'), 'Existing capture');
+    await rm(target);
+    const manifestPath = join(dir, 'mografy.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, params: { text: 'Custom copy' } }));
+    await seedComponentThumbnail(dir, 'stagger-text');
+    await assert.rejects(access(target), { code: 'ENOENT' });
+    await writeFile(manifestPath, '{broken manifest');
+    await seedComponentThumbnail(dir, 'stagger-text');
+    await assert.rejects(access(target), { code: 'ENOENT' });
+    await writeFile(manifestPath, JSON.stringify(manifest));
+    await writeFile(join(dir, 'scenes/components.ts'), '// Customized shared drawing\n');
+    await seedComponentThumbnail(dir, 'stagger-text');
+    await assert.rejects(access(target), { code: 'ENOENT' });
+  } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 
 test('projects point to the shared outer skill folder, migrate generated files, and preserve custom guidance', async () => {
