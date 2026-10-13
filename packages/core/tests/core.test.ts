@@ -50,4 +50,15 @@ test('per-export overrides preserve unspecified project settings', () => {
  assert.deepEqual(exportRequestSchema.parse({}), { format: 'mp4' });
  assert.throws(() => exportRequestSchema.parse({ format: 'gif' }));
  assert.throws(() => exportRequestSchema.parse({ render: { fps: 0 } }));
+ assert.deepEqual(exportRequestSchema.parse({ size: { width: 128, height: 128 } }).size, { width: 128, height: 128, fit: 'contain' });
+ for (const size of [{ width: 0, height: 128 }, { width: 128, height: 1.5 }, { width: 8000, height: 128 }, { width: 128, height: 128, fit: 'stretch' }]) assert.throws(() => exportRequestSchema.parse({ size }));
+});
+
+test('export requests enforce format frame-rate caps and keep valid boundary rates', () => {
+ for (const [format, max] of [['mp4', 60], ['lottie', 30], ['svga', 30]] as const) {
+  assert.equal(exportRequestSchema.parse({ format, render: { fps: max } }).render?.fps, max);
+  assert.throws(() => exportRequestSchema.parse({ format, render: { fps: max + 1 } }), /frame rate/);
+ }
+ assert.throws(() => exportRequestSchema.parse({ format: 'svga', render: { fps: 24 } }), /SVGA frame rate/);
+ assert.throws(() => exportRequestSchema.parse({ format: 'svga', render: { fps: 60 } }), /30 fps/);
 });

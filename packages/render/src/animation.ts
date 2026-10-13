@@ -4,8 +4,8 @@ import { createHash } from 'node:crypto';
 import { deflate } from 'node:zlib';
 import { promisify } from 'node:util';
 import protobuf from 'protobufjs/minimal.js';
-import { outputFrameCount, segmentFrames, SVGA_FRAME_RATES } from '@mografy/core';
-import type { ExportFormat, SceneProject } from '@mografy/core';
+import { outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
+import type { ExportFormat, ExportSize, SceneProject } from '@mografy/core';
 import type { SceneBuild } from './build.js';
 import { SceneHost } from './host.js';
 
@@ -18,6 +18,7 @@ export interface AnimationJob {
   project: SceneProject; build: SceneBuild; host: SceneHost;
   format: Exclude<ExportFormat, 'mp4'>;
   signal?: AbortSignal;
+  size?: ExportSize | undefined;
   onProgress?: (done: number, total: number, stage: 'capture' | 'package') => void;
 }
 export interface AnimationResult {
@@ -75,9 +76,8 @@ export async function encodeSvga(movie: RasterFrames): Promise<Buffer> {
 
 export async function renderAnimation(job: AnimationJob): Promise<AnimationResult> {
   const project = structuredClone(job.project), settings = project.render;
-  if (job.format === 'svga' && !SVGA_FRAME_RATES.some(fps => fps === settings.fps))
-    throw new Error(`SVGA frame rate must be one of ${SVGA_FRAME_RATES.join(', ')}.`);
-  const probe = await job.host.open(job.build, project, { renderScale: settings.scale });
+  validateExportFrameRate(job.format, settings.fps);
+  const probe = await job.host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
   const { width, height, meta } = probe.scene;
   await probe.close();
   const frames = outputFrameCount(meta.duration, settings.fps);
@@ -85,7 +85,7 @@ export async function renderAnimation(job: AnimationJob): Promise<AnimationResul
   const captured = new Array<Buffer>(frames);
   let bytes = 0, done = 0, failure: unknown;
   await Promise.allSettled(segmentFrames(frames, settings.workers).map(async segment => {
-    const page = await job.host.open(job.build, project, { renderScale: settings.scale });
+    const page = await job.host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
     try {
       for (let k = segment.start; k < segment.end; k++) {
         if (failure) break;

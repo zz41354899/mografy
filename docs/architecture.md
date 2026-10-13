@@ -80,9 +80,13 @@ Recursive `fs.watch` reacts promptly. A file-fingerprint poll once per second ca
 
 `POST /__mografy/render` freezes the version, params, seed, and output settings at job start. Render overrides do not write back to `mografy.json`. MP4 capture and encoding run in system temporary storage; Lottie/SVGA are packaged in memory. Finished outputs return to the Project write queue and use `atomicWrite` under `renders/`.
 
+An optional `size: { width, height, fit: 'contain' | 'cover' }` sets an exact output viewport independently of render scale. The Runtime retains the scene's logical dimensions, centers proportional artwork, and either adds scene-background margins or crops to fill. Sampling and post-processing run on the output viewport for all three formats. Requests without `size` retain the existing scale behavior. The player offers two fixed sizes per format: Lottie 256 square or 640 × 360 landscape, SVGA 375 square or 375 × 750 portrait, and MP4 720p/1080p landscape.
+
 `POST /__mografy/render/cancel` cancels capture or FFmpeg by job ID. State becomes `cancelling`, then `cancelled` after cleanup. Closing a project also cancels jobs and awaits cleanup without publishing partial files. `mografy dev` observes Project snapshots directly, so player exports also report progress in the terminal.
 
 Canvas scenes have no vector timeline. Lottie uses visible per-frame image layers and base64 PNGs; SVGA uses PNG images and alpha visibility tables inside zlib-compressed MovieEntity data. Neither executes scenes in Node or introduces SVG/GSAP. Identical PNGs are deduplicated, with limits on frames, pixels, and PNG bytes.
+
+Core owns format-specific export frame-rate limits and validation: MP4 up to 60 fps, Lottie up to 30 fps, and SVGA's supported rates up to 30 fps. The export request schema checks explicit overrides; the Server checks resolved project settings; direct render functions validate before capture. The player filters options and caps inherited MP4 defaults without writing them back to the project. Scene preview stepping and project render settings retain their existing ranges.
 
 The player keeps a lightweight raw live preview. All three export formats share `renderOutputFrame`, multisample blending, and post-processing. The Final frame UI was removed; inspect finished frames using output review sheets from `mografy review`.
 

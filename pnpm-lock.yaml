@@ -92,6 +92,9 @@ importers:
         specifier: 8.22.0
         version: 8.22.0
     devDependencies:
+      '@types/node':
+        specifier: 26.6.5
+        version: 26.6.5
       '@types/ws':
         specifier: 8.18.2
         version: 8.18.2

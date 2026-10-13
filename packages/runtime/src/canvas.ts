@@ -1,5 +1,5 @@
-import { beatAt, parameterDefinitionsSchema, resolveParams, sceneMetaSchema } from '@mografy/core';
-import type { BeatGrid, BeatPosition, SceneMeta, ParameterDefinitions, ParameterValues } from '@mografy/core';
+import { beatAt, exportSizeSchema, parameterDefinitionsSchema, resolveParams, sceneMetaSchema } from '@mografy/core';
+import type { BeatGrid, BeatPosition, ExportSize, SceneMeta, ParameterDefinitions, ParameterValues } from '@mografy/core';
 import { hashNoise, seededRandom } from './math.js';
 import { createDrawing } from './draw.js';
 import type { DrawingApi } from './draw.js';
@@ -47,6 +47,7 @@ export interface FontSource { family: string; path: string; weight?: number | un
 export interface RuntimeOptions {
   seed?: number; renderScale?: number; assetBase?: string; params?: ParameterValues;
   fonts?: FontSource[]; audio?: BeatGrid | undefined;
+  outputSize?: ExportSize | undefined;
   /** Throw when renderFrame touches Math.random / Date.now / performance.now. Default true. */
   guard?: boolean;
 }
@@ -62,6 +63,26 @@ function checkAssetPath(path: string) {
 
 export async function createSceneRuntime(element: HTMLCanvasElement, scene: SceneModule, options: RuntimeOptions = {}): Promise<SceneRuntime> {
   const meta = sceneMetaSchema.parse(scene.meta), definitions = parameterDefinitionsSchema.parse(scene.params);
+  if (options.outputSize) {
+    const size = exportSizeSchema.parse(options.outputSize);
+    const factor = size.fit === 'cover' ? Math.max(size.width / meta.width, size.height / meta.height) : Math.min(size.width / meta.width, size.height / meta.height);
+    const source = document.createElement('canvas');
+    const runtime = await createSceneRuntime(source, scene, { ...options, outputSize: undefined, renderScale: Math.min(4, factor) });
+    element.width = size.width; element.height = size.height;
+    const ctx = element.getContext('2d', { willReadFrequently: true });
+    if (!ctx) { runtime.dispose(); throw new Error('Canvas 2D unavailable'); }
+    const width = meta.width * factor, height = meta.height * factor;
+    return {
+      meta: runtime.meta, definitions: runtime.definitions, renderScale: runtime.renderScale,
+      render(time, values) {
+        runtime.render(time, values);
+        ctx.reset(); ctx.fillStyle = meta.background; ctx.fillRect(0, 0, size.width, size.height);
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(source, (size.width - width) / 2, (size.height - height) / 2, width, height);
+      },
+      dispose() { runtime.dispose(); source.width = source.height = 0; },
+    };
+  }
   if (typeof scene.setup !== 'function' || typeof scene.renderFrame !== 'function') throw new Error('Scene must export setup and renderFrame');
   const scale = options.renderScale ?? 1, seed = (options.seed ?? 1) >>> 0;
   if (!Number.isFinite(scale) || scale <= 0 || scale > 4) throw new Error('Invalid renderScale');
@@ -75,7 +96,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   }
   await document.fonts.ready;
 
-  element.width = Math.round(meta.width * scale); element.height = Math.round(meta.height * scale);
+  element.width = Math.max(1, Math.round(meta.width * scale)); element.height = Math.max(1, Math.round(meta.height * scale));
   const sx = element.width / meta.width, sy = element.height / meta.height, effect = Math.sqrt(sx * sy);
   const assets: Record<string, unknown> = {};
   await scene.setup({

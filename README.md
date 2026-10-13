@@ -121,6 +121,18 @@ mografy export ./projects/my-animation --format svga -o preview.svga
 
 MP4 supports audio, motion sampling, glow, grain, and H.264 encoding settings. Lottie and SVGA package embedded PNG frames, preserving Canvas artwork and effects without editable vector layers or audio. Lottie output is `.lottie.json`; SVGA output is compressed SVGA 2 protobuf. Finished files are written under `renders/`.
 
+The player's Export dialog offers these output sizes:
+
+| Format | Sizes |
+| --- | --- |
+| Lottie | 256 × 256 — Square; 640 × 360 — Landscape |
+| SVGA | 375 × 375 — Square; 375 × 750 — Portrait |
+| MP4 | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
+
+Each format starts at its first size and remembers its selection while the dialog stays open. For a different aspect ratio, **Fit entire scene** centers the complete artwork with the scene's background color around it; **Fill and crop** centers and crops the artwork to fill the output. Neither stretches the scene or changes project settings. Sampling and effects apply through the shared runtime at the output size. CLI exports without a size override continue to use the project's render scale.
+
+Mografy exports allow up to **60 fps for MP4** and **30 fps for Lottie and SVGA**. SVGA uses its supported rates within this limit. The player, API, CLI, and direct render functions enforce the same limits. The export dialog caps older MP4 project defaults at 60 fps without changing saved settings.
+
 Progress appears in the CLI and player. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
 
 ## Commands and project structure

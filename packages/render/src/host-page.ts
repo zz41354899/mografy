@@ -2,12 +2,13 @@
 // Frame bytes go back by POST to the host server, never through JSON or PNG.
 import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
 import type { SceneModule, SceneRuntime, OutputSettings } from '@mografy/runtime';
-import type { BeatGrid, ParameterValues } from '@mografy/core';
+import type { BeatGrid, ExportSize, ParameterValues } from '@mografy/core';
 
 export interface LoadSpec {
   sceneUrl: string; assetBase: string; seed: number; renderScale: number;
   params: ParameterValues; fonts: { family: string; path: string; weight: number }[];
   audio?: BeatGrid | undefined;
+  outputSize?: ExportSize | undefined;
 }
 export type Cell = { label: string; kind: 'raw'; t: number } | { label: string; kind: 'output'; k: number };
 export interface SheetSpec { title: string[]; cells: Cell[]; columns: number; cellWidth: number; settings: OutputSettings }
@@ -42,6 +43,7 @@ const host = {
     canvas = document.createElement('canvas'); document.body.append(canvas);
     runtime = await createSceneRuntime(canvas, scene, {
       seed: next.seed, renderScale: next.renderScale, params: next.params, assetBase: next.assetBase, fonts: next.fonts, audio: next.audio,
+      outputSize: next.outputSize,
     });
     return { meta: runtime.meta, params: runtime.definitions, width: canvas.width, height: canvas.height };
   },

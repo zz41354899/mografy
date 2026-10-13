@@ -62,6 +62,26 @@ export const renderSettingsSchema = z.strictObject({
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
 export const exportFormatSchema = z.enum(['mp4', 'lottie', 'svga']);
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
+export const EXPORT_MAX_FPS = { mp4: 60, lottie: 30, svga: 30 } as const;
+export const SVGA_FRAME_RATES = [1, 2, 3, 5, 6, 10, 12, 15, 20, 30] as const;
+export function validateExportFrameRate(format: ExportFormat, fps: number) {
+  if (!Number.isInteger(fps) || fps < 1 || fps > EXPORT_MAX_FPS[format])
+    throw new Error(`${format === 'lottie' ? 'Lottie' : format.toUpperCase()} frame rate must be between 1 and ${EXPORT_MAX_FPS[format]} fps.`);
+  if (format === 'svga' && !SVGA_FRAME_RATES.some(rate => rate === fps))
+    throw new Error(`SVGA frame rate must be one of ${SVGA_FRAME_RATES.join(', ')}.`);
+}
+export const EXPORT_SIZES = {
+  lottie: [{ width: 256, height: 256, name: 'Square' }, { width: 640, height: 360, name: 'Landscape' }],
+  svga: [{ width: 375, height: 375, name: 'Square' }, { width: 375, height: 750, name: 'Portrait' }],
+  mp4: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
+} as const;
+/** Output viewport only; the scene keeps its logical dimensions. */
+export const exportSizeSchema = z.strictObject({
+  width: z.number().int().min(2).max(7680),
+  height: z.number().int().min(2).max(7680),
+  fit: z.enum(['contain', 'cover']).default('contain'),
+});
+export type ExportSize = z.infer<typeof exportSizeSchema>;
 export const renderOverridesSchema = z.strictObject({
   scale: renderSettingsSchema.shape.scale.unwrap().optional(),
   workers: renderSettingsSchema.shape.workers.unwrap().optional(),
@@ -79,10 +99,14 @@ export const renderOverridesSchema = z.strictObject({
 export const exportRequestSchema = z.strictObject({
   format: exportFormatSchema.default('mp4'),
   output: localPath.optional(),
+  size: exportSizeSchema.optional(),
   render: renderOverridesSchema.optional(),
+}).superRefine((request, ctx) => {
+  if (request.render?.fps === undefined) return;
+  try { validateExportFrameRate(request.format, request.render.fps); }
+  catch (error) { ctx.addIssue({ code: 'custom', path: ['render', 'fps'], message: (error as Error).message }); }
 });
 export type ExportRequest = z.input<typeof exportRequestSchema>;
-export const SVGA_FRAME_RATES = [1, 2, 3, 5, 6, 10, 12, 15, 20, 30, 60] as const;
 export const audioSchema = z.strictObject({
   path: localPath,
   bpm: z.number().finite().positive().max(1000),

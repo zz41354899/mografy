@@ -2,8 +2,8 @@
 import { access, copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
-import { outputFrameCount, segmentFrames } from '@mografy/core';
-import type { SceneProject } from '@mografy/core';
+import { outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
+import type { ExportSize, SceneProject } from '@mografy/core';
 import type { SceneBuild } from './build.js';
 import { runFfmpeg, startFfmpeg } from './ffmpeg.js';
 import { SceneHost } from './host.js';
@@ -19,6 +19,7 @@ export interface VideoJob {
   host?: SceneHost;
   onProgress?: (done: number, total: number, stage: 'capture' | 'encode') => void;
   signal?: AbortSignal;
+  size?: ExportSize | undefined;
 }
 export interface VideoResult { output: string; frames: number; fps: number; duration: number; width: number; height: number; version: string; segments: number; audio: boolean }
 
@@ -29,7 +30,7 @@ async function exists(path: string) { return access(path).then(() => true, () =>
 /** Capture output frames [start, end) into one lossless FFV1 segment. */
 async function captureSegment(host: SceneHost, job: VideoJob, start: number, end: number, file: string, onFrame: () => void) {
   const { project } = job, settings = project.render;
-  const page = await host.open(job.build, project, { renderScale: settings.scale });
+  const page = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
   const { width, height } = page.scene;
   const ffmpeg = startFfmpeg(['-f', 'rawvideo', '-pixel_format', 'rgba', '-video_size', `${width}x${height}`, '-framerate', String(settings.fps), '-i', 'pipe:0', '-c:v', 'ffv1', '-level', '3', '-g', '1', '-pix_fmt', 'bgr0', '-y', file], true);
   try {
@@ -48,6 +49,7 @@ async function captureSegment(host: SceneHost, job: VideoJob, start: number, end
 
 export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const project = structuredClone(job.project), settings = project.render;
+  validateExportFrameRate('mp4', settings.fps);
   const output = resolve(job.output);
   if (extname(output).toLowerCase() !== '.mp4') throw new Error('Output must end with .mp4');
   if (!job.overwrite && await exists(output)) throw new Error(`Output already exists: ${output}`);
@@ -55,7 +57,7 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const work = await mkdtemp(join(tmpdir(), 'mografy-render-'));
   try {
     // Read meta once to plan the segments.
-    const probe = await host.open(job.build, project, { renderScale: settings.scale });
+    const probe = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
     const { meta } = probe.scene, { width, height } = probe.scene;
     await probe.close();
     if (width % 2 || height % 2) throw new Error(`H.264 yuv420p needs even dimensions; got ${width}×${height} (meta × render.scale)`);

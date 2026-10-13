@@ -2,6 +2,25 @@
 
 Updated: 2026-10-13
 
+## Export frame-rate limits (2026-10-13)
+
+- MP4 exports now allow at most 60 fps; Lottie and SVGA exports allow at most 30 fps. SVGA's 60 fps option was removed at the user's request. Core owns the limits and shared validation used by the request schema, resolved Server settings, and direct render functions.
+- The dialog filters frame-rate options by format and caps older MP4 project defaults at 60 fps for this export only. Project settings and scene preview stepping keep their existing ranges. Over-limit API and CLI requests return an explicit format-specific error before capture.
+- `pnpm check` passed 52 tests and `pnpm test:browser` passed 17 checks with `--config.verifyDepsBeforeRun=false`. Real exports verify Lottie and SVGA at 30 fps and decoded MP4 at 60 fps. Tests also cover rejected explicit and inherited rates, legacy defaults in the dialog, and cancellation at a valid rate. The running local player was restarted; its menus and API enforce each format's cap.
+
+## Server Node type dependency and editor diagnostics (2026-10-13)
+
+- Server now declares `@types/node` 26.6.5 as a direct development dependency, with its package-local pnpm link and lockfile entry. The existing cached version was reused offline.
+- Workspace TypeScript 7.0.2 and VS Code's bundled TypeScript 6.0.3 both validate the Server configuration. Reloading the TypeScript service cleared the editor's cached missing-Node-type diagnostics across the workspace; VS Code's Problems panel shows zero errors.
+- `pnpm check` passed 50 tests and `pnpm test:browser` passed 17 checks with `--config.verifyDepsBeforeRun=false`.
+
+## Fixed export sizes (2026-10-13)
+
+- Export Resolution now offers exactly two sizes per format: Lottie 256 × 256 Square / 640 × 360 Landscape; SVGA 375 × 375 Square / 375 × 750 Portrait; MP4 1280 × 720 720p / 1920 × 1080 1080p. Lottie 128 × 128 was removed at the user's request. Each format starts at its first size and retains its selection while the dialog stays open.
+- Export requests accept a separate output viewport with width, height, and contain/cover fitting. The shared Runtime preserves logical scene coordinates, centers proportional artwork, and either adds scene-background margins or crops. Sampling and post-processing apply to the output viewport; settings are not saved to the project. Existing requests without a viewport keep their render-scale behavior.
+- `pnpm check` passed 50 tests and `pnpm test:browser` passed 17 checks with `--config.verifyDepsBeforeRun=false`. Independent Lottie and SVGA players reproduce shared pixels at all four animation presets, including random seeks. FFmpeg decodes native 720p and 1080p frames. Viewport probes verify fitting, cropping, and deterministic seeking; end-to-end checks cover exact labels, keyboard selection, retained choices, downloads, and unchanged project defaults.
+- Desktop and 390px mobile export dialogs passed visual review without horizontal overflow. End-to-end tests now use an ephemeral localhost port to avoid conflicts with other test runs.
+
 ## Component and intro references, README, and MIT license (2026-10-13)
 
 - The single shared `mografy` Skill now routes to `references/built-in-components.md` and `references/intro.md`, generated from `packages/core/src/guide.ts`. The catalog links all sixteen source entries and reusable modules; the intro reference covers the actual four beats, assets, subtitle params, timing, and review settings.

@@ -6,7 +6,7 @@ import type { FSWatcher } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
-import { exportRequestSchema, outputFrameCount, reconcileParams, resolveParams, SVGA_FRAME_RATES, validateSceneProject } from '@mografy/core';
+import { exportRequestSchema, outputFrameCount, reconcileParams, resolveParams, validateExportFrameRate, validateSceneProject } from '@mografy/core';
 import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, RenderStatus, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
 import { buildScene, renderAnimation, renderReview, renderVideo, SceneHost, slug, validateAnimationSize } from '@mografy/render';
 import type { Cell, HostPage, SceneBuild } from '@mografy/render';
@@ -324,14 +324,14 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     try {
       request = exportRequestSchema.parse(typeof input === 'string' ? { output: input } : input);
       snapshot = validateSceneProject({ ...structuredClone(project), render: { ...project.render, ...request.render } });
+      validateExportFrameRate(request.format, snapshot.render.fps);
     } catch (error) { throw new ApiError(400, 'INVALID_EXPORT', describe(error)); }
     const { format } = request, settings = snapshot.render;
-    const width = Math.round(scene.meta.width * settings.scale), height = Math.round(scene.meta.height * settings.scale);
+    const width = request.size?.width ?? Math.round(scene.meta.width * settings.scale), height = request.size?.height ?? Math.round(scene.meta.height * settings.scale);
     const total = outputFrameCount(scene.meta.duration, settings.fps);
     if (format === 'mp4' && (width % 2 || height % 2)) throw new ApiError(400, 'INVALID_EXPORT', 'MP4 needs even pixel dimensions. Adjust the resolution.');
     if (format !== 'mp4') {
       try { validateAnimationSize(width, height, total); } catch (error) { throw new ApiError(400, 'INVALID_EXPORT', describe(error)); }
-      if (format === 'svga' && !SVGA_FRAME_RATES.some(fps => fps === settings.fps)) throw new ApiError(400, 'INVALID_EXPORT', `SVGA frame rate must be one of ${SVGA_FRAME_RATES.join(', ')}.`);
     }
     const ext = format === 'lottie' ? '.lottie.json' : `.${format}`;
     const file = resolve(this.dir, request.output ?? join('renders', `${slug(project.name)}${ext}`));
@@ -350,12 +350,12 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       if (format === 'mp4') {
         const temp = await mkdtemp(join(tmpdir(), 'mografy-export-'));
         try {
-          const result = await renderVideo({ projectDir: this.dir, project: snapshot, build, output: join(temp, 'output.mp4'), host: this.host, signal: controller.signal, onProgress });
+          const result = await renderVideo({ projectDir: this.dir, project: snapshot, build, output: join(temp, 'output.mp4'), host: this.host, size: request.size, signal: controller.signal, onProgress });
           if (controller.signal.aborted) throw new Error('Render cancelled');
           await this.run(() => atomicWrite(file, createReadStream(result.output)));
         } finally { await rm(temp, { recursive: true, force: true }); }
       } else {
-        const result = await renderAnimation({ project: snapshot, build, host: this.host, format, signal: controller.signal, onProgress });
+        const result = await renderAnimation({ project: snapshot, build, host: this.host, format, size: request.size, signal: controller.signal, onProgress });
         if (controller.signal.aborted) throw new Error('Render cancelled');
         await this.run(() => atomicWrite(file, result.data));
       }

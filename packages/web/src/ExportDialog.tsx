@@ -5,9 +5,9 @@ import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { FilmStripIcon } from '@phosphor-icons/react/dist/csr/FilmStrip';
 import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
-import { outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
+import { EXPORT_MAX_FPS, EXPORT_SIZES, outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
 import type { CSSProperties } from 'react';
-import type { ExportFormat, RenderSettings, Snapshot } from '@mografy/core';
+import type { ExportFormat, ExportSize, RenderSettings, Snapshot } from '@mografy/core';
 import type { Session } from './session.js';
 
 interface ChoiceOption { value: string; label: string }
@@ -53,14 +53,20 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
   const meta = snapshot.scene!.meta, project = snapshot.project!;
   const dialog = useRef<HTMLDialogElement>(null);
   const [format, setFormat] = useState<ExportFormat>('mp4');
+  const [sizes, setSizes] = useState<Record<ExportFormat, ExportSize>>({
+    mp4: { ...EXPORT_SIZES.mp4[0], fit: 'contain' },
+    lottie: { ...EXPORT_SIZES.lottie[0], fit: 'contain' },
+    svga: { ...EXPORT_SIZES.svga[0], fit: 'contain' },
+  });
   const [drafts, setDrafts] = useState<Record<ExportFormat, RenderSettings>>(() => {
-    const raster = { ...project.render, scale: Math.max(0.1, Math.min(1, 640 / meta.width)), fps: 20, samples: 1, includeAudio: false };
-    return { mp4: { ...project.render }, lottie: { ...raster }, svga: { ...raster } };
+    const raster = { ...project.render, fps: 20, samples: 1, includeAudio: false };
+    return { mp4: { ...project.render, fps: Math.min(project.render.fps, EXPORT_MAX_FPS.mp4) }, lottie: { ...raster }, svga: { ...raster } };
   });
   const [qualities, setQualities] = useState<Record<ExportFormat, string>>({ mp4: 'standard', lottie: 'standard', svga: 'standard' });
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const settings = drafts[format], raster = format !== 'mp4';
-  const width = Math.round(meta.width * settings.scale), height = Math.round(meta.height * settings.scale);
+  const size = sizes[format], { width, height } = size;
+  const differentRatio = width * meta.height !== height * meta.width;
   const frames = outputFrameCount(meta.duration, settings.fps);
   useEffect(() => { dialog.current?.showModal(); }, []);
   const patch = (change: Partial<RenderSettings>, custom = true) => {
@@ -75,10 +81,10 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
       : { samples: raster ? 1 : 4, glow: project.render.glow, grain: project.render.grain, encoding: 'two-pass', bitrate: project.render.bitrate, preset: 'medium' };
     patch(change, false);
   };
-  const sizes = [...new Set([0.25, 0.5, 1, 2, settings.scale])].sort((a, b) => a - b).map(scale => ({ value: String(scale), label: `${Math.round(meta.width * scale)} × ${Math.round(meta.height * scale)}` }));
+  const resolutions = EXPORT_SIZES[format].map(s => ({ value: `${s.width}x${s.height}`, label: `${s.width} × ${s.height} — ${s.name}` }));
   const submit = async () => {
     setBusy(true); setError('');
-    try { await session.startRender({ format, render: settings }); onClose(); }
+    try { await session.startRender({ format, size: { width, height, fit: size.fit }, render: settings }); onClose(); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
@@ -93,12 +99,18 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
         </nav>
         <div className="export-settings">
           <h3>{formatTitle[format]} settings</h3>
-          <div className="export-field"><span>Resolution</span><Choice label="Resolution" value={String(settings.scale)} options={sizes} onChange={v => patch({ scale: Number(v) })} /></div>
-          <div className="export-field"><span>Frame rate</span><Choice label="Frame rate" value={String(settings.fps)} options={choiceOptions(format === 'svga' ? SVGA_FRAME_RATES : [...new Set([12, 15, 20, 24, 25, 30, 60, 120, settings.fps])].sort((a,b) => a-b), ' fps')} onChange={v => patch({ fps: Number(v) })} /></div>
+          <div className="export-field"><span>Resolution</span><Choice label="Resolution" value={`${width}x${height}`} options={resolutions} onChange={v => {
+            const selected = EXPORT_SIZES[format].find(s => `${s.width}x${s.height}` === v)!;
+            setSizes(s => ({ ...s, [format]: { width: selected.width, height: selected.height, fit: s[format].fit } })); setError('');
+          }} /></div>
+          {differentRatio ? <>
+            <div className="export-field"><span>Fit</span><Choice label="Fit" value={size.fit} options={[{ value: 'contain', label: 'Fit entire scene' }, { value: 'cover', label: 'Fill and crop' }]} onChange={v => { setSizes(s => ({ ...s, [format]: { ...s[format], fit: v as ExportSize['fit'] } })); setError(''); }} /></div>
+            <p className="export-note">{size.fit === 'contain' ? 'Keeps the entire scene centered. Extra space uses the scene background color.' : 'Fills the output and crops the edges. The scene stays centered.'}</p>
+          </> : null}
+          <div className="export-field"><span>Frame rate</span><Choice label="Frame rate" value={String(settings.fps)} options={choiceOptions(format === 'svga' ? SVGA_FRAME_RATES : [...new Set([12, 15, 20, 24, 25, 30, 60, settings.fps])].filter(fps => fps <= EXPORT_MAX_FPS[format]).sort((a,b) => a-b), ' fps')} onChange={v => patch({ fps: Number(v) })} /></div>
           <div className="export-field"><span>Quality</span><Choice label="Quality" value={qualities[format]} options={[{ value: 'draft', label: 'Draft' }, { value: 'standard', label: 'Standard' }, { value: 'high', label: 'High' }, ...(qualities[format] === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]} onChange={quality} /></div>
           {raster ? <p className="export-note">Embedded image frames preserve the Canvas scene. No audio or editable vector layers. Smaller sizes keep playback lighter.</p> : null}
           <details className="export-advanced"><summary>Advanced settings</summary>
-            <div className="export-field"><label htmlFor="output-width">Width</label><div className="export-unit"><input id="output-width" type="number" min={Math.ceil(meta.width * 0.1)} max={meta.width * 4} step={1} value={width} onChange={e => { const v = e.currentTarget.valueAsNumber; if (Number.isFinite(v) && v >= meta.width * .1 && v <= meta.width * 4) patch({ scale: v / meta.width }); }} /><span>px</span></div></div>
             <div className="export-field"><span>Motion samples</span><Choice label="Motion samples" value={String(settings.samples)} options={choiceOptions([1, 2, 4, 8, 16])} onChange={v => patch({ samples: Number(v) })} /></div>
             <div className="export-field"><span>Color mixing</span><Choice label="Color mixing" value={settings.mixing} options={[{ value: 'srgb', label: 'sRGB' }, { value: 'linear', label: 'Linear light' }]} onChange={v => patch({ mixing: v as RenderSettings['mixing'] })} /></div>
             <label className="export-slider"><span>Glow <output>{settings.glow.toFixed(2)}</output></span><input style={{ '--fill': `${settings.glow * 100}%` } as CSSProperties} aria-label="Glow" type="range" min={0} max={1} step={.01} value={settings.glow} onChange={e => patch({ glow: e.currentTarget.valueAsNumber })} /></label>

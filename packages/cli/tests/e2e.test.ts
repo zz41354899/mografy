@@ -28,7 +28,7 @@ before(async () => {
   process.env.MOGRAFY_STATE = join(sandbox, 'state');
   dir = join(sandbox, 'first');
   await createProject(dir, 'First', await readFile(join(TEMPLATE_DIR, 'scenes/lower-third.ts'), 'utf8'));
-  server = await startServer(dir, { port: 4390 });
+  server = await startServer(dir, { port: 0 });
   browser = await chromium.launch();
   page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', e => console.error('pageerror', e.message));
@@ -314,6 +314,28 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
   await api('project','PATCH',{patch:{render:{scale:.1,fps:10,samples:1,workers:1}}});
   const manifest=await readFile(join(dir,'mografy.json'),'utf8');
   await page.getByRole('button',{name:'Export',exact:true}).click();
+  const modal = page.getByRole('dialog');
+  const expectedSizes = {
+    MP4: ['1280 × 720 — 720p', '1920 × 1080 — 1080p'],
+    Lottie: ['256 × 256 — Square', '640 × 360 — Landscape'],
+    SVGA: ['375 × 375 — Square', '375 × 750 — Portrait'],
+  };
+  for (const [format, sizes] of Object.entries(expectedSizes)) {
+    await modal.getByRole('button', { name: new RegExp('^' + format) }).click();
+    const resolution = modal.getByRole('combobox', { name: 'Resolution', exact: true });
+    await resolution.click();
+    assert.deepEqual(await modal.getByRole('option').allTextContents(), sizes);
+    await resolution.press('End'); await resolution.press('Enter');
+    assert.equal(await resolution.innerText(), sizes[1]);
+  }
+  await modal.getByRole('button', { name: /^Lottie/ }).click();
+  assert.equal(await modal.getByRole('combobox', { name: 'Resolution', exact: true }).innerText(), expectedSizes.Lottie[1], 'format switches preserve selections');
+  assert.equal(await modal.getByRole('combobox', { name: 'Fit', exact: true }).count(), 0, 'matching landscape aspect ratio does not need fitting');
+  const lottieResolution = modal.getByRole('combobox', { name: 'Resolution', exact: true });
+  await lottieResolution.click(); await lottieResolution.press('Home'); await lottieResolution.press('Enter');
+  const fit = modal.getByRole('combobox', { name: 'Fit', exact: true });
+  await fit.click(); await fit.press('End'); await fit.press('Enter');
+  assert.equal(await fit.innerText(), 'Fill and crop');
   await page.getByRole('dialog').getByRole('combobox',{name:'Resolution',exact:true}).click();
   await page.getByRole('dialog').getByRole('combobox',{name:'Resolution',exact:true}).press('Escape');
   assert.equal(await page.getByRole('dialog').count(),1,'Escape closes the choice before the dialog');
@@ -324,7 +346,12 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
     const modal=page.getByRole('dialog',{name:'Export animation'});
     await modal.getByRole('button',{name:new RegExp('^'+format)}).click();
     const fps=modal.getByRole('combobox',{name:'Frame rate',exact:true});
-    await fps.click(); await fps.press('Home'); await fps.press('Enter');
+    await fps.click();
+    const availableRates = await modal.getByRole('option').allTextContents();
+    const maximum = format === 'MP4' ? 60 : 30;
+    assert.equal(availableRates.at(-1), `${maximum} fps`);
+    assert.ok(availableRates.every(rate => Number.parseInt(rate) <= maximum));
+    await fps.press('Home'); await fps.press('Enter');
     await modal.getByText('Advanced settings',{exact:true}).click();
     const encoding=modal.getByRole('combobox',{name:'Encoding',exact:true});
     if(format==='MP4') {
@@ -332,11 +359,11 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
       await modal.getByRole('slider',{name:'CRF'}).fill('20');
     } else {
       assert.equal(await encoding.count(),0);
-      assert.match(await modal.locator('.export-note').innerText(),/Embedded image frames/);
+      assert.match(await modal.locator('.export-note').filter({ hasText: 'Embedded image frames' }).innerText(),/Embedded image frames/);
     }
     await modal.getByRole('button',{name:'Export '+format,exact:true}).click();
     await modal.waitFor({state:'detached'});
-    for(let i=0;i<200&&(await api('snapshot')).data.render.state==='running';i++) await new Promise(r=>setTimeout(r,50));
+    for(let i=0;i<1200&&(await api('snapshot')).data.render.state==='running';i++) await new Promise(r=>setTimeout(r,50));
     const render=(await api('snapshot')).data.render;
     assert.equal(render.state,'done',render.error); assert.equal(render.format,format.toLowerCase());
     const complete=page.locator('.export-complete');
@@ -348,20 +375,30 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
     assert.equal(downloaded.status,200);
     const bytes=Buffer.from(await downloaded.arrayBuffer());
     if(format==='MP4') assert.equal(bytes.subarray(4,8).toString(),'ftyp');
-    else if(format==='Lottie') assert.equal(JSON.parse(bytes.toString()).layers.length,render.total);
+    else if(format==='Lottie') { const movie = JSON.parse(bytes.toString()); assert.equal(movie.layers.length,render.total); assert.equal(movie.w,256); assert.equal(movie.h,256); }
     else assert.equal(bytes[0],0x78,'zlib-compressed SVGA 2');
   }
   assert.equal((await api('render','POST',{format:'svga',render:{fps:24}})).status,400);
+  assert.equal((await api('render','POST',{format:'mp4',render:{fps:61}})).status,400);
+  assert.equal((await api('render','POST',{format:'lottie',render:{fps:31}})).status,400);
+  assert.equal((await api('render','POST',{format:'svga',render:{fps:31}})).status,400);
+  assert.equal((await api('render','POST',{format:'svga',render:{fps:60}})).status,400);
+  await api('project', 'PATCH', { patch: { render: { fps: 120 } } });
+  for (const format of ['mp4', 'lottie', 'svga']) assert.equal((await api('render', 'POST', { format })).status, 400, 'inherited project frame rates also obey the format cap');
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  assert.equal(await page.getByRole('dialog').getByRole('combobox', { name: 'Frame rate', exact: true }).innerText(), '60 fps', 'dialog clamps legacy project defaults');
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await api('project', 'PATCH', { patch: { render: { fps: 10 } } });
   assert.equal((await api('render','POST',{format:'lottie',output:'mografy.json'})).status,400);
   const uiOutput='renders/cancel-from-player.lottie.json';
-  assert.equal((await api('render','POST',{format:'lottie',output:uiOutput,render:{scale:.25,fps:120,samples:8}})).status,202);
+  assert.equal((await api('render','POST',{format:'lottie',output:uiOutput,render:{scale:.25,fps:30,samples:8}})).status,202);
   await page.getByRole('button',{name:'Cancel export',exact:true}).click();
   for(let i=0;i<200&&(await api('snapshot')).data.render.state==='running';i++) await new Promise(r=>setTimeout(r,25));
   assert.equal((await api('snapshot')).data.render.state,'cancelled');
   await assert.rejects(access(join(dir,uiOutput)),'cancelled player export does not commit a partial file');
 
   const cliOutput='renders/cancel-from-cli.lottie.json';
-  assert.equal((await api('render','POST',{format:'lottie',output:cliOutput,render:{scale:.25,fps:120,samples:8}})).status,202);
+  assert.equal((await api('render','POST',{format:'lottie',output:cliOutput,render:{scale:.25,fps:30,samples:8}})).status,202);
   const child=spawn(process.execPath,[BIN,'export',dir,'--cancel'],{env:{...process.env,MOGRAFY_NO_OPEN:'1'}});
   let stdout='',stderr=''; child.stdout.on('data',c=>{stdout+=c;}); child.stderr.on('data',c=>{stderr+=c;});
   const code=await new Promise<number|null>(done=>child.once('close',done));

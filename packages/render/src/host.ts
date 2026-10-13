@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { build as esbuild } from 'esbuild';
 import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
-import type { ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
+import type { ExportSize, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
 import type { Cell, HostApi, LoadSpec, SheetSpec } from './host-page.js';
 import type { SceneBuild } from './build.js';
 
@@ -40,7 +40,7 @@ export async function projectFile(projectDir: string, relativePath: string) {
 }
 
 export interface LoadedScene { meta: SceneMeta; params: ParameterDefinitions; width: number; height: number }
-export interface OpenOptions { renderScale?: number; params?: ParameterValues; seed?: number }
+export interface OpenOptions { renderScale?: number; params?: ParameterValues; seed?: number; outputSize?: ExportSize | undefined }
 type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>;
 
 export class HostPage {
@@ -160,6 +160,7 @@ export class SceneHost {
         sceneUrl, assetBase: `${this.origin}/project/`, seed: options.seed ?? project.seed,
         renderScale: options.renderScale ?? 1, params: options.params ?? project.params,
         fonts: project.fonts, audio: project.audio,
+        outputSize: options.outputSize,
       };
       const scene = await page.evaluate(s => window.mografyHost.load(s), spec) as LoadedScene;
       return new HostPage(this, context, page, scene);
