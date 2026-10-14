@@ -161,6 +161,7 @@ export class SceneHost {
         renderScale: options.renderScale ?? 1, params: options.params ?? project.params,
         fonts: project.fonts, audio: project.audio,
         outputSize: options.outputSize,
+        aspectRatio: project.aspectRatio,
       };
       const scene = await page.evaluate(s => window.mografyHost.load(s), spec) as LoadedScene;
       return new HostPage(this, context, page, scene);

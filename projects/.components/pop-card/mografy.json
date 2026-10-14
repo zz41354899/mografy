@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Pop card",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 1,
   "params": {},
   "fonts": [
@@ -11,6 +12,20 @@
       "weight": 400
     }
   ],
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 4,
+    "mixing": "srgb",
+    "bitrate": "12M",
+    "glow": 0.12,
+    "grain": 0.008,
+    "encoding": "two-pass",
+    "preset": "medium",
+    "crf": 18,
+    "includeAudio": true
+  },
   "review": {
     "times": [
       0,

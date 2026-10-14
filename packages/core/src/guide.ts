@@ -31,6 +31,16 @@ export function renderFrame(ctx: FrameContext, time: number, p: any) {
 }
 \`\`\`
 
+## Landscape and portrait compositions
+
+Read \`mografy.json.aspectRatio\` before planning or editing. It is \`"16:9"\` (landscape) or \`"9:16"\` (portrait); when absent, use the scene's \`meta.width / meta.height\`. This is canvas configuration only. The main player has no orientation switch: it previews the authored scene at its configured dimensions. Output orientation is chosen only in the Export dialog and never changes the project or the main preview.
+
+When the user requests a future 9:16 video, explicitly record **9:16 portrait** in the brief before authoring. Treat this as the intended composition, not merely an export setting. Create the scene natively in portrait, tell the user that the preview follows the authored scene, and do not rely on fitting or cropping a landscape scene to satisfy a portrait brief. For a native social video, author \`meta = { width: 1080, height: 1920, ... }\` and set \`aspectRatio: "9:16"\` in the project. A landscape scene normally uses 1920 × 1080. The shared Runtime applies the saved aspect ratio to the logical canvas before setup and rendering, preserving the scene's short edge; both \`SetupContext\` and \`FrameContext\` receive the effective dimensions. Use \`ctx.width\` and \`ctx.height\`, never imported meta dimensions, for layout, backgrounds, clipping, and camera bounds. Branch with \`const portrait = ctx.height > ctx.width\` when the compositions differ. Stack portrait elements vertically, wrap copy to available width, and reposition the focal subject and subtitles. Do not rotate, stretch, or merely shrink a complete landscape shot into the portrait canvas. Fixed-coordinate scenes need a scene-code layout pass; an orientation toggle cannot infer their intended design.
+
+For portrait social layouts, use conservative guides: leave about 8% above, 18% below, 6% on the left, and 12% on the right clear of critical copy and logos. Platform overlays vary; treat these as planning margins, not platform guarantees. Inspect at phone size, including long subtitles, entrances, exits, and transitions. If both outputs are requested, review both complete compositions and random seeks.
+
+MP4 exports have landscape 1280 × 720 / 1920 × 1080 and portrait 720 × 1280 / 1080 × 1920 presets, selected with orientation icons. If output orientation differs from the authored scene, show Fit: \`contain\` (Fit entire scene, the default) or \`cover\` (Fill and crop). These fit the existing artwork without reauthoring the canvas. The dialog shows an actual paused-frame preview of the output. Choose \`reflow\` (Adapt layout) for deliberately responsive scenes, including all sixteen built-in components: it passes the output canvas dimensions to scene code so portrait sizes, card arrangements, and text wrapping adapt. It is not a player orientation control. Export overrides do not change the saved canvas. CLI: \`mografy export [project] --format mp4 --orientation portrait --resolution 1080p\` (or \`landscape\`); without overrides it uses the saved canvas and render scale. Player, stills, thumbnails, review, and exports share the effective canvas and output effects.
+
 ## Required behavior
 
 1. Treat \`renderFrame\` as a pure function of \`time\`, resolved params, and assets prepared by \`setup\`. Do not read a previous frame, accumulate module state, or read a clock. The player may seek in any order, and validation renders the same time twice to detect state leaks.
@@ -166,6 +176,8 @@ const STORYBOARD = `# Storyboard planning for Mografy
 
 Read this reference when asked for a storyboard, shot list, or a new animation that needs shot planning. Read the project's scene entry, imported modules, assets, and settings first. Reuse its visual language, dimensions, fonts, palette, and existing characters or brand assets. Write planning documents, shot labels, and tool prompts in English; preserve supplied dialogue and artwork unless translation or redesign is requested.
 
+For a portrait brief, explicitly label the written plan and every image-generation prompt as **9:16 portrait**, and draw each storyboard panel as a tall 9:16 frame. Read the saved \`aspectRatio\`; design a vertical composition with stacked content, wrapped copy, and social safe margins. A landscape storyboard cropped into tall panels is not a portrait plan. When both ratios are needed, specify the layout changes for each shot and verify both versions against actual frames.
+
 ## Deliverables
 
 Save a project-specific plan as \`storyboards/storyboard.md\`. Include the audience, message, aspect ratio, total duration, visual direction, asset inventory, and assumptions. Use one row per shot:
@@ -262,7 +274,7 @@ The reusable implementations live in [components.ts](__REPOSITORY__/packages/ser
 | Toggle switch | [toggle-switch.ts](__REPOSITORY__/packages/server/template/scenes/toggle-switch.ts) | \`toggleSwitch\` | Coordinated knob position, track color, and cursor response. |
 | Audio wave | [audio-wave.ts](__REPOSITORY__/packages/server/template/scenes/audio-wave.ts) | \`audioWave\` | A procedural wave of bars; actual audio-reactive motion needs scene-specific audio or beat input. |
 
-[component-frame.ts](__REPOSITORY__/packages/server/template/scenes/component-frame.ts) supplies the shared 1920 × 1080, eight-second, 30fps scene contract, font selection, speed control, and drawing scopes. \`componentFrame\` evaluates \`time * speed % 4\`; account for that four-second reset before changing timing. \`centeredComponent\` adds a centered design-space transform. [brand-logo.ts](__REPOSITORY__/packages/server/template/scenes/brand-logo.ts) supplies the original mark geometry. [showcase.ts](__REPOSITORY__/packages/server/template/scenes/showcase.ts) demonstrates composition of all sixteen motifs.
+[component-frame.ts](__REPOSITORY__/packages/server/template/scenes/component-frame.ts) supplies the shared 1920 × 1080, eight-second, 30fps scene contract, font selection, speed control, and drawing scopes. \`componentFrame\` evaluates \`time * speed % 4\`; account for that four-second reset before changing timing. \`centeredComponent\` retains the landscape design-space transform and uses component-specific widths around the exact canvas center in portrait. Installed built-in projects and their bundled thumbnails default to 9:16 portrait. All sixteen entries support both landscape and portrait canvases. Follow badges stack vertically; chat, notification, profile, and lower-third copy use measured wrapping or bounded single lines. Dots and bar thickness use the short edge to preserve spacing and proportions. Select Adapt layout when exporting to the other orientation. [brand-logo.ts](__REPOSITORY__/packages/server/template/scenes/brand-logo.ts) supplies the original mark geometry. [showcase.ts](__REPOSITORY__/packages/server/template/scenes/showcase.ts) demonstrates composition of all sixteen motifs.
 
 ## Reuse in a project
 
@@ -332,7 +344,7 @@ description: Develop Mografy, plan storyboards, and create, edit, validate, visu
 
 # Mografy
 
-Read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. Tailor the work to that project's visual language and brief.
+Read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
 
 - Before editing a scene, read [references/scene-authoring.md](references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.
 - For a storyboard or a new animation that needs shot planning, read [references/storyboard.md](references/storyboard.md). Codex uses image generation; Claude uses Artifacts when available, with an explicit local HTML fallback in Claude Code.

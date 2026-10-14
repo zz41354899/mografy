@@ -1,4 +1,5 @@
-import { beatAt, exportSizeSchema, parameterDefinitionsSchema, resolveParams, sceneMetaSchema } from '@mografy/core';
+import { beatAt, exportSizeSchema, parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
+import type { AspectRatio } from '@mografy/core';
 import type { BeatGrid, BeatPosition, ExportSize, SceneMeta, ParameterDefinitions, ParameterValues } from '@mografy/core';
 import { hashNoise, seededRandom } from './math.js';
 import { createDrawing } from './draw.js';
@@ -48,6 +49,7 @@ export interface RuntimeOptions {
   seed?: number; renderScale?: number; assetBase?: string; params?: ParameterValues;
   fonts?: FontSource[]; audio?: BeatGrid | undefined;
   outputSize?: ExportSize | undefined;
+  aspectRatio?: AspectRatio | undefined;
   /** Throw when renderFrame touches Math.random / Date.now / performance.now. Default true. */
   guard?: boolean;
 }
@@ -62,12 +64,18 @@ function checkAssetPath(path: string) {
 }
 
 export async function createSceneRuntime(element: HTMLCanvasElement, scene: SceneModule, options: RuntimeOptions = {}): Promise<SceneRuntime> {
-  const meta = sceneMetaSchema.parse(scene.meta), definitions = parameterDefinitionsSchema.parse(scene.params);
+  const meta = sceneMetaForAspect(sceneMetaSchema.parse(scene.meta), options.aspectRatio), definitions = parameterDefinitionsSchema.parse(scene.params);
   if (options.outputSize) {
     const size = exportSizeSchema.parse(options.outputSize);
+    if (size.fit === 'reflow') {
+      const factor = Math.min(size.width, size.height) / Math.min(meta.width, meta.height);
+      const aspect = size.width * 16 === size.height * 9 ? '9:16' : size.width * 9 === size.height * 16 ? '16:9' : undefined;
+      const layout = aspect ? sceneMetaForAspect(meta, aspect) : { ...meta, width: Math.round(size.width / factor), height: Math.round(size.height / factor) };
+      return createSceneRuntime(element, { ...scene, meta: layout }, { ...options, aspectRatio: undefined, outputSize: { ...size, fit: 'contain' } });
+    }
     const factor = size.fit === 'cover' ? Math.max(size.width / meta.width, size.height / meta.height) : Math.min(size.width / meta.width, size.height / meta.height);
     const source = document.createElement('canvas');
-    const runtime = await createSceneRuntime(source, scene, { ...options, outputSize: undefined, renderScale: Math.min(4, factor) });
+    const runtime = await createSceneRuntime(source, { ...scene, meta }, { ...options, aspectRatio: undefined, outputSize: undefined, renderScale: Math.min(4, factor) });
     element.width = size.width; element.height = size.height;
     const ctx = element.getContext('2d', { willReadFrequently: true });
     if (!ctx) { runtime.dispose(); throw new Error('Canvas 2D unavailable'); }

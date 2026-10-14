@@ -5,5 +5,5 @@ export { meta, params, setup } from './component-frame.js';
 export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Record<string, unknown>>) {
   centeredComponent(ctx, time, params, (animationTime, accent) => {
     audioWave(ctx, animationTime, { x: 0, y: 0, color: accent });
-  });
+  }, 960);
 }

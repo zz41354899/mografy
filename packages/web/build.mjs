@@ -10,6 +10,7 @@ await copyFile('favicon.svg', 'dist/favicon.svg');
 const options = {
   entryPoints: { app: 'src/main.tsx' }, outdir: 'dist', bundle: true, format: 'esm', platform: 'browser',
   target: 'chrome110', jsx: 'automatic', minify: !watch, sourcemap: true, logLevel: 'info',
+  loader: { '.png': 'file' },
   define: { 'process.env.NODE_ENV': JSON.stringify(watch ? 'development' : 'production') },
 };
 if (watch) { const ctx = await context(options); await ctx.watch(); console.log('Watching player sources…'); }

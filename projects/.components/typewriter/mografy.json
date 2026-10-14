@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Typewriter",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 1,
   "params": {
     "accent": "#00ffe5"

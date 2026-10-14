@@ -19,6 +19,15 @@ export const sceneMetaSchema = z.strictObject({
   background: color,
 });
 export type SceneMeta = z.infer<typeof sceneMetaSchema>;
+export const aspectRatioSchema = z.enum(['16:9', '9:16']);
+export type AspectRatio = z.infer<typeof aspectRatioSchema>;
+/** Keep short-edge detail near the native size, with an exact ratio and valid bounds. */
+export function sceneMetaForAspect(meta: SceneMeta, aspectRatio?: AspectRatio): SceneMeta {
+  if (!aspectRatio) return meta;
+  const unit = Math.min(480, Math.max(1, Math.round(Math.min(meta.width, meta.height) / 9)));
+  const short = unit * 9, long = unit * 16;
+  return sceneMetaSchema.parse({ ...meta, width: aspectRatio === '9:16' ? short : long, height: aspectRatio === '9:16' ? long : short });
+}
 
 const base = { name: z.string().min(1) };
 export const parameterSchema = z.discriminatedUnion('type', [
@@ -75,11 +84,12 @@ export const EXPORT_SIZES = {
   svga: [{ width: 375, height: 375, name: 'Square' }, { width: 375, height: 750, name: 'Portrait' }],
   mp4: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
 } as const;
+export const MP4_PORTRAIT_SIZES = EXPORT_SIZES.mp4.map(size => ({ ...size, width: size.height, height: size.width }));
 /** Output viewport only; the scene keeps its logical dimensions. */
 export const exportSizeSchema = z.strictObject({
   width: z.number().int().min(2).max(7680),
   height: z.number().int().min(2).max(7680),
-  fit: z.enum(['contain', 'cover']).default('contain'),
+  fit: z.enum(['contain', 'cover', 'reflow']).default('contain'),
 });
 export type ExportSize = z.infer<typeof exportSizeSchema>;
 export const renderOverridesSchema = z.strictObject({
@@ -134,6 +144,8 @@ export const sceneProjectSchema = z.strictObject({
   version: z.literal(1),
   name: z.string().min(1),
   scene: localPath.regex(/\.[cm]?[jt]s$/, 'Scene entry must be a .ts or .js module'),
+  /** Composition canvas; absent uses the scene module's native dimensions. */
+  aspectRatio: aspectRatioSchema.optional(),
   seed: z.number().int().min(0).max(0xffffffff).default(1),
   params: z.record(z.string(), scalar).default({}),
   fonts: z.array(z.strictObject({ family: z.string().min(1), path: localPath, weight: z.number().int().min(1).max(1000).default(400) })).default([]),

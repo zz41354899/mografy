@@ -1,6 +1,34 @@
 # Development status
 
-Updated: 2026-10-13
+Updated: 2026-10-14
+
+## Centered portrait component previews (2026-10-14)
+
+- All sixteen installed component projects now use saved 9:16 portrait canvases. New built-ins also default to portrait. Bundled and local previews are regenerated from actual Chromium frames; sidebar thumbnails use 9:16 boxes with contain fitting.
+- Component subjects use the exact horizontal and vertical canvas center. Fixed card bounds, the heart silhouette and the count-up lockup align around this point. Chat height adapts to wrapped copy while keeping the complete bubble group centered. Portrait component sizing and landscape export layouts remain available.
+- Chromium checks measure the settled subject bounds for all sixteen portrait scenes and verify centered placement, safe padding and random seeking. Player checks cover each component's 1080 × 1920 canvas and portrait thumbnail styling.
+- `pnpm check` passed all 81 tests and `pnpm test:browser` passed all 17 checks. Real portrait raw/output frame review and desktop/390px sidebar and player review passed.
+
+## Responsive component layouts (2026-10-14)
+
+- All sixteen built-in scene entries support landscape 16:9 and portrait 9:16. Portrait composition uses subject-specific sizing and social safe margins. Follow badges stack identity and button vertically; chat, notification, profile and lower-third copy uses measured wrapping or bounded lines. Loading dots retain separate circles and progress bars retain their thickness using the canvas short edge.
+- Updated the template and the installed component scene modules, preserving saved project orientations and settings. Bundled thumbnail fingerprints were regenerated through Chromium. Shared authoring guidance was regenerated with `pnpm build` and `pnpm sync:skills`.
+- Export Fit includes Adapt layout (`reflow`) for responsive scenes. The paused output preview and actual export use the same layout; output changes leave the authored canvas intact. Contain and cover remain available.
+- `pnpm check` passed 81 tests; `pnpm test:browser` passed 17 checks. New Chromium coverage checks all sixteen components in both ratios, safe margins, loop and random seeks, matching saved-canvas/reflow pixels, and long English/CJK copy. Real raw/output frame review covers entrances, click/reply states, holds and loop resets.
+
+## Export progress and completion dialog (2026-10-14)
+
+- Starting an export continues in the same modal, with a cute robot on the left (blinking, typing and printing film cards), real capture progress/count and elapsed time. Short stage headings replace explanatory sentences and the repeated stage list. Encoding/package progress stays indeterminate; completion shows the real file and Download/Done without another percentage. Dark green surfaces and reduced-motion support retain the brand style.
+- Hide moves running progress to a compact toast with View/Cancel; the top Exporting button also reopens the same job. Closing settings or a terminal result resets the dialog, while background jobs retain their identity and latest state. Cancel cleans up through the existing Server flow. Failed/cancelled local jobs offer Retry and Edit settings; externally started jobs offer settings rather than claiming to repeat unknown overrides.
+- Completed MP4s play the actual output file in the modal and all formats provide Download. Completion remains until dismissed. The duplicate success toast was removed. Done closes the modal without a toast. Last export in the top bar reopens the completed file; Export opens fresh settings. Export orientation/Fit and project settings stay unchanged.
+- `pnpm check` passed 81 tests and `pnpm test:browser` passed 17 checks. Regression coverage exercises real capture, dismiss/reopen, cancellation without a partial file, an export-only frame failure, source repair, successful retry, playable 720 × 1280 metadata and actual download. Checks also verify that the loading animation moves, reduced-motion stops it, and completion does not produce a second toast. Desktop/390px progress, background toast, failure/cancel and completion captures are in `artifacts/export-dialog/`.
+
+## Portrait canvas and MP4 orientation (2026-10-14)
+
+- The player and new-project UI have no canvas orientation controls. The main preview follows the authored scene. Agents can create native landscape 16:9 or portrait 9:16 scenes. Optional saved `aspectRatio` is configuration in `mografy.json`; animation stays in scenes. The shared Runtime passes the effective canvas to setup and drawing. Canvas changes trial-render before saving, survive reopen, update watched metadata without a new source hash, and invalidate still/thumbnail caches. Small/custom dimensions retain an exact ratio within scene bounds.
+- MP4 exports offer 1280 × 720 / 1920 × 1080 landscape and 720 × 1280 / 1080 × 1920 portrait. Orientation icons retain the resolution tier; changing output orientation shows Fit when its ratio differs from the scene: Fit entire scene (default) or Fill and crop, with an actual paused-frame preview. The preview canvas stays authored. Export settings do not overwrite the saved canvas, and portrait default filenames append `-portrait` to preserve the landscape output. CLI supports `--orientation landscape|portrait --resolution 720p|1080p`.
+- Portrait Guides reserve conservative social overlay margins. The shared Skill and scene/storyboard references read the saved ratio and requested brief, require native 1080 × 1920 scenes for future 9:16 videos, 9:16 storyboard panels, vertical layout, wrapped copy, and phone-size review. Fixed-coordinate scenes require authoring a responsive layout; the Runtime provides dimensions rather than inventing an arrangement. Guidance was generated with `pnpm build` and `pnpm sync:skills` for both Codex and Claude.
+- `pnpm check` passed 63 tests and `pnpm test:browser` passed 17 checks. Real Chromium verifies canvas persistence, failed-change rollback, disk watching, UI icons/keyboard/resolution retention, preview and mobile overflow. FFmpeg decodes all four native MP4 sizes, with portrait setup/drawing and random-seek pixel probes. Desktop and 390px visual review passed; captures and details are in `artifacts/portrait-video/`.
 
 ## Immediate built-in thumbnails and cached image loading (2026-10-13)
 
@@ -144,7 +172,7 @@ At this stage, `pnpm check` passed core 9, runtime 8, render 9, server 4, and en
 
 The Projects panel lists recent projects, the `projects/` library, and built-in examples. Switching uses the same player while the Server changes locks and Project and broadcasts the switch. Thumbnails update after publication. `examples/mografy-intro` contains the 12-second introduction animation.
 
-Each project currently represents one animation with one scene entrypoint. Multiple compositions in one project, such as 16:9 and 9:16 versions, remain unimplemented; see the plan's open decisions.
+Each project represents one animation with one scene entrypoint. That scene can now draw responsive 16:9 and 9:16 compositions using the shared canvas setting and MP4 export overrides. Independently authored scene variants and multiple entrypoints per project remain open decisions.
 
 ## Remaining work (phase 5)
 

@@ -6,6 +6,8 @@ import { access, mkdir, readdir, readFile, realpath, rmdir, stat, unlink } from 
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { aspectRatioSchema } from '@mografy/core';
+import type { AspectRatio } from '@mografy/core';
 import { projectGuide, SKILL, SKILL_REFERENCES, isLegacyAgentFile, validateSceneProject } from '@mografy/core';
 import type { ProjectList, ProjectSummary } from '@mografy/core';
 import { atomicWrite, readJson } from './files.js';
@@ -123,7 +125,8 @@ export function folderName(name: string) {
 }
 
 /** Copy the starter project into `dir`, which must not already be a project. */
-export async function createProject(dir: string, name?: string, scene?: string) {
+export async function createProject(dir: string, name?: string, scene?: string, aspectRatio?: AspectRatio) {
+  if (aspectRatio !== undefined) aspectRatioSchema.parse(aspectRatio);
   return queueProjectWrite(dir, async () => {
   await mkdir(dir, { recursive: true });
   if (await isProject(dir)) throw new Error(`${dir} already has a mografy.json`);
@@ -139,6 +142,7 @@ export async function createProject(dir: string, name?: string, scene?: string) 
   const manifest = JSON.parse(await readFile(join(TEMPLATE_DIR, 'mografy.json'), 'utf8'));
   const folder = basename(dir);
   manifest.name = name?.trim() || (folder && !/^(mografy|untitled|desktop)$/i.test(folder) ? folder : manifest.name);
+  if (aspectRatio) manifest.aspectRatio = aspectRatio;
   if (scene) {
     await atomicWrite(join(dir, 'scenes', 'main.ts'), scene);
     manifest.review = { times: [0, 0.8, 2, 3.5, 4.8, 6], transitions: [] };
@@ -160,7 +164,7 @@ async function ensureComponentProject(preset: typeof COMPONENT_PRESETS[number]) 
     creation = (async () => {
     try {
       if (await isProject(dir)) await ensureAgentFiles(dir);
-      else await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8'));
+      else await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8'), '9:16');
       await seedComponentThumbnail(dir, preset.id);
       readyComponents.add(dir);
       return dir;
@@ -176,11 +180,11 @@ export const ensureComponentProjects = () => Promise.all(COMPONENT_PRESETS.map(e
 export async function ensureComponentsProject() { return (await ensureComponentProjects())[0]!; }
 
 /** Create a project named `name` in the library folder, picking a free folder name. */
-export async function createInLibrary(name: string) {
+export async function createInLibrary(name: string, aspectRatio?: AspectRatio) {
   const base = folderName(name);
   let dir = join(libraryDir(), base);
   for (let i = 2; await exists(dir); i++) dir = join(libraryDir(), `${base}-${i}`);
-  return createProject(dir, name);
+  return createProject(dir, name, undefined, aspectRatio);
 }
 
 // ---------------------------------------------------------------- listing

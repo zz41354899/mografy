@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
+import { Project } from '../src/project.js';
 import { seedComponentThumbnail } from '../src/component-thumbnails.js';
 
 test('projects: create in the library, remember, list without duplicates', async () => {
@@ -33,6 +34,11 @@ test('projects: create in the library, remember, list without duplicates', async
     assert.deepEqual(list.projects.filter(p => p.kind === 'component').map(p => p.name), COMPONENT_PRESETS.map(p => p.name));
     assert.ok(list.projects.filter(p => p.kind === 'component').every(p => p.thumb !== null), 'all built-ins have previews before any is opened');
     assert.equal(new Set(await ensureComponentProjects()).size, 16);
+    for (const dir of await ensureComponentProjects()) {
+      assert.equal(JSON.parse(await readFile(join(dir, 'mografy.json'), 'utf8')).aspectRatio, '9:16');
+      const png = await readFile(join(dir, '.mografy/thumb.png'));
+      assert.equal(png.readUInt32BE(20), Math.round(png.readUInt32BE(16) * 16 / 9), 'bundled preview shows the full portrait canvas');
+    }
     // A former gallery in Recent migrates to the first independent animation and stays out of the sidebar.
     await createProject(join(sandbox, 'library', '.components'), 'Animation components');
     await rememberProject(join(sandbox, 'library', '.components'));
@@ -47,7 +53,7 @@ test('bundled thumbnails seed unchanged existing components and preserve customi
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-thumb-seed-'));
   try {
     const dir = join(sandbox, 'component');
-    await createProject(dir, 'Renamed example', await readFile(join(TEMPLATE_DIR, 'scenes/stagger-text.ts'), 'utf8'));
+    await createProject(dir, 'Renamed example', await readFile(join(TEMPLATE_DIR, 'scenes/stagger-text.ts'), 'utf8'), '9:16');
     await seedComponentThumbnail(dir, 'stagger-text');
     const target = join(dir, '.mografy/thumb.png');
     const original = await readFile(target);
@@ -165,4 +171,25 @@ test('installation state and published guidance are portable across checkout loc
   assert.doesNotMatch(JSON.stringify(first), /\/clones\//);
   assert.match(first.mografy['references/project.md']!, /https:\/\/github.com\/zz41354899\/mografy/);
   assert.equal(projectGuide('/clones/first'), projectGuide('/clones/second'));
+});
+
+
+test('new portrait projects reopen with effective dimensions and reject a broken canvas before saving', async () => {
+  const dir = await mkdtemp(join(tmpdir(),'mografy-portrait-project-'));
+  let project: Project | undefined;
+  try {
+    await createProject(dir,'Portrait',await readFile(join(TEMPLATE_DIR,'scenes/stagger-text.ts'),'utf8'),'9:16');
+    project = await Project.open(dir);
+    assert.deepEqual([project.snapshot().scene!.meta.width,project.snapshot().scene!.meta.height],[1080,1920]);
+    await project.close(); project = await Project.open(dir);
+    assert.equal(project.snapshot().project!.aspectRatio,'9:16');
+    await project.patchProject({aspectRatio:null});
+    assert.deepEqual([project.snapshot().scene!.meta.width,project.snapshot().scene!.meta.height],[1920,1080]);
+    const source = await readFile(join(dir,'scenes/main.ts'),'utf8');
+    await project.updateSource({'scenes/main.ts':source.replace('  componentFrame(ctx, time, params, animationTime => {', "  if (ctx.height > ctx.width) throw new Error('unsupported portrait layout');\n  componentFrame(ctx, time, params, animationTime => {")});
+    const before = await readFile(join(dir,'mografy.json'),'utf8');
+    await assert.rejects(project.patchProject({aspectRatio:'9:16'}),/unsupported portrait layout/);
+    assert.equal(await readFile(join(dir,'mografy.json'),'utf8'),before);
+    assert.equal(project.snapshot().scene!.meta.width,1920);
+  } finally {await project?.close(); await rm(dir,{recursive:true,force:true});}
 });

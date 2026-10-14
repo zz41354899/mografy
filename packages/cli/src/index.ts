@@ -6,7 +6,7 @@ import { homedir, platform } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
-import { exportFormatSchema } from '@mografy/core';
+import { exportFormatSchema, EXPORT_SIZES, MP4_PORTRAIT_SIZES } from '@mografy/core';
 import type { ExportFormat, RenderStatus } from '@mografy/core';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
@@ -43,6 +43,8 @@ Usage
 Export options
   --format <mp4|lottie|svga>       Output format (default: mp4)
   --output, -o <file>              File name, or a path inside renders/
+  --orientation <landscape|portrait> MP4 output (16:9 or 9:16, fits the entire scene)
+  --resolution <720p|1080p>        MP4 size (default with orientation: 720p)
   --cancel                         Cancel this project's current export
 
 Other options
@@ -291,7 +293,10 @@ async function exportProject(dir: string, flags: Flags) {
   if (flags.cancel) return cancelExport(dir);
   await requireProject(dir);
   const format = flags.format ?? 'mp4';
-  const output = exportOutput(flags.output);
+  if ((flags.orientation || flags.resolution) && format !== 'mp4') throw new Error('--orientation and --resolution are MP4 options');
+  const preset = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
+  const size = flags.orientation || flags.resolution ? { width: preset.width, height: preset.height, fit: 'contain' as const } : undefined;
+  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}) };
   const running = await findServer(dir);
   let close: (() => Promise<void>) | undefined;
   let current: () => Promise<RenderStatus | null>;
@@ -299,7 +304,7 @@ async function exportProject(dir: string, flags: Flags) {
   let status: RenderStatus;
   if (running) {
     const response = await fetch(new URL('/__mografy/render', running.url), {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ format, ...(output ? { output } : {}) }),
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
     });
     status = await responseJson<RenderStatus>(response);
     current = async () => (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
@@ -307,7 +312,7 @@ async function exportProject(dir: string, flags: Flags) {
   } else {
     const project = await Project.open(dir);
     close = () => project.close();
-    status = project.startRender({ format, ...(output ? { output } : {}) });
+    status = project.startRender(request);
     current = async () => project.snapshot().render;
     cancel = async () => { project.cancelRender(status.id); };
   }
@@ -353,6 +358,8 @@ interface Flags {
   output?: string | undefined;
   video?: string | undefined;
   format?: ExportFormat | undefined;
+  orientation?: 'landscape' | 'portrait';
+  resolution?: '720p' | '1080p';
   cancel: boolean;
 }
 
@@ -368,6 +375,8 @@ function parse(argv: string[]) {
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];
     else if (value === '--format') flags.format = exportFormatSchema.parse(argv[++i]);
+    else if (value === '--orientation') { const v = argv[++i]; if (v !== 'landscape' && v !== 'portrait') throw new Error('--orientation must be landscape or portrait'); flags.orientation = v; }
+    else if (value === '--resolution') { const v = argv[++i]; if (v !== '720p' && v !== '1080p') throw new Error('--resolution must be 720p or 1080p'); flags.resolution = v; }
     else if (value.startsWith('-') && value !== '-h' && value !== '--help' && value !== '--version') throw new Error(`Unknown option: ${value}`);
     else rest.push(value);
   }

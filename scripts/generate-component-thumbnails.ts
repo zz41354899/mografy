@@ -11,7 +11,7 @@ const sandbox = await realpath(await mkdtemp(join(tmpdir(), 'mografy-thumbnails-
 try {
   for (const preset of COMPONENT_PRESETS) {
     const dir = join(sandbox, preset.id);
-    await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8'));
+    await createProject(dir, preset.name, await readFile(join(TEMPLATE_DIR, 'scenes', `${preset.id}.ts`), 'utf8'), '9:16');
     const project = await Project.open(dir);
     try {
       if (!await project.refreshThumbnail()) throw new Error(`No thumbnail captured for ${preset.id}`);

@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Pulse dots",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 633173,
   "params": {},
   "fonts": [

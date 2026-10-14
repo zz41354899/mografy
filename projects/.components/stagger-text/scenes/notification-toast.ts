@@ -5,6 +5,6 @@ export { meta, setup } from './component-frame.js';
 export const params = { ...defaults, message: { name: "Message", type: 'string' as const, default: "New message" } };
 export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Record<string, unknown>>) {
   centeredComponent(ctx, time, params, (animationTime, accent) => {
-    notificationToast(ctx, animationTime, { x: -435, y: -88, color: accent, message: params.message as string });
-  });
+    notificationToast(ctx, animationTime, { x: ctx.height > ctx.width ? -320 : -435, y: ctx.height > ctx.width ? -155 : -88, color: accent, message: params.message as string });
+  }, 720);
 }

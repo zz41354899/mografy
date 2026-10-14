@@ -5,9 +5,13 @@ import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { FilmStripIcon } from '@phosphor-icons/react/dist/csr/FilmStrip';
 import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
-import { EXPORT_MAX_FPS, EXPORT_SIZES, outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
+import { EXPORT_MAX_FPS, EXPORT_SIZES, MP4_PORTRAIT_SIZES, outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
+import { AspectRatioToggle } from './AspectRatioToggle.js';
+import { ExportPreview } from './ExportPreview.js';
+import { ExportJob } from './ExportJob.js';
+import type { ExportJobPreview } from './ExportJob.js';
 import type { CSSProperties } from 'react';
-import type { ExportFormat, ExportSize, RenderSettings, Snapshot } from '@mografy/core';
+import type { ExportFormat, ExportSize, RenderSettings, RenderStatus, Snapshot } from '@mografy/core';
 import type { Session } from './session.js';
 
 interface ChoiceOption { value: string; label: string }
@@ -49,12 +53,12 @@ const FORMATS = [
 const formatTitle = { mp4: 'MP4', lottie: 'Lottie', svga: 'SVGA' };
 const choiceOptions = (values: readonly number[], suffix = '') => values.map(v => ({ value: String(v), label: `${v}${suffix}` }));
 
-export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapshot; session: Session; onClose(): void }) {
+export function ExportDialog({ snapshot, session, open, resume, onClose }: { snapshot: Snapshot; session: Session; open: boolean; resume: boolean; onClose(keepJob: boolean): void }) {
   const meta = snapshot.scene!.meta, project = snapshot.project!;
   const dialog = useRef<HTMLDialogElement>(null);
   const [format, setFormat] = useState<ExportFormat>('mp4');
   const [sizes, setSizes] = useState<Record<ExportFormat, ExportSize>>({
-    mp4: { ...EXPORT_SIZES.mp4[0], fit: 'contain' },
+    mp4: { ...(meta.height > meta.width ? MP4_PORTRAIT_SIZES[0]! : EXPORT_SIZES.mp4[0]), fit: 'contain' },
     lottie: { ...EXPORT_SIZES.lottie[0], fit: 'contain' },
     svga: { ...EXPORT_SIZES.svga[0], fit: 'contain' },
   });
@@ -64,11 +68,18 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
   });
   const [qualities, setQualities] = useState<Record<ExportFormat, string>>({ mp4: 'standard', lottie: 'standard', svga: 'standard' });
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const [job, setJob] = useState<RenderStatus | null>(() => resume ? snapshot.render : null), [preview, setPreview] = useState<ExportJobPreview | null>(null);
+  const activeJob = snapshot.render?.id === job?.id ? snapshot.render : job;
   const settings = drafts[format], raster = format !== 'mp4';
   const size = sizes[format], { width, height } = size;
   const differentRatio = width * meta.height !== height * meta.width;
   const frames = outputFrameCount(meta.duration, settings.fps);
-  useEffect(() => { dialog.current?.showModal(); }, []);
+  useEffect(() => { if (open) dialog.current?.showModal(); else dialog.current?.close(); }, [open]);
+  useEffect(() => {
+    if (open && !busy && snapshot.render?.state === 'running' && snapshot.render.id !== job?.id) { setJob(snapshot.render); setFormat(snapshot.render.format); setPreview(null); }
+  }, [open, snapshot.render?.id, busy]);
+  useEffect(() => { if (snapshot.render && snapshot.render.id === job?.id) setJob(snapshot.render); }, [snapshot.render, job?.id]);
+  const close = () => onClose(activeJob?.state === 'running');
   const patch = (change: Partial<RenderSettings>, custom = true) => {
     setDrafts(d => ({ ...d, [format]: { ...d[format], ...change } }));
     if (custom) setQualities(q => ({ ...q, [format]: 'custom' }));
@@ -81,17 +92,22 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
       : { samples: raster ? 1 : 4, glow: project.render.glow, grain: project.render.grain, encoding: 'two-pass', bitrate: project.render.bitrate, preset: 'medium' };
     patch(change, false);
   };
-  const resolutions = EXPORT_SIZES[format].map(s => ({ value: `${s.width}x${s.height}`, label: `${s.width} × ${s.height} — ${s.name}` }));
+  const presets = format === 'mp4' && height > width ? MP4_PORTRAIT_SIZES : EXPORT_SIZES[format];
+  const resolutions = presets.map(s => ({ value: `${s.width}x${s.height}`, label: `${s.width} × ${s.height} — ${s.name}` }));
   const submit = async () => {
     setBusy(true); setError('');
-    try { await session.startRender({ format, size: { width, height, fit: size.fit }, render: settings }); onClose(); }
+    try {
+      const nextPreview = { snapshot: structuredClone(snapshot), size: { width, height, fit: size.fit }, settings: { ...settings } };
+      const next = await session.startRender({ format, size: nextPreview.size, render: settings });
+      setPreview(nextPreview); setJob(next);
+    }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
   };
-  return <dialog ref={dialog} className="export-dialog" aria-labelledby="export-title" onClose={onClose}
-    onCancel={e => { if (busy) e.preventDefault(); }} onClick={e => { if (e.target === e.currentTarget && !busy) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose(); } }}>
-    <header className="export-header"><h2 id="export-title">Export animation</h2><button type="button" className="icon-button" aria-label="Close export" title="Close" disabled={busy} onClick={onClose}><XIcon size={19} /></button></header>
-    <form onSubmit={e => { e.preventDefault(); void submit(); }}>
+  return <dialog ref={dialog} className={`export-dialog ${activeJob ? 'export-job-dialog' : ''}`} aria-labelledby="export-title"
+    onCancel={e => { e.preventDefault(); if (!busy) close(); }} onClick={e => { if (e.target === e.currentTarget && !busy) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close(); } }}>
+    <header className="export-header"><h2 id="export-title">Export animation</h2><button type="button" className="icon-button" aria-label="Close export" title="Close" disabled={busy} onClick={close}><XIcon size={19} /></button></header>
+    {activeJob ? <ExportJob job={activeJob} preview={preview} session={session} onClose={close} onRetry={() => void submit()} onEdit={() => { setFormat(activeJob.format); setJob(null); setPreview(null); setError(''); }} starting={busy} requestError={error} /> : <form onSubmit={e => { e.preventDefault(); void submit(); }}>
       <div className="export-body">
         <nav className="export-formats" aria-label="Output format">
           {FORMATS.map(({ id, name, description, Icon }) => <button key={id} type="button" aria-pressed={format === id} className={format === id ? 'selected' : ''}
@@ -99,13 +115,18 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
         </nav>
         <div className="export-settings">
           <h3>{formatTitle[format]} settings</h3>
+          {!raster ? <div className="export-field"><span>Orientation</span><AspectRatioToggle label="MP4 orientation" value={height > width ? '9:16' : '16:9'} disabled={busy} onChange={ratio => {
+            setSizes(s => { const current = s.mp4, short = Math.min(current.width, current.height), long = Math.max(current.width, current.height);
+              return { ...s, mp4: { width: ratio === '9:16' ? short : long, height: ratio === '9:16' ? long : short, fit: current.fit } }; }); setError('');
+          }} /></div> : null}
           <div className="export-field"><span>Resolution</span><Choice label="Resolution" value={`${width}x${height}`} options={resolutions} onChange={v => {
-            const selected = EXPORT_SIZES[format].find(s => `${s.width}x${s.height}` === v)!;
+            const selected = presets.find(s => `${s.width}x${s.height}` === v)!;
             setSizes(s => ({ ...s, [format]: { width: selected.width, height: selected.height, fit: s[format].fit } })); setError('');
           }} /></div>
+          {!raster ? <ExportPreview snapshot={snapshot} size={size} settings={settings} /> : null}
           {differentRatio ? <>
-            <div className="export-field"><span>Fit</span><Choice label="Fit" value={size.fit} options={[{ value: 'contain', label: 'Fit entire scene' }, { value: 'cover', label: 'Fill and crop' }]} onChange={v => { setSizes(s => ({ ...s, [format]: { ...s[format], fit: v as ExportSize['fit'] } })); setError(''); }} /></div>
-            <p className="export-note">{size.fit === 'contain' ? 'Keeps the entire scene centered. Extra space uses the scene background color.' : 'Fills the output and crops the edges. The scene stays centered.'}</p>
+            <div className="export-field"><span>Fit</span><Choice label="Fit" value={size.fit} options={[{ value: 'contain', label: 'Fit entire scene' }, { value: 'cover', label: 'Fill and crop' }, { value: 'reflow', label: 'Adapt layout' }]} onChange={v => { setSizes(s => ({ ...s, [format]: { ...s[format], fit: v as ExportSize['fit'] } })); setError(''); }} /></div>
+            <p className="export-note">{size.fit === 'reflow' ? 'Rearranges responsive scenes for the output canvas. Built-in components support landscape and portrait layouts.' : size.fit === 'contain' ? 'Keeps the entire scene centered. Extra space uses the scene background color.' : 'Fills the output and crops the edges. The scene stays centered.'}</p>
           </> : null}
           <div className="export-field"><span>Frame rate</span><Choice label="Frame rate" value={String(settings.fps)} options={choiceOptions(format === 'svga' ? SVGA_FRAME_RATES : [...new Set([12, 15, 20, 24, 25, 30, 60, settings.fps])].filter(fps => fps <= EXPORT_MAX_FPS[format]).sort((a,b) => a-b), ' fps')} onChange={v => patch({ fps: Number(v) })} /></div>
           <div className="export-field"><span>Quality</span><Choice label="Quality" value={qualities[format]} options={[{ value: 'draft', label: 'Draft' }, { value: 'standard', label: 'Standard' }, { value: 'high', label: 'High' }, ...(qualities[format] === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]} onChange={quality} /></div>
@@ -128,7 +149,7 @@ export function ExportDialog({ snapshot, session, onClose }: { snapshot: Snapsho
           {error ? <p className="error-text" role="alert">{error}</p> : null}
         </div>
       </div>
-      <footer className="export-footer"><span>{meta.duration.toFixed(meta.duration % 1 ? 2 : 0)} seconds · {frames.toLocaleString()} frames<small>{width} × {height} · {settings.fps} fps</small></span><div><button type="button" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="export-primary" disabled={busy}>{busy ? 'Starting…' : `Export ${formatTitle[format]}`}</button></div></footer>
-    </form>
+      <footer className="export-footer"><span>{meta.duration.toFixed(meta.duration % 1 ? 2 : 0)} seconds · {frames.toLocaleString()} frames<small>{width} × {height} · {settings.fps} fps</small></span><div><button type="button" disabled={busy} onClick={close}>Cancel</button><button type="submit" className="export-primary" disabled={busy}>{busy ? 'Starting…' : `Export ${formatTitle[format]}`}</button></div></footer>
+    </form>}
   </dialog>;
 }

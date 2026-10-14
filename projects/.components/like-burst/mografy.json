@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Like burst",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 1,
   "params": {},
   "fonts": [

@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Stagger text",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 1,
   "params": {},
   "fonts": [

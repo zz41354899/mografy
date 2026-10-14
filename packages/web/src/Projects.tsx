@@ -74,7 +74,7 @@ export function Projects({ current, refreshKey }: { current: string | undefined;
         <h3>{group.title}</h3>
         <ul>
           {items.map(p => <li key={p.dir}>
-            <button className={`project-item ${p.dir === current ? 'current' : ''}`} onClick={() => void open(p.dir)} disabled={busy !== null && busy !== p.dir} aria-current={p.dir === current ? 'true' : undefined} title={p.dir}>
+            <button className={`project-item ${p.kind === 'component' ? 'component-item' : ''} ${p.dir === current ? 'current' : ''}`} onClick={() => void open(p.dir)} disabled={busy !== null && busy !== p.dir} aria-current={p.dir === current ? 'true' : undefined} title={p.dir}>
               <span className="thumb">{p.thumb ? <img src={`/__mografy/projects/thumb?dir=${encodeURIComponent(p.dir)}&v=${p.thumb}`} alt="" loading="lazy" decoding="async" /> : <i />}</span>
               <span className="project-text">
                 <span className="project-name">{p.name}</span>

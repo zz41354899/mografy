@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Lower third",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 345306,
   "params": {},
   "fonts": [

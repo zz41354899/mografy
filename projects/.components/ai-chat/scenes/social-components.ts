@@ -18,6 +18,32 @@ function enter(ctx: FrameContext, time: number, o: Options, draw: (time: number)
 function text(ctx: FrameContext, value: string, x: number, y: number, size: number, color = WHITE) {
   ctx.draw.noStroke(); ctx.draw.fill(color); ctx.draw.textSize(size); ctx.draw.text(value, x, y);
 }
+/** Measured wrapping also handles CJK and long words without horizontal squeezing. */
+function lines(ctx: FrameContext, value: string, size: number, width: number, maxLines: number) {
+  ctx.draw.textSize(size);
+  const result: string[] = [];
+  for (const paragraph of value.split('\n')) {
+    let line = '';
+    for (const letter of [...paragraph]) {
+      if (line && ctx.draw.textWidth(line + letter) > width) {
+        const space = line.lastIndexOf(' ');
+        result.push((space > 0 ? line.slice(0, space) : line).trimEnd());
+        line = (space > 0 ? line.slice(space + 1) : '') + letter;
+      } else line += letter;
+    }
+    result.push(line.trim());
+  }
+  if (result.length > maxLines) {
+    result.length = maxLines;
+    let last = result[maxLines - 1]!;
+    while (last && ctx.draw.textWidth(last + '…') > width) last = [...last].slice(0, -1).join('');
+    result[maxLines - 1] = last + '…';
+  }
+  return result;
+}
+function textLines(ctx: FrameContext, values: string[], x: number, y: number, size: number, color = WHITE) {
+  values.forEach((value, i) => text(ctx, value, x, y + i * size * 1.3, size, color));
+}
 function panel(ctx: FrameContext, width: number, height: number, radius = 32) {
   ctx.shadow('#00000044', 28, 0, 12); ctx.draw.fill(PANEL); ctx.draw.rect(0, 0, width, height, radius); ctx.shadow('transparent', 0);
 }
@@ -57,7 +83,8 @@ export function socialCard(ctx: FrameContext, time: number, o: Options & { name?
   enter(ctx, time, o, localTime => {
     const mografy = ctx.draw; panel(ctx, 620, 630);
     mografy.fill(ink(o)); mografy.circle(70, 70, 64);
-    text(ctx, o.avatar ?? 'M', 51, 70, 35); text(ctx, o.name ?? 'Mografy', 120, 70, 36);
+    text(ctx, lines(ctx, o.avatar ?? 'M', 35, 50, 1)[0]!, 51, 70, 35);
+    textLines(ctx, lines(ctx, o.name ?? 'Mografy', 36, 460, 1), 120, 70, 36);
     const crop = new Path2D(); crop.roundRect(28, 130, 564, 380, 20);
     ctx.clip(crop, () => {
       mografy.fill('#1a3637'); mografy.rect(28, 130, 564, 380);
@@ -68,7 +95,8 @@ export function socialCard(ctx: FrameContext, time: number, o: Options & { name?
       mografy.fill('#1a3637'); mografy.circle(-30, 58, 110);
     });
     ctx.withCanvas(() => { mografy.translate(62, 573); mografy.scale(.54); mografy.fill(ink(o)); mografy.path(heart); });
-    text(ctx, o.caption ?? 'Made to move.', 102, 573, 28, MUTED);
+    const caption = lines(ctx, o.caption ?? 'Made to move.', 28, 420, 2);
+    textLines(ctx, caption, 102, caption.length === 1 ? 573 : 552, 28, MUTED);
     mografy.noFill(); mografy.stroke(MUTED); mografy.strokeWeight(3);
     const bookmark = new Path2D('M548 552 L570 552 L570 585 L559 578 L548 585 Z'); mografy.path(bookmark);
   });
@@ -81,7 +109,7 @@ export function youtubeSubscribe(ctx: FrameContext, time: number, o: Options & {
     mografy.fill(clicked ? PANEL : ink(o)); mografy.rect(0, 0, 680, 176, 88);
     if (clicked) check(ctx, 85, 88, 46, ink(o));
     else { mografy.fill(WHITE); mografy.triangle(61, 59, 61, 117, 107, 88); }
-    text(ctx, clicked ? (o.subscribed ?? 'Subscribed') : (o.label ?? 'Subscribe'), 144, 88, 56);
+    textLines(ctx, lines(ctx, clicked ? (o.subscribed ?? 'Subscribed') : (o.label ?? 'Subscribe'), 56, 398, 1), 144, 88, 56);
     const wiggle = clicked ? Math.sin((localTime - 1.3) * 24) * .3 * (1 - pr(localTime, 1.3, 2.2)) : 0;
     bellIcon(ctx, 599, 90, 65, wiggle);
     if (localTime < 2.5) clickCursor(ctx, localTime, 465, 104);
@@ -89,19 +117,26 @@ export function youtubeSubscribe(ctx: FrameContext, time: number, o: Options & {
 }
 
 /** A compact chat exchange: prompt, thinking dots, then a typed reply. */
-export function aiChat(ctx: FrameContext, time: number, o: Options & { prompt?: string; reply?: string; avatar?: string }) {
+export function aiChat(ctx: FrameContext, time: number, o: Options & { prompt?: string; reply?: string; avatar?: string; centered?: boolean }) {
   enter(ctx, time, o, localTime => {
     const mografy = ctx.draw;
-    mografy.fill(PANEL); mografy.rect(290, 0, 410, 140, 38);
-    text(ctx, o.prompt ?? 'Hello.', 334, 70, 44);
+    const portrait = ctx.height > ctx.width, promptX = portrait ? 200 : 290, promptWidth = portrait ? 500 : 410;
+    const prompt = lines(ctx, o.prompt ?? 'Hello.', 44, promptWidth - 88, 3);
+    const response = lines(ctx, o.reply ?? "Let's create.", 44, 440, 3);
+    const promptHeight = Math.max(140, prompt.length * 57.2 + 48), replyY = promptHeight + 52;
+    const replyHeight = Math.max(160, response.length * 57.2 + 48);
+    if (o.centered) mografy.translate(0, -(replyY + replyHeight) / 2);
+    mografy.fill(PANEL); mografy.rect(promptX, 0, promptWidth, promptHeight, 38);
+    textLines(ctx, prompt, promptX + 44, prompt.length === 1 ? 70 : 48, 44);
     const reply = ease.outCubic(pr(localTime, .6, 1));
-    mografy.push(); mografy.opacity(reply); mografy.fill(ink(o)); mografy.rect(0, 192, 610, 160, 38);
-    text(ctx, o.avatar ?? 'AI', 30, 272, 30);
+    mografy.push(); mografy.opacity(reply); mografy.fill(ink(o)); mografy.rect(0, replyY, 610, replyHeight, 38);
+    textLines(ctx, lines(ctx, o.avatar ?? 'AI', 30, 76, 1), 30, replyY + replyHeight / 2, 30);
     if (localTime < 1.4) {
-      for (let i = 0; i < 3; i++) mografy.circle(182 + i * 36, 272 - Math.sin(localTime * 8 - i) * 7, 14);
+      for (let i = 0; i < 3; i++) mografy.circle(182 + i * 36, replyY + replyHeight / 2 - Math.sin(localTime * 8 - i) * 7, 14);
     } else {
       const value = o.reply ?? "Let's create.";
-      text(ctx, [...value].slice(0, Math.floor([...value].length * pr(localTime, 1.4, 2.2))).join(''), 126, 272, 44);
+      const visible = [...value].slice(0, Math.floor([...value].length * pr(localTime, 1.4, 2.2))).join('');
+      textLines(ctx, lines(ctx, visible, 44, 440, 3), 126, replyY + (response.length === 1 ? 80 : 48), 44);
     }
     mografy.pop();
   });
@@ -130,11 +165,23 @@ export function likeBurst(ctx: FrameContext, time: number, o: Options) {
 /** Profile + Follow becomes Following after a simulated click. */
 export function followBadge(ctx: FrameContext, time: number, o: Options & { name?: string; avatar?: string; label?: string; following?: string }) {
   enter(ctx, time, o, localTime => {
-    const mografy = ctx.draw, followed = localTime >= 1.3; panel(ctx, 940, 190, 38);
+    const mografy = ctx.draw, followed = localTime >= 1.3;
+    if (ctx.height > ctx.width) {
+      panel(ctx, 640, 500, 38);
+      mografy.fill(ink(o)); mografy.circle(320, 105, 120);
+      mografy.textAlign('center', 'middle');
+      textLines(ctx, lines(ctx, o.avatar ?? 'M', 52, 90, 1), 320, 105, 52);
+      textLines(ctx, lines(ctx, o.name ?? 'Mografy', 48, 544, 1), 320, 220, 48);
+      mografy.fill(followed ? '#343840' : ink(o)); mografy.rect(126, 300, 388, 116, 58);
+      textLines(ctx, lines(ctx, followed ? (o.following ?? 'Following') : (o.label ?? 'Follow'), 40, 332, 1), 320, 358, 40);
+      if (localTime < 2.4) clickCursor(ctx, localTime, 395, 370);
+      return;
+    }
+    panel(ctx, 940, 190, 38);
     mografy.fill(ink(o)); mografy.circle(100, 95, 90); text(ctx, o.avatar ?? 'M', 77, 95, 45);
-    text(ctx, o.name ?? 'Mografy', 180, 95, 44);
+    textLines(ctx, lines(ctx, o.name ?? 'Mografy', 44, 440, 1), 180, 95, 44);
     mografy.fill(followed ? '#343840' : ink(o)); mografy.rect(660, 47, 232, 96, 48);
-    mografy.textAlign('center', 'middle'); text(ctx, followed ? (o.following ?? 'Following') : (o.label ?? 'Follow'), 776, 95, 32);
+    mografy.textAlign('center', 'middle'); textLines(ctx, lines(ctx, followed ? (o.following ?? 'Following') : (o.label ?? 'Follow'), 32, 208, 1), 776, 95, 32);
     if (localTime < 2.4) clickCursor(ctx, localTime, 795, 113);
   });
 }
@@ -142,25 +189,30 @@ export function followBadge(ctx: FrameContext, time: number, o: Options & { name
 /** A notification enters, rings its bell, and drains its lifetime indicator. */
 export function notificationToast(ctx: FrameContext, time: number, o: Options & { message?: string }) {
   enter(ctx, time, o, localTime => {
-    const mografy = ctx.draw; panel(ctx, 870, 176, 32);
+    const mografy = ctx.draw, portrait = ctx.height > ctx.width;
+    const width = portrait ? 640 : 870, height = portrait ? 310 : 176;
+    panel(ctx, width, height, 32);
     mografy.fill(ink(o)); mografy.circle(84, 83, 86);
     bellIcon(ctx, 84, 82, 54, Math.sin(localTime * 20) * .18 * (1 - pr(localTime, .3, 1.1)));
-    text(ctx, o.message ?? 'New message', 166, 83, 46);
-    const clip = new Path2D(); clip.roundRect(0, 0, 870, 176, 32);
-    ctx.clip(clip, () => { mografy.fill(ink(o)); mografy.rect(0, 170, 870 * (1 - pr(localTime, .6, 3.7)), 6); });
+    const message = lines(ctx, o.message ?? 'New message', 46, width - 200, portrait ? 4 : 2);
+    textLines(ctx, message, 166, message.length === 1 ? 83 : 65, 46);
+    const clip = new Path2D(); clip.roundRect(0, 0, width, height, 32);
+    ctx.clip(clip, () => { mografy.fill(ink(o)); mografy.rect(0, height - 6, width * (1 - pr(localTime, .6, 3.7)), 6); });
   });
 }
 
 /** A two-line name plate with a drawing accent rail. */
 export function lowerThird(ctx: FrameContext, time: number, o: Options & { name?: string; subtitle?: string }) {
   enter(ctx, time, o, localTime => {
-    const mografy = ctx.draw, width = 960 * ease.outExpo(pr(localTime, 0, .75));
-    const clip = new Path2D(); clip.rect(0, -10, width, 250);
+    const mografy = ctx.draw, portrait = ctx.height > ctx.width;
+    const panelWidth = portrait ? 680 : 960, height = portrait ? 290 : 230;
+    const width = panelWidth * ease.outExpo(pr(localTime, 0, .75));
+    const clip = new Path2D(); clip.rect(0, -10, width, height + 20);
     ctx.clip(clip, () => {
-      mografy.fill(PANEL); mografy.rect(0, 0, 960, 230, 22);
-      mografy.fill(ink(o)); mografy.rect(0, 0, 9, 230);
-      text(ctx, o.name ?? 'Mografy', 62, 86, 62);
-      text(ctx, o.subtitle ?? 'Motion designer', 62, 160, 34, MUTED);
+      mografy.fill(PANEL); mografy.rect(0, 0, panelWidth, height, 22);
+      mografy.fill(ink(o)); mografy.rect(0, 0, 9, height);
+      textLines(ctx, lines(ctx, o.name ?? 'Mografy', 62, panelWidth - 110, 1), 62, 86, 62);
+      textLines(ctx, lines(ctx, o.subtitle ?? 'Motion designer', 34, panelWidth - 110, portrait ? 3 : 2), 62, 160, 34, MUTED);
     });
   });
 }

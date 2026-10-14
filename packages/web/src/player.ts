@@ -51,16 +51,17 @@ export class ScenePlayer {
   load(version: string, project: SceneProject, params: ParameterValues) {
     const task = async () => {
       // Version, seed, fonts and the beat grid feed the runtime; anything else (volume, render settings) is applied in place.
-      const key = JSON.stringify([version, project.seed, project.fonts, project.audio && [project.audio.path, project.audio.bpm, project.audio.offset, project.audio.beatsPerBar]]);
+      const key = JSON.stringify([version, project.aspectRatio, project.seed, project.fonts, project.audio && [project.audio.path, project.audio.bpm, project.audio.offset, project.audio.beatsPerBar]]);
       if (key === this.loadedKey) { this.project = project; this.syncAudio(project); return; }
       const url = '/__mografy/scene/' + version + '.js';
       const scene = await import(url) as SceneModule;
-      const width = scene.meta?.width ?? 1920;
+      const width = project.aspectRatio === '9:16' ? Math.min(scene.meta.width, scene.meta.height) : scene.meta.width;
       const scale = Math.min(1, Math.max(0.25, Math.round(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
       const canvas = document.createElement('canvas');
       canvas.className = 'stage-canvas';
       const runtime = await createSceneRuntime(canvas, scene, {
         seed: project.seed, renderScale: scale, params, assetBase: '/__mografy/files/', fonts: project.fonts, audio: project.audio,
+        aspectRatio: project.aspectRatio,
       });
       this.runtime?.dispose(); this.canvas?.remove();
       this.runtime = runtime; this.canvas = canvas; this.version = version; this.project = project; this.params = params; this.loadedKey = key;

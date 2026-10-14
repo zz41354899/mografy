@@ -17,7 +17,7 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Get started
 
-Requires Node.js 22.12 or later and pnpm. Clone the repository, then run setup in its root:
+Requires Node.js 22.12 or later and pnpm (the repository pins pnpm 11.18.0). Mografy currently runs from source; a standalone npm distribution is still planned. Clone the repository, then run setup in its root:
 
 ```sh
 git clone https://github.com/zz41354899/mografy.git
@@ -32,7 +32,7 @@ mografy dev
 
 `install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, repeat `pnpm install`, `pnpm build`, and `pnpm sync:skills`.
 
-The player opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. Each installation keeps separate recent-project and active-player state under `~/.mografy/installations/`; the former shared history is not imported. First launch in a new checkout opens Stagger text and initializes the sixteen independent built-in animations.
+Inside the source checkout, `mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
 
 Create an animation or open the bundled intro:
 
@@ -50,7 +50,27 @@ export MOGRAFY_HOME="$HOME/Animations"
 mografy dev "$MOGRAFY_HOME/my-animation" --yes
 ```
 
-`MOGRAFY_STATE` optionally selects a state directory. Using the same override for several installations intentionally shares their history and active player.
+Each installation keeps separate recent-project and active-player state under `~/.mografy/installations/`; the former shared history is not imported.
+
+| Environment variable | Purpose |
+| --- | --- |
+| `MOGRAFY_HOME` | Project library directory |
+| `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
+| `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
+| `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH |
+
+## Create your first animation
+
+1. Run `mografy dev ./projects/my-animation --yes` to create a project and open its player.
+2. Open the repository in Codex or Claude Code and describe the animation, naming the project folder. The shared Skill guides scene authoring and review.
+3. Watch the player update after each successful compile and Chromium trial render. Scrub to check timing and adjust the exposed scene controls.
+4. Run `mografy check ./projects/my-animation` and `mografy review ./projects/my-animation`, then inspect the generated images. Export from the player or CLI when ready.
+
+For example:
+
+> Create an eight-second 9:16 animation in `projects/my-animation`, with a native 1080 × 1920 canvas. Use the Typewriter and Logo reveal components as references. Show “Hello, Mografy.”, then reveal the logo with a teal accent. Review the actual frames and export an MP4.
+
+For a longer sequence, ask for a storyboard first. Scene code determines the composition; the player exposes the parameters declared by that scene.
 
 ## One Skill for Codex and Claude
 
@@ -80,7 +100,7 @@ The sixteen built-in animations are authoring references as well as playable exa
 
 Reusable functions live in [components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/components.ts) and [social-components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/social-components.ts). Each example has its own scene entry, controls, preview, and export. Source copies live under `packages/server/template/scenes/`; editable installed projects live under the library's `.components/{id}/` directory. New projects include the reusable modules and scene entries.
 
-Built-in animations include bundled thumbnails, so a new installation can show all sixteen previews before opening their projects. Scene edits refresh the opened project's thumbnail automatically. After changing built-in source scenes or assets, maintainers regenerate the bundled previews with `pnpm thumbnails:generate`.
+All sixteen built-in component projects default to centered **9:16 portrait** previews. Their bundled thumbnails also show the full portrait canvas, so a new installation can show all sixteen previews before opening their projects. Scene edits refresh the opened project's thumbnail automatically. After changing built-in source scenes or assets, maintainers regenerate the bundled previews with `pnpm thumbnails:generate`.
 
 The [component reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) links every entry and explains layout, timing, local imports, and review. Ask the agent to adapt the relevant component to your project's own assets and style.
 
@@ -131,7 +151,9 @@ mografy review ./projects/my-animation
 
 ## Player and exports
 
-Scene groups Subtitles, Colors, and Controls. Only strings marked `role: 'subtitle'` appear as editable subtitles; the agent edits other copy in source. Effects controls Glow and Grain with percentage inputs, reset, and an Original/With effects comparison. Audio supports a track, volume, and beat-grid settings.
+The Scene inspector groups Subtitles, Colors, and Controls. Only strings marked `role: 'subtitle'` appear as editable subtitles; the agent edits other copy in source. The Effects inspector provides Glow and Grain with percentage inputs, reset, and an Original/With effects comparison. Audio supports a track, volume, and beat-grid settings.
+
+The main preview follows the authored scene's dimensions and has no orientation switch. For a new **9:16 portrait** video, ask the agent to create a native 1080 × 1920 scene with vertical layout, wrapped text, and social safe margins. The shared Skill records this requirement. An optional saved `aspectRatio` is also read by agents and the Runtime. Portrait Guides reserve conservative space for social overlays.
 
 Playback supports Space, frame stepping with arrows, beat stepping with Shift+arrows when audio is present, Loop (`L`), Guides (`G`), and Projects (`P`).
 
@@ -139,6 +161,7 @@ Export from the player or CLI:
 
 ```sh
 mografy export ./projects/my-animation --format mp4
+mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
@@ -151,13 +174,30 @@ The player's Export dialog offers these output sizes:
 | --- | --- |
 | Lottie | 256 × 256 — Square; 640 × 360 — Landscape |
 | SVGA | 375 × 375 — Square; 375 × 750 — Portrait |
-| MP4 | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
+| MP4 landscape (16:9) | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
+| MP4 portrait (9:16) | 720 × 1280 — 720p; 1080 × 1920 — 1080p |
 
-Each format starts at its first size and remembers its selection while the dialog stays open. For a different aspect ratio, **Fit entire scene** centers the complete artwork with the scene's background color around it; **Fill and crop** centers and crops the artwork to fill the output. Neither stretches the scene or changes project settings. Sampling and effects apply through the shared runtime at the output size. CLI exports without a size override continue to use the project's render scale.
+MP4 starts in the authored canvas orientation, with icons to switch the output orientation while retaining 720p/1080p quality. A paused-frame preview shows the selected output. Each format remembers its size and Fit selection while the dialog stays open.
+
+When the output aspect differs from the scene, **Fit** appears for all three formats:
+
+| Fit option | Result |
+| --- | --- |
+| **Fit entire scene** (default) | Center the full artwork, filling extra space with the scene background |
+| **Fill and crop** | Fill the output, cropping the centered artwork at the edges |
+| **Adapt layout** | Give responsive scene code the output canvas dimensions so it can rearrange the composition |
+
+All sixteen built-in components support landscape and portrait layouts. Choose **Adapt layout** when exporting a component in the other orientation. Custom scenes must use `ctx.width` and `ctx.height` to implement their own responsive layout; selecting this option alone does not rearrange fixed-coordinate artwork.
+
+Output choices leave the main preview and saved project settings intact. Portrait MP4 files default to `name-portrait.mp4`. CLI `--orientation` and `--resolution` presets use **Fit entire scene**; `--orientation` alone defaults to 720p, and `--resolution` alone selects landscape. CLI exports without these flags use the project's render scale. Output names supplied with `-o` must be filenames or relative paths inside the project's `renders/` directory.
 
 Mografy exports allow up to **60 fps for MP4** and **30 fps for Lottie and SVGA**. SVGA uses its supported rates within this limit. The player, API, CLI, and direct render functions enforce the same limits. The export dialog caps older MP4 project defaults at 60 fps without changing saved settings.
 
-Progress appears in the CLI and player. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
+After starting a player export, the same dialog shows an animated robot, actual frame-capture progress, and elapsed time. Encoding and packaging use an indeterminate indicator. **Hide** keeps the export running and moves progress into a toast with **View** and **Cancel**; the top **Exporting** button also reopens it.
+
+Completed MP4s can be played and downloaded in the dialog. **Done** dismisses the result, and **Last export** reopens it while the player retains that job. **Export** opens fresh settings. Failed or cancelled jobs offer **Settings** and, for exports started in this dialog, **Retry**.
+
+Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
 
 ## Commands and project structure
 
@@ -169,6 +209,9 @@ Progress appears in the CLI and player. Cancel a direct CLI export with Ctrl+C, 
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
 | `mografy export [project] --format mp4\|lottie\|svga` | Export the animation |
 | `mografy stop [project]` | Stop the project's player server |
+| `mografy --help` | Show commands and supported options |
+
+Use `mografy dev --yes` to create a missing project without a prompt, `--no-open` to start the player without opening a browser, and `--port <port>` to choose its port (default: 4173, then the next free port). For `dev`, `check`, `review`, `export`, and `stop`, omitted project paths use `MOGRAFY_PROJECT` when set, otherwise the current project or the source checkout's default project. `mografy init` without a path creates a project in the current folder.
 
 ```text
 mografy/
@@ -180,7 +223,7 @@ mografy/
   docs/                       Architecture and development status
 
 animation-project/
-  mografy.json                 Scene entry, params, fonts, audio, render, review
+  mografy.json                 Scene entry, aspectRatio, params, fonts, audio, render, review
   scenes/                     Animation code and local reusable components
   assets/                     Images, fonts, and audio
   AGENTS.md / CLAUDE.md        Shared Skill pointers

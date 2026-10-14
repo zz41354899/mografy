@@ -5,7 +5,7 @@ description: Develop Mografy, plan storyboards, and create, edit, validate, visu
 
 # Mografy
 
-Read the project's `mografy.json`, configured scene entry, imported local modules, and relevant assets before making changes. Tailor the work to that project's visual language and brief.
+Read the project's `mografy.json`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved `aspectRatio`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
 
 - Before editing a scene, read [references/scene-authoring.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.
 - For a storyboard or a new animation that needs shot planning, read [references/storyboard.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md). Codex uses image generation; Claude uses Artifacts when available, with an explicit local HTML fallback in Claude Code.

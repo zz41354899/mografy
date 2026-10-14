@@ -4,7 +4,7 @@ import { copyFile, cp, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { EXPORT_SIZES, validateSceneProject } from '@mografy/core';
+import { MP4_PORTRAIT_SIZES, EXPORT_SIZES, validateSceneProject } from '@mografy/core';
 import type { ExportFormat, SceneProject } from '@mografy/core';
 import { buildScene, SceneHost, renderAnimation, renderVideo, ffmpegOutput } from '../src/index.js';
 
@@ -89,14 +89,14 @@ export function renderFrame(ctx, time) { const c = ctx.canvas; c.fillStyle = '#f
   }
 });
 
-for (const { width, height } of EXPORT_SIZES.mp4) {
+for (const { width, height } of [...EXPORT_SIZES.mp4, ...MP4_PORTRAIT_SIZES]) {
   test(`MP4 preset produces ${width}×${height} encoded frames`, { timeout: 60_000 }, async () => {
     const p = structuredClone(project);
     p.render = { ...p.render, fps: 1, samples: 1, encoding: 'crf', preset: 'veryfast' };
     const frame = await readFile(join(dir, 'scenes/component-frame.ts'), 'utf8');
     const build = await buildScene(dir, p, { 'scenes/component-frame.ts': frame.replace('duration: 8', 'duration: 0.2') });
     const output = join(dir, `renders/${width}.mp4`);
-    const result = await renderVideo({ projectDir: dir, project: p, build, host, output, size: { width, height, fit: 'contain' } });
+    const result = await renderVideo({ projectDir: dir, project: p, build, host, output, size: { width, height, fit: 'reflow' } });
     assert.equal(result.width, width); assert.equal(result.height, height); assert.equal(result.frames, 1);
     const decoded = await ffmpegOutput(['-i', output, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
     assert.equal(decoded.length, width * height * 4);
@@ -154,4 +154,30 @@ test('Lottie and SVGA 30fps and MP4 60fps export at their accepted frame-rate bo
   const decoded = (await ffmpegOutput(['-i', output, '-map', '0:v:0', '-f', 'framehash', 'pipe:1'])).toString();
   assert.match(decoded, /#tb 0: 1\/60/);
   assert.equal(decoded.split('\n').filter(line => /^0,/.test(line)).length, 12);
+});
+
+
+test('portrait reflow uses tall logical coordinates in setup and drawing without letterboxing or rotation', async () => {
+  const source = `export const meta = { width: 1920, height: 1080, duration: 1, fps: 1, background: '#000000' };
+export const params = {};
+export function setup(ctx) { ctx.assets.w = ctx.width; ctx.assets.h = ctx.height; }
+export function renderFrame(ctx) {
+ if (ctx.assets.w !== ctx.width || ctx.assets.h !== ctx.height) throw new Error('setup canvas differs');
+ const c = ctx.canvas; c.fillStyle = ctx.height > ctx.width ? '#00ff00' : '#ff0000'; c.fillRect(0,0,ctx.width,ctx.height);
+ c.fillStyle = '#0000ff'; c.fillRect(ctx.width * .8,ctx.height * .8,ctx.width * .2,ctx.height * .2);
+}`;
+  const build = await buildScene(dir, project, { 'scenes/main.ts': source });
+  for (const saved of [false, true]) {
+    const p = { ...project, ...(saved ? { aspectRatio: '9:16' as const } : {}) };
+    const page = await host.open(build, p, saved ? { renderScale: .1 } : { outputSize: { width: 108, height: 192, fit: 'reflow' } });
+    try {
+      assert.deepEqual([page.scene.meta.width, page.scene.meta.height], [1080,1920]);
+      assert.deepEqual([page.scene.width,page.scene.height], [108,192]);
+      const pixels = await page.raw(.5);
+      const at = (x: number,y: number) => [...pixels.subarray((y * 108 + x) * 4,(y * 108 + x) * 4 + 4)];
+      for (const [x,y] of [[0,0],[107,0],[0,191],[54,96]]) assert.deepEqual(at(x!,y!), [0,255,0,255]);
+      assert.deepEqual(at(100,185),[0,0,255,255]);
+      await page.raw(1); await page.raw(0); assert.deepEqual(await page.raw(.5),pixels);
+    } finally { await page.close(); }
+  }
 });

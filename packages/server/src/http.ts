@@ -10,6 +10,7 @@ import { WebSocket, WebSocketServer } from 'ws';
 import { projectFile } from '@mografy/render';
 import type { Cell } from '@mografy/render';
 import type { ExportRequest, ProjectList, ProjectPatch, ServerEvent } from '@mografy/core';
+import { aspectRatioSchema } from '@mografy/core';
 import { ApiError, Project } from './project.js';
 import { saveAsset, sha256 } from './files.js';
 import { AlreadyRunning, ServerLock } from './lock.js';
@@ -176,9 +177,11 @@ export async function startServer(projectDir: string, options: StartOptions = {}
         return json(response, 200, await switchProject(dir));
       }
       case 'POST /projects/new': {
-        const { name } = await body<{ name?: string }>(request);
+        const { name, aspectRatio } = await body<{ name?: string; aspectRatio?: unknown }>(request);
         if (typeof name !== 'string' || !name.trim() || name.length > 80) throw new ApiError(400, 'INVALID', 'Give the project a name (up to 80 characters)');
-        return json(response, 200, await switchProject(await createInLibrary(name)));
+        const ratio = aspectRatioSchema.optional().safeParse(aspectRatio);
+        if (!ratio.success) throw new ApiError(400, 'INVALID', 'Aspect ratio must be 16:9 or 9:16');
+        return json(response, 200, await switchProject(await createInLibrary(name, ratio.data)));
       }
       case 'GET /snapshot': return json(response, 200, project.snapshot());
       case 'POST /assets': {

@@ -41,6 +41,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private raw = '';
   private project: SceneProject | null = null;
   private scene: SceneInfo | null = null;
+  private sceneAspectRatio: SceneProject['aspectRatio'];
   private error: SceneError | null = null;
   private issues: ParameterIssue[] = [];
   private state = { playhead: 0 };
@@ -156,7 +157,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   /** Compile and trial-render in Chromium. Nothing is published or written here. */
   private async prepare(project: SceneProject, overrides?: Record<string, string>) {
     const build = await buildScene(this.dir, project, overrides);
-    const known = this.scene?.version === build.version ? this.scene : undefined;
+    const known = this.scene?.version === build.version && this.sceneAspectRatio === project.aspectRatio ? this.scene : undefined;
     const loaded = known ? { meta: known.meta, params: known.params } : await this.host.inspect(build, project);
     return { build, meta: loaded.meta, params: loaded.params };
   }
@@ -169,8 +170,9 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.builds.set(build.version, build);
     for (const key of [...this.builds.keys()].slice(0, -8)) this.builds.delete(key);
     await writeFile(join(this.dir, '.mografy', 'builds', `${build.version}.js`), build.code).catch(() => {});
-    const changed = this.scene?.version !== build.version;
+    const changed = this.scene?.version !== build.version || this.scene.meta.width !== meta.width || this.scene.meta.height !== meta.height;
     if (changed) this.scene = { version: build.version, meta, params, sources: build.sources, publishedAt: now(), reason };
+    this.sceneAspectRatio = project.aspectRatio;
     this.state.playhead = Math.min(this.state.playhead, meta.duration);
     this.issues = issues.length ? issues : changed ? [] : this.issues;
     this.error = null;
@@ -241,12 +243,16 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       }
       if (patch.name !== undefined) next.name = patch.name;
       if (patch.seed !== undefined) next.seed = patch.seed;
+      if (patch.aspectRatio !== undefined) { if (patch.aspectRatio === null) delete next.aspectRatio; else next.aspectRatio = patch.aspectRatio; }
       if (patch.audio !== undefined) { if (patch.audio === null) delete next.audio; else next.audio = patch.audio; }
       if (patch.render) next.render = { ...project.render, ...patch.render };
       if (patch.review) next.review = { ...project.review, ...patch.review };
       let validated: SceneProject;
       try { validated = validateSceneProject(next); } catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
+      // Trial the new logical canvas before persisting it; a failed layout keeps the current canvas.
+      const prepared = patch.aspectRatio !== undefined ? await this.prepare(validated).catch(error => { throw new ApiError(422, 'CANVAS', describe(error)); }) : undefined;
       await this.writeManifest(validated);
+      if (prepared) await this.commit(validated, prepared, 'update');
       if (patch.audio || patch.seed !== undefined) {
         // Assets and seed feed setup; re-run the trial so a bad audio path surfaces now.
         try { await this.commit(validated, await this.prepare(validated), 'update'); }
@@ -270,7 +276,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private withStillPage<T>(task: (page: HostPage, project: SceneProject, scene: SceneInfo) => Promise<T>) {
     const run = async () => {
       const { project, scene, build } = this.current();
-      const key = `${scene.version}|${project.seed}|${JSON.stringify(project.params)}`;
+      const key = `${scene.version}|${project.aspectRatio ?? ''}|${project.seed}|${JSON.stringify(project.params)}`;
       if (this.stillPage?.key !== key) {
         await this.stillPage?.page.close();
         this.stillPage = { key, page: await this.host.open(build, project, { renderScale: 1 }) };
@@ -335,7 +341,8 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       try { validateAnimationSize(width, height, total); } catch (error) { throw new ApiError(400, 'INVALID_EXPORT', describe(error)); }
     }
     const ext = format === 'lottie' ? '.lottie.json' : `.${format}`;
-    const file = resolve(this.dir, request.output ?? join('renders', `${slug(project.name)}${ext}`));
+    const orientation = format === 'mp4' && height > width ? '-portrait' : '';
+    const file = resolve(this.dir, request.output ?? join('renders', `${slug(project.name)}${orientation}${ext}`));
     const local = relative(this.dir, file);
     if (local.split(/[\\/]/)[0] !== 'renders' || !file.endsWith(format === 'lottie' ? '.json' : ext)) throw new ApiError(400, 'INVALID_PATH', `Output must be a ${format === 'lottie' ? '.json' : ext} file inside renders/`);
     const status: RenderStatus = { id: Math.random().toString(36).slice(2, 10), format, state: 'running', stage: 'capture', done: 0, total, version: scene.version, output: file, startedAt: now() };

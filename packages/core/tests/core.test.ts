@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema } from '../src/index.js';
+import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema } from '../src/index.js';
 test('manifest stores configuration only and rejects animation payload', () => {
  const input = { version: 1, name: 'demo', scene: 'scenes/main.ts' };
  assert.equal(validateSceneProject(input).render.mixing, 'srgb');
@@ -61,4 +61,25 @@ test('export requests enforce format frame-rate caps and keep valid boundary rat
  }
  assert.throws(() => exportRequestSchema.parse({ format: 'svga', render: { fps: 24 } }), /SVGA frame rate/);
  assert.throws(() => exportRequestSchema.parse({ format: 'svga', render: { fps: 60 } }), /30 fps/);
+});
+
+
+test('portrait canvas settings and AI guidance retain the requested composition', () => {
+ const input = { version: 1, name: 'Social', scene: 'scenes/main.ts', aspectRatio: '9:16' };
+ assert.equal(validateSceneProject(input).aspectRatio, '9:16');
+ assert.throws(() => validateSceneProject({ ...input, aspectRatio: '1:1' }));
+ const meta = { width: 1920, height: 1080, duration: 1, fps: 30, background: '#000000' };
+ const portrait = sceneMetaForAspect(meta, '9:16');
+ assert.deepEqual([portrait.width, portrait.height], [1080, 1920]);
+ assert.deepEqual(sceneMetaForAspect(portrait, '16:9'), meta);
+ assert.equal(sceneMetaForAspect(meta), meta);
+ for (const short of [2,100,1079,7680]) {
+  const tiny = sceneMetaForAspect({ ...meta, width: short, height: short },'9:16');
+  assert.equal(tiny.width * 16,tiny.height * 9);
+  assert.ok(tiny.height <= 7680);
+ }
+ assert.match(SKILL, /9:16.*1080.*1920/);
+ assert.match(SKILL, /Fit belong only to export/);
+ assert.match(SKILL_REFERENCES['scene-authoring.md'], /SetupContext.*FrameContext/);
+ assert.match(SKILL_REFERENCES['storyboard.md'], /9:16 portrait/);
 });

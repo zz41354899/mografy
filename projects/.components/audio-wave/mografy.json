@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Audio wave",
   "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
   "seed": 1,
   "params": {},
   "fonts": [

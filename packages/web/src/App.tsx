@@ -9,12 +9,12 @@ import type { AudioTrack } from './audio.js';
 import { LOGO_PIECES, LOGO_VIEWBOX } from './logo.js';
 import { Projects } from './Projects.js';
 import { ExportDialog } from './ExportDialog.js';
+import { ExportProgressToast } from './ExportProgressToast.js';
+import { FilmStripIcon } from '@phosphor-icons/react/dist/csr/FilmStrip';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockwise';
 import { FrameCornersIcon } from '@phosphor-icons/react/dist/csr/FrameCorners';
 import { ExportIcon } from '@phosphor-icons/react/dist/csr/Export';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
-import { CheckCircleIcon } from '@phosphor-icons/react/dist/csr/CheckCircle';
-import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowCounterClockwise';
 import { MusicNotesIcon } from '@phosphor-icons/react/dist/csr/MusicNotes';
 import type { Session } from './session.js';
@@ -177,41 +177,14 @@ function Parameters({ snapshot, values, onChange, onReset }: { snapshot: Snapsho
   </>;
 }
 
-function ExportStatus({ snapshot, session }: { snapshot: Snapshot; session: Session }) {
-  const render = snapshot.render;
+function FrameReview({ snapshot, session }: { snapshot: Snapshot; session: Session }) {
   const [review, setReview] = useState<{ files: string[] } | null>(null);
-  const [reviewing, setReviewing] = useState(false), [reviewMessage, setReviewMessage] = useState(''), [cancelMessage, setCancelMessage] = useState(''), [cancelling, setCancelling] = useState(false);
-  const [hiddenDone, setHiddenDone] = useState('');
-  useEffect(() => { if (render?.state !== 'running' || render.cancelling) setCancelling(false); }, [render?.state, render?.cancelling]);
-  useEffect(() => {
-    if (!render || render.state !== 'done') return;
-    setHiddenDone('');
-    const timer = setTimeout(() => setHiddenDone(render.id), 6000);
-    return () => clearTimeout(timer);
-  }, [render?.id, render?.state]);
-  const pct = render ? Math.round((render.state === 'done' ? 1 : render.done / (render.total || 1)) * 100) : 0;
-  const complete = render?.state === 'done' && hiddenDone !== render.id ? render : null;
-  return <>
-  <div className="inspector-footer">
+  const [reviewing, setReviewing] = useState(false), [reviewMessage, setReviewMessage] = useState('');
+  return <div className="inspector-footer">
     <details className="review-tools"><summary>Frame review</summary><p className="panel-help">Create sheets of key frames to check the animation.</p><button className="review-button" disabled={reviewing || !snapshot.scene} onClick={() => { setReviewing(true); setReviewMessage(''); session.review().then(setReview, e => setReviewMessage(String(e.message))).finally(() => setReviewing(false)); }}>{reviewing ? 'Making sheets…' : 'Create review sheets'}</button>
     {review ? <ul className="files">{review.files.map(f => <li key={f}><a href={filesUrl(snapshot.projectDir, f)} target="_blank" rel="noreferrer">{f.split(/[\\/]/).pop()}</a></li>)}</ul> : null}
     {reviewMessage ? <p className="error-text">{reviewMessage}</p> : null}</details>
-    {render && render.state !== 'done' ? <div className={`job ${render.state}`} role="status">
-      <div className="bar"><i style={{ width: `${pct}%` }} /></div>
-      <div className="job-line"><p>{render.state === 'running' ? render.cancelling ? 'Cancelling export…' : (render.stage === 'encode' ? 'Encoding…' : render.stage === 'package' ? 'Packaging animation…' : `Capturing frame ${render.done} of ${render.total}`) : render.state === 'cancelled' ? 'Export cancelled' : 'Export failed'} <span className="hint">version {short(render.version)}</span></p>
-      {render.state === 'running' ? <button className="text-button cancel-export" disabled={cancelling || render.cancelling} onClick={() => { setCancelling(true); setCancelMessage(''); session.cancelRender(render.id).catch(e => { setCancelling(false); setCancelMessage(String(e.message)); }); }}>{cancelling || render.cancelling ? 'Cancelling…' : 'Cancel'}</button> : null}</div>
-      {render.error ? <pre>{render.error}</pre> : null}
-      {cancelMessage ? <p className="error-text">{cancelMessage}</p> : null}
-    </div> : null}
-  </div>
-  {complete ? <div className="export-complete" role="status" aria-live="polite">
-    <CheckCircleIcon className="export-complete-icon" size={24} weight="fill" aria-hidden="true" />
-    <div className="export-complete-copy"><strong>Export ready</strong><span title={complete.output}>{complete.output.split(/[\\/]/).pop()}</span></div>
-    <button className="icon-button export-complete-close" onClick={() => setHiddenDone(complete.id)} aria-label="Dismiss export completed message"><XIcon size={15} /></button>
-    <a className="export-complete-download" href={filesUrl(snapshot.projectDir, complete.output)} download><DownloadSimpleIcon size={16} />Download</a>
-    <i className="export-complete-life" aria-hidden="true" />
-  </div> : null}
-  </>;
+  </div>;
 }
 
 // ------------------------------------------------------------------ app
@@ -283,6 +256,9 @@ export function App() {
   const [dismissedIssues, setDismissedIssues] = useState('');
   const [loadError, setLoadError] = useState('');
   const [exportOpen, setExportOpen] = useState(false);
+  const [exportMounted, setExportMounted] = useState(false);
+  const [exportResume, setExportResume] = useState(false);
+  const [exportGeneration, setExportGeneration] = useState(0);
   const [inspectorTab, setInspectorTab] = useState<'scene' | 'effects' | 'audio'>('scene');
   const [guides, setGuides] = useState(false);
   const [showProjects, setShowProjects] = useState(() => { try { return localStorage.getItem('mografy.projects') !== 'hidden'; } catch { return true; } });
@@ -294,7 +270,7 @@ export function App() {
   const shownDir = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!projectDir || projectDir === shownDir.current) return;
-    if (shownDir.current) { started.current = false; setLocal({}); setLocalEffects(null); setPreviewEffects(false); setEffectsError(''); setToast(''); setExportOpen(false); }
+    if (shownDir.current) { started.current = false; setLocal({}); setLocalEffects(null); setPreviewEffects(false); setEffectsError(''); setToast(''); setExportOpen(false); setExportMounted(false); }
     shownDir.current = projectDir;
   }, [projectDir]);
 
@@ -404,6 +380,8 @@ export function App() {
   const connection = { connecting: 'Connecting', connected: 'Live', offline: 'Reconnecting' }[session.connection];
   const issuesKey = JSON.stringify([projectDir, snapshot?.scene?.version, snapshot?.issues]);
 
+  const showExport = (resume: boolean) => { p?.pause(); if (!resume) setExportGeneration(v => v + 1); setExportResume(resume); setExportMounted(true); setExportOpen(true); };
+
   return <div className="app">
     <header className="topbar">
       <button className={`icon-button ${showProjects ? 'on' : ''}`} onClick={() => setShowProjects(v => !v)} aria-label={showProjects ? 'Hide projects' : 'Show projects'} aria-pressed={showProjects} title="Projects (P)">
@@ -415,11 +393,8 @@ export function App() {
         {meta ? <span className="meta">{meta.width} × {meta.height}, {meta.fps} fps</span> : null}
         <span className="version" title={snapshot?.scene ? `Published ${new Date(snapshot.scene.publishedAt).toLocaleTimeString()} (${snapshot.scene.reason})` : ''}>{short(view.version)}</span>
         <span className={`conn ${session.connection}`} role="status"><i />{connection}</span>
-        <button className={`export-primary topbar-export ${snapshot?.render?.state === 'running' ? 'is-cancel' : ''}`} disabled={!snapshot?.scene || !!snapshot?.render?.cancelling} onClick={() => {
-          const render = snapshot?.render;
-          if (render?.state === 'running') { void session.cancelRender(render.id).catch(e => setToast(String(e.message))); return; }
-          p?.pause(); setExportOpen(true);
-        }}>{snapshot?.render?.state === 'running' ? <XIcon size={17} /> : <ExportIcon size={17} />}{snapshot?.render?.state === 'running' ? snapshot.render.cancelling ? 'Cancelling…' : 'Cancel export' : 'Export'}</button>
+        {snapshot?.render && snapshot.render.state !== 'running' ? <button className="last-export" aria-label="View last export" title={snapshot.render.output.split(/[\\/]/).pop()} onClick={() => showExport(true)}><FilmStripIcon size={17} /><span>{snapshot.render.state === 'done' ? 'Last export' : snapshot.render.state === 'failed' ? 'Export failed' : 'Export cancelled'}</span></button> : null}
+        <button className="export-primary topbar-export" disabled={!snapshot?.scene} aria-label={snapshot?.render?.state === 'running' ? 'View active export' : 'Export'} onClick={() => showExport(snapshot?.render?.state === 'running')}><ExportIcon size={17} />{snapshot?.render?.state === 'running' ? snapshot.render.cancelling ? 'Cancelling…' : 'Exporting…' : 'Export'}</button>
       </div>
     </header>
 
@@ -434,7 +409,7 @@ export function App() {
       {showProjects ? <Projects current={projectDir} refreshKey={`${projectDir}|${snapshot?.scene?.version ?? ''}|${snapshot?.project?.name ?? ''}|${snapshot?.thumbnail ?? ''}`} /> : null}
       <section className="viewer">
         <div className="surround">
-          <div className="stage" ref={stage} style={{ aspectRatio: meta ? `${meta.width} / ${meta.height}` : '16 / 9', '--scene-bg': meta?.background ?? '#000', '--aspect': meta ? meta.width / meta.height : 16 / 9 } as CSSProperties} onClick={() => p?.toggle()} data-testid="stage" data-version={view.version ?? ''} data-time={view.t.toFixed(4)}>
+          <div className={`stage ${meta && meta.height > meta.width ? 'portrait' : ''}`} ref={stage} style={{ aspectRatio: meta ? `${meta.width} / ${meta.height}` : '16 / 9', '--scene-bg': meta?.background ?? '#000', '--aspect': meta ? meta.width / meta.height : 16 / 9 } as CSSProperties} onClick={() => p?.toggle()} data-testid="stage" data-version={view.version ?? ''} data-time={view.t.toFixed(4)}>
             {guides ? <div className="guides" aria-hidden="true"><i className="action" /><i className="title" /><i className="cross" /></div> : null}
           </div>
           {toast ? <div className="toast" role="status">{toast}</div> : null}
@@ -477,9 +452,10 @@ export function App() {
         <div className="inspector-content" id={`${inspectorTab}-panel`} role="tabpanel" aria-labelledby={`${inspectorTab}-tab`} tabIndex={0}>
           {snapshot ? inspectorTab === 'scene' ? <Parameters snapshot={snapshot} values={values} onChange={onParam} onReset={onReset} /> : inspectorTab === 'effects' ? <EffectsPanel effects={effects} preview={previewEffects} playing={view.playing} saving={!!localEffects && localEffects.dir === projectDir} error={effectsError} onChange={onEffects} onPreview={onEffectsPreview} /> : <AudioPanel key={snapshot.projectDir} snapshot={snapshot} session={session} sound={view.sound} /> : null}
         </div>
-        {snapshot ? <ExportStatus key={snapshot.projectDir} snapshot={snapshot} session={session} /> : null}
+        {snapshot ? <FrameReview key={snapshot.projectDir} snapshot={snapshot} session={session} /> : null}
       </aside>
     </main>
-    {exportOpen && snapshot?.scene && snapshot.project ? <ExportDialog snapshot={snapshot} session={session} onClose={() => setExportOpen(false)} /> : null}
+    {!exportOpen && snapshot?.render?.state === 'running' ? <ExportProgressToast key={snapshot.render.id} job={snapshot.render} session={session} onOpen={() => showExport(true)} /> : null}
+    {exportMounted && snapshot?.scene && snapshot.project ? <ExportDialog key={`${snapshot.projectDir}:${exportGeneration}`} snapshot={snapshot} session={session} open={exportOpen} resume={exportResume} onClose={keepJob => { setExportOpen(false); if (!keepJob) setExportMounted(false); }} /> : null}
   </div>;
 }

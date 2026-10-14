@@ -2,6 +2,7 @@
   "version": 1,
   "name": "Mografy intro",
   "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
   "seed": 859530,
   "params": {
     "vignette": 0,

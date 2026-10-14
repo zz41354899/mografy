@@ -12,7 +12,7 @@ export const COMPONENT_THUMBNAILS_DIR = resolve(dirname(fileURLToPath(import.met
 /** Stable across clones; covers source files, assets and settings used by raw previews. */
 export async function thumbnailFingerprint(dir: string) {
   const project = validateSceneProject(JSON.parse(await readFile(join(dir, 'mografy.json'), 'utf8')));
-  const hash = createHash('sha256').update(JSON.stringify({ scene: project.scene, seed: project.seed, params: project.params, fonts: project.fonts, audio: project.audio }));
+  const hash = createHash('sha256').update(JSON.stringify({ scene: project.scene, seed: project.seed, params: project.params, fonts: project.fonts, audio: project.audio, aspectRatio: project.aspectRatio }));
   const walk = async (path: string): Promise<void> => {
     for (const entry of (await readdir(join(dir, path), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
       const local = `${path}/${entry.name}`;

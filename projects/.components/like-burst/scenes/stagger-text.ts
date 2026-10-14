@@ -8,8 +8,8 @@ export const params = {
 };
 export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Record<string, unknown>>) {
   componentFrame(ctx, time, params, animationTime => {
-    const text = 'Hello.', size = Math.min(ctx.width * 0.15, ctx.height * 0.24);
+    const text = 'Hello.', size = Math.min(ctx.width * (ctx.height > ctx.width ? .23 : .15), ctx.height * .24);
     ctx.draw.textSize(size);
-    staggerText(ctx, animationTime, { text, color: String(params.textColor), x: (ctx.width - ctx.draw.textWidth(text)) / 2, y: ctx.height / 2, size, lift: size * 0.3 });
+    staggerText(ctx, animationTime, { text, color: String(params.textColor), x: ctx.width / 2 - ctx.draw.textWidth(text) / 2, y: ctx.height / 2, size, lift: size * 0.3 });
   });
 }

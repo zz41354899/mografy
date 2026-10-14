@@ -1,6 +1,6 @@
 // Connection to the Mografy server: snapshots and seek events over WebSocket, writes over HTTP.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ExportRequest, ProjectPatch, ServerEvent, Snapshot } from '@mografy/core';
+import type { ExportRequest, ProjectPatch, RenderStatus, ServerEvent, Snapshot } from '@mografy/core';
 
 export type Connection = 'connecting' | 'connected' | 'offline';
 export interface Session {
@@ -11,7 +11,7 @@ export interface Session {
   seek: { t: number; n: number } | null;
   patchProject(patch: ProjectPatch): Promise<void>;
   reportPlayhead(t: number): void;
-  startRender(request?: ExportRequest): Promise<void>;
+  startRender(request?: ExportRequest): Promise<RenderStatus>;
   cancelRender(id?: string): Promise<void>;
   review(): Promise<{ files: string[]; report: string }>;
 }
@@ -61,7 +61,7 @@ export function useSession(): Session {
       clearTimeout(playheadTimer.current);
       playheadTimer.current = setTimeout(() => { void call('state', 'PATCH', { playhead: t, clientId }).catch(() => {}); }, 400);
     },
-    async startRender(request = {}) { await call('render', 'POST', request); },
+    startRender: (request = {}) => call<RenderStatus>('render', 'POST', request),
     async cancelRender(id) { await call('render/cancel', 'POST', id ? { id } : {}); },
     review: () => call('review', 'POST', {}),
   }), [snapshot, connection, clientId, seek]);

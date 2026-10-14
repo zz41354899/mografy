@@ -6,5 +6,5 @@ export const params = { ...defaults, name: { name: "Profile name", type: 'string
 export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Record<string, unknown>>) {
   centeredComponent(ctx, time, params, (animationTime, accent) => {
     socialCard(ctx, animationTime, { x: -310, y: -315, color: accent, name: params.name as string, avatar: params.avatar as string, caption: params.caption as string });
-  });
+  }, 720);
 }

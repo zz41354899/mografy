@@ -17,11 +17,14 @@ export function componentFrame(
   });
 }
 
-/** Draw a component around the center of the canvas, in a 1920 × 1080 design space. */
-export function centeredComponent(ctx: FrameContext, time: number, input: Readonly<Record<string, unknown>>, draw: (animationTime: number, accent: string) => void) {
+/** Landscape keeps its design space; portrait sizes the subject for a centered composition. */
+export function centeredComponent(ctx: FrameContext, time: number, input: Readonly<Record<string, unknown>>, draw: (animationTime: number, accent: string) => void, portraitWidth = 960) {
   componentFrame(ctx, time, input, (animationTime, accent) => {
+    const portrait = ctx.height > ctx.width;
     ctx.draw.translate(ctx.width / 2, ctx.height / 2);
-    ctx.draw.scale(Math.min(ctx.width / 1920, ctx.height / 1080));
+    ctx.draw.scale(portrait
+      ? Math.min(ctx.width * .82 / portraitWidth, ctx.height * .64 / 900)
+      : Math.min(ctx.width / 1920, ctx.height / 1080));
     draw(animationTime, accent);
   });
 }

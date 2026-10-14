@@ -40,6 +40,7 @@ export interface ProjectPatch {
   /** null removes a saved value (back to the scene default). */
   params?: Record<string, ParameterValue | null>;
   seed?: number;
+  aspectRatio?: SceneProject['aspectRatio'] | null;
   audio?: SceneProject['audio'] | null;
   render?: Partial<SceneProject['render']>;
   review?: Partial<SceneProject['review']>;
