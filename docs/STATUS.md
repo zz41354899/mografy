@@ -1,6 +1,15 @@
 # Development status
 
-Updated: 2026-10-16
+Updated: 2026-10-17
+
+## Optional extras: camera, transitions and CJK typography (2026-10-17)
+
+- Installation still contains only the sixteen built-in components; the project template, component registry, thumbnails and their fingerprints are unchanged. New helpers live in the tracked `extras/` folder and are copied into a project only when a brief needs them (from the checkout, or downloaded from GitHub).
+- `extras/cinema/cinema.ts`: `preparePlate` / `plate` / `move` camera moves on image plates (cover fit, focus-point zoom, pans clamped so edges never show); `crossfade`, `dipTo`, `flash`, `iris`, `slash`, `whip`, `smear` and `particleWipe` (sakura petals by default; star, circle, heart) over `from` / `to` draw callbacks; `glow`, `drift`, `twinkle`, `lightSweep` atmosphere. `cinema-demo.ts` is a fourteen-second tour.
+- `extras/cjk/cjk.ts`: `verticalText` / `verticalLayout` (columns right to left, vertical punctuation and bracket forms, rotated long marks and Latin letters, small-kana offsets, tate-chu-yoko digits, kinsoku-aware wrapping) and `cjkText` / `wrapCJK` (horizontal kinsoku wrapping that keeps Latin words whole). `cjk-demo.ts` shows both.
+- `extras/cjk/fonts/`: OFL subsets of Noto Sans CJK TC Medium (4.2 MB) and Noto Serif CJK TC Bold (5.3 MB) covering kana, punctuation, vertical forms, Big5 level 1, JIS levels 1–2 and GB2312 level 1, with `OFL.txt`; `subset-cjk-fonts.py` rebuilds them.
+- `guide.ts` adds the `camera-transitions.md` and `cjk-typography.md` references with fetch instructions, two SKILL.md routing lines and a built-in reference pointer. `GUIDE_BODY` is unchanged, so legacy-guide detection still matches; the legacy storyboard cleanup ignores the new references. The skill generator reproduced the previous files byte for byte before the change.
+- Validation: strict TypeScript checks of all four modules; real Chromium renders through `@mografy/runtime` sources (transition windows, vertical/horizontal CJK with the subset fonts loaded from `mografy.json`) with repeat-render determinism checks. Run `pnpm build`, `pnpm sync:skills`, `pnpm check` and `pnpm test:browser` locally.
 
 ## Project and player refactoring (2026-10-16)
 

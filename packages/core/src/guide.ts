@@ -282,11 +282,128 @@ The reusable implementations live in [components.ts](__REPOSITORY__/packages/ser
 - New projects receive the component modules and scene entries. Import the needed function from the project's local \`scenes/components.ts\` or \`scenes/social-components.ts\`. Preserve required imports, including brand geometry. Do not import files outside the animation project; compilation allows project-local modules and \`@mografy/runtime\` only.
 - Copy the useful motion and composition into the selected project's own scene modules. Adapt layout, copy, palette, scale, and timing to its brief. Keep pure time evaluation and isolated Canvas state; retain the project's existing assets and visual identity.
 - Use these examples to choose a motif in the storyboard and connect it to a concrete scene function. For a longer sequence with transitions and a brand ending, read [intro.md](intro.md).
+- Optional extras are not installed with Mografy; installation contains only the sixteen built-in components. They live in the repository's [extras/](__REPOSITORY__/extras/) folder on GitHub and are copied into a project when a brief needs them: camera moves and transitions for film-style sequences ([camera-transitions.md](camera-transitions.md)) and Chinese / Japanese typography with OFL fonts ([cjk-typography.md](cjk-typography.md)).
 - Keep important subtitle params distinct from ordinary scene copy. The source entries may contain string params that are edited by an agent in source rather than shown in the subtitle inspector.
 
 ## Review
 
 Open an installed example with \`mografy dev [project]\`. After adapting it, run \`mografy check [project]\` and \`mografy review [project]\`; inspect actual frames at the entrance, extreme, settle, hold, and any loop reset. Verify text measurement, safe margins, clipping, contrast, and out-of-order seeking. The catalog is a source reference, not an acceptance result for a modified scene. Read [scene-authoring.md](scene-authoring.md) and [animation-principles.md](animation-principles.md) for the contract and motion direction.
+`;
+
+const CAMERA_TRANSITIONS_REFERENCE = `# Camera, transition and atmosphere helpers
+
+[cinema.ts](__REPOSITORY__/extras/cinema/cinema.ts) gives film-style scenes a shared vocabulary. Every helper is a pure function of time and options, uses \`ctx.width\` / \`ctx.height\`, and works in landscape and portrait. [cinema-demo.ts](__REPOSITORY__/extras/cinema/cinema-demo.ts) is a fourteen-second tour of six shots joined by six transitions.
+
+## Add to a project
+
+The helpers are an optional extra, not part of the installed template. If the project already has \`scenes/cinema.ts\`, read and reuse that local copy; it may have been customized. Otherwise copy \`extras/cinema/cinema.ts\` from the current Mografy checkout into the project's \`scenes/\` folder, or download it from GitHub:
+
+\`\`\`sh
+curl -fsSL -o scenes/cinema.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cinema/cinema.ts
+\`\`\`
+
+Import it locally (\`import { plate, move, particleWipe } from './cinema.js'\`). Copy \`cinema-demo.ts\` too only when the user wants the tour.
+
+## Plates and camera
+
+| Helper | Use |
+| --- | --- |
+| \`preparePlate(ctx, path, softWidth?)\` | In \`setup\`: load an image and prepare a blurred highlights copy for bloom. Store the result in \`ctx.assets\`. |
+| \`plate(ctx, plate, camera, { crop?, alpha?, bloom? })\` | Draw a plate covering the canvas. \`crop\` selects a source rectangle for a close-up. |
+| \`move(time, start, end, from, to, curve?)\` | Ease between two framings. A camera is \`{ zoom, focusX, focusY, panX, panY }\`; \`zoom ≥ 1\` scales about the focus (0–1 of the canvas); pans are canvas pixels. |
+
+Camera direction: give each shot one motivated move (push in, pull out, pan, tilt) with \`ease.inOutCubic\` or \`ease.outCubic\`. Keep zoom ranges small (for example 1.0 → 1.08 over three or four seconds). Pans are clamped to the image, so add zoom headroom before panning. Avoid roll, shake, and bounce unless the brief asks for energy; natural camera work reads as one continuous, decelerating move. Flat key art cannot blink or move limbs; motion comes from camera, light, particles, and type.
+
+## Transitions
+
+Each transition takes \`{ start, end, from, to }\`. \`from\` and \`to\` are callbacks that draw complete frames; the transition calls them inside clips and transforms. Before \`start\` it draws \`from\`, after \`end\` it draws \`to\`. Clamp each callback's time to its own shot, for example \`from: () => shotA(ctx, Math.min(time, cut))\`, so the outgoing shot does not continue past its end.
+
+| Helper | Effect | Good for |
+| --- | --- | --- |
+| \`crossfade\` | Dissolve | Quiet changes, a breath between sections. |
+| \`dipTo({ color })\` | Fade through a colour, cut at the midpoint | Section changes; a dip to dark when the music drops. |
+| \`flash(ctx, time, at, { strength, decay })\` | Exposure flash overlay (draw after the frame) | Downbeats and hard cuts. |
+| \`iris({ x, y })\` | A circle opens from a point with a glowing rim | Moving from a motif (a moon, an eye, a logo) into the next shot. |
+| \`slash({ slant })\` | A slanted light band wipes across | Bright, energetic cuts. |
+| \`whip({ direction })\` | Both shots travel together with motion smear | Implied camera movement, for example tilting from a face to the feet. |
+| \`particleWipe({ direction, shape, count, color })\` | A gust of growing petals, stars, circles or hearts becomes windows onto the next shot | Sakura-style transitions and themed changes. |
+
+Keep transitions between roughly 0.3 and 0.8 seconds. Place the cut on a beat or bar with \`ctx.beat(time)\` when the project has audio. Use two or three transition types per film; repeating one signature transition (such as \`particleWipe\`) ties a piece together better than using every type.
+
+## Atmosphere
+
+| Helper | Use |
+| --- | --- |
+| \`glow(ctx, x, y, radius, color, alpha)\` | Soft screen-mode light, for a moon halo or stage light. |
+| \`drift(ctx, time, { shape, count, amount, wind, fall, size, color })\` | Wrapping particles: falling sakura, snow, or sparks. |
+| \`twinkle(ctx, time, { area, count, size, color })\` | Four-point stars that twinkle independently. |
+| \`lightSweep(ctx, time, { start, end, width, slant, alpha })\` | One slanted sheet of light crossing the frame. |
+| \`smear(ctx, amount, axis)\` | Brief directional motion smear of the current frame. |
+
+## Review
+
+Add each transition window to \`review.transitions\` in \`mografy.json\` with a small step (0.033–0.05 s) and inspect the strips. Check that clamped shots do not jump at the cut, that particle rims fade before shapes grow large, that flashes do not wash out type, and that the frame never shows an image edge during a move.
+`;
+
+const CJK_TYPOGRAPHY_REFERENCE = `# Chinese and Japanese typography
+
+[cjk.ts](__REPOSITORY__/extras/cjk/cjk.ts) sets Chinese and Japanese copy: vertical text (tategaki) and horizontal text with CJK line breaking. [cjk-demo.ts](__REPOSITORY__/extras/cjk/cjk-demo.ts) shows both.
+
+## Add to a project
+
+The module and fonts are an optional extra, not part of the installed template. If the project already has \`scenes/cjk.ts\`, read and reuse that local copy. Otherwise copy from the current Mografy checkout (\`extras/cjk/\`) or download from GitHub:
+
+\`\`\`sh
+curl -fsSL -o scenes/cjk.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/cjk.ts
+curl -fsSL -o assets/NotoSansCJKtc-Medium-subset.otf https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/NotoSansCJKtc-Medium-subset.otf
+curl -fsSL -o assets/NotoSerifCJKtc-Bold-subset.otf https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/NotoSerifCJKtc-Bold-subset.otf
+curl -fsSL -o assets/OFL-NotoCJK.txt https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/OFL.txt
+\`\`\`
+
+Copy only the font the design uses when one is enough. Keep the licence file with the fonts.
+
+## Fonts
+
+The repository provides two OFL-licensed subsets in [extras/cjk/fonts/](__REPOSITORY__/extras/cjk/fonts/): \`NotoSansCJKtc-Medium-subset.otf\` (family \`Noto Sans CJK TC\`, weight 500) and \`NotoSerifCJKtc-Bold-subset.otf\` (family \`Noto Serif CJK TC\`, weight 700). They cover ASCII, kana, CJK punctuation, full-width and vertical presentation forms, 5,401 common Traditional Chinese characters (Big5 level 1), 6,355 Japanese kanji (JIS levels 1–2), and 3,755 Simplified characters (GB2312 level 1). Together they are about 9.5 MB, so they are fetched per project rather than installed. After copying, register them in \`mografy.json\`:
+
+\`\`\`json
+"fonts": [
+  { "family": "Noto Sans CJK TC", "path": "assets/NotoSansCJKtc-Medium-subset.otf", "weight": 500 },
+  { "family": "Noto Serif CJK TC", "path": "assets/NotoSerifCJKtc-Bold-subset.otf", "weight": 700 }
+]
+\`\`\`
+
+Use the exported \`CJK_SANS\` and \`CJK_SERIF\` names with the registered weights. Without registration, the browser falls back to system fonts, so previews may differ between computers and exports. Serif (Mincho / Song) suits titles, poetry and Japanese PV copy; Sans suits subtitles and UI. For a character outside the subsets, or JP / SC / KR glyph forms, regenerate a subset with [subset-cjk-fonts.py](__REPOSITORY__/extras/cjk/subset-cjk-fonts.py) from the [Noto CJK](https://github.com/notofonts/noto-cjk) sources (\`--extra\` adds characters). Check unusual names and rare characters in actual frames.
+
+## Vertical text
+
+\`verticalText(ctx, time, { text, x, y, size, columnHeight?, tracking?, columnGap?, font?, weight?, color?, glow?, outline?, start?, stagger?, duration?, lift?, end?, out? })\` draws columns top to bottom and right to left. \`x\` is the centre of the first (rightmost) column, \`y\` its top. \`columnHeight\` wraps automatically; \`\\n\` starts a new column. It returns the layout (\`glyphs\`, \`columns\`, \`width\`, \`height\`) for placing rules or ornaments; \`verticalLayout\` returns the same without drawing.
+
+Canvas has no vertical writing mode, so the helper:
+
+- swaps punctuation and brackets for Unicode vertical presentation forms (、。，：；！？「」『』（）【】《》〈〉…);
+- rotates long marks and dashes (ー, 〜, ―) and single Latin letters by 90°;
+- nudges small kana (っ, ゃ, ョ…) toward the upper right of their cell;
+- sets one or two consecutive digits horizontally in one cell (tate-chu-yoko), for dates such as 10月17日;
+- applies kinsoku when wrapping: closing punctuation, small kana and ー never start a column, and opening brackets never end one.
+
+Longer Latin words read poorly in vertical copy; prefer a separate horizontal label.
+
+## Horizontal text
+
+\`cjkText(ctx, time, { text, x, y, size, maxWidth?, lineHeight?, tracking?, align?, ... })\` wraps with the same kinsoku rules while keeping Latin words and numbers whole, then reveals characters with the shared stagger options. \`wrapCJK\` returns the lines without drawing, for layout. \`y\` is the first baseline; lines advance by \`size * lineHeight\` (default 1.5).
+
+## Direction
+
+- Keep important copy visible for at least about \`characters / 4 + 1\` seconds; CJK characters carry more meaning per glyph than Latin letters, so long lines need longer holds.
+- Use \`stagger\` of 0.04–0.08 s for titles and 0.015–0.03 s for longer captions.
+- On bright or busy images, add a dark gradient scrim or \`outline\` (about 0.1 × size) rather than relying on glow alone.
+- In portrait, wrap captions to the social safe area and shorten columns with \`columnHeight\`.
+- Expose only important subtitles as \`role: 'subtitle'\` params; editable copy must stay within the font subset.
+
+## Review
+
+Inspect actual frames: punctuation position in columns, wrapped column starts, digit pairs, long-mark rotation, glyph fallback (a different-looking character usually means it is missing from the subset), contrast, and reading time.
 `;
 
 const INTRO_REFERENCE = `# Mografy intro reference
@@ -390,6 +507,8 @@ For scene work, read the project's \`mografy.json\`, configured scene entry, imp
 - Before editing a scene, read [references/scene-authoring.md](references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.
 - For a storyboard or a new animation that needs shot planning, read [references/storyboard.md](references/storyboard.md). Codex uses image generation; Claude uses Artifacts when available, with an explicit local HTML fallback in Claude Code.
 - When creating an animation, choosing storyboard motifs, or reusing examples, read [references/built-in-components.md](references/built-in-components.md) for the sixteen scene components and [references/intro.md](references/intro.md) for the existing twelve-second intro. Inspect the relevant original scene code before adapting it.
+- For a film-style sequence built from stills or key art (camera moves, transitions such as sakura petal wipes, atmosphere), read [references/camera-transitions.md](references/camera-transitions.md) and add the optional \`cinema.ts\` extra to the project.
+- For Chinese or Japanese copy, vertical text (tategaki), or CJK line breaking, read [references/cjk-typography.md](references/cjk-typography.md) and add the optional \`cjk.ts\` extra and CJK fonts to the project.
 - For new motion or animation polish, read [references/animation-principles.md](references/animation-principles.md) and apply the relevant principles.
 - When an exported video is too large or the user asks to compress it, read [references/video-compression.md](references/video-compression.md) and run the bundled \`scripts/compress-video.py\` on the finished file. Preserve the original, check the reported size, and review the compressed result.
 - When developing Mografy itself, read [references/project.md](references/project.md) for the GitHub sources and required checks. Inspect the current checkout's local files before editing.
@@ -457,6 +576,8 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
   const references = Object.fromEntries(Object.entries({ ...SKILL_REFERENCES,
     'built-in-components.md': BUILTIN_COMPONENTS_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'intro.md': INTRO_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'camera-transitions.md': CAMERA_TRANSITIONS_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'cjk-typography.md': CJK_TYPOGRAPHY_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
   })
@@ -542,6 +663,8 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   const files: Record<string, string> = { ...skillFilesWithRepositoryLinks(repository).mografy, 'SKILL.md': LEGACY_STORYBOARD_SKILL };
   delete files['references/built-in-components.md'];
   delete files['references/intro.md'];
+  delete files['references/camera-transitions.md'];
+  delete files['references/cjk-typography.md'];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",
     "Skills live in the source repository's outer `.agents/skills/` folder. Codex and Claude share `mografy` and `mografy-storyboard` there, with local references. Never create Skill folders inside animation subprojects. Root `AGENTS.md` routes Codex; root `CLAUDE.md` imports the same shared Skill for Claude.",
