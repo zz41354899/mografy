@@ -15,6 +15,10 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 [Watch the intro with audio (MP4)](https://github.com/zz41354899/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4).
 
+## Latest updates
+
+**2026-10-17** — Optional extras for film-style videos and Chinese / Japanese copy: camera moves, sakura petal and other transitions, vertical Japanese text, and OFL CJK fonts. Ask your agent for "sakura transitions" or "vertical Japanese copy" and it adds what the project needs. Installation is unchanged. See the [changelog](CHANGELOG.md).
+
 ## Get started
 
 Requires Node.js 22.12 or later and pnpm (the repository pins pnpm 11.18.0). Mografy currently runs from source; a standalone npm distribution is still planned. Clone the repository, then run setup in its root:
