@@ -1,5 +1,5 @@
 // Generate one shared outer .agents folder and migrate animation subproject guidance.
-// All generated English content is owned by packages/core/src/guide.ts.
+// Guidance is owned by packages/core/src/guide.ts; executable helpers are copied from scripts/.
 import { lstat, mkdir, readdir, readFile, realpath, rmdir, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,7 @@ import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (process.argv.length > 2) throw new Error('Usage: pnpm sync:skills');
 for (const [name, files] of Object.entries(sharedSkillFiles())) {
+  if (name === 'mografy') files['scripts/compress-video.py'] = await readFile(join(root, 'scripts', 'compress-video.py'), 'utf8');
   const skill = join(root, '.agents', 'skills', name);
   await queueProjectWrite(skill, async () => {
     for (const [file, contents] of Object.entries(files)) await atomicWrite(join(skill, file), contents);

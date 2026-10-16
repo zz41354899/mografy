@@ -1,5 +1,6 @@
 // Connection to the Mografy server: snapshots and seek events over WebSocket, writes over HTTP.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { callApi } from './api.js';
 import type { ExportRequest, ProjectPatch, RenderStatus, ServerEvent, Snapshot } from '@mografy/core';
 
 export type Connection = 'connecting' | 'connected' | 'offline';
@@ -14,13 +15,6 @@ export interface Session {
   startRender(request?: ExportRequest): Promise<RenderStatus>;
   cancelRender(id?: string): Promise<void>;
   review(): Promise<{ files: string[]; report: string }>;
-}
-
-async function call<T>(path: string, method: string, payload?: unknown): Promise<T> {
-  const response = await fetch(`/__mografy/${path}`, { method, headers: payload === undefined ? {} : { 'content-type': 'application/json' }, ...(payload === undefined ? {} : { body: JSON.stringify(payload) }) });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.error?.message ?? `HTTP ${response.status}`);
-  return data as T;
 }
 
 export function useSession(): Session {
@@ -43,7 +37,7 @@ export function useSession(): Session {
         const event = JSON.parse(String(message.data)) as ServerEvent;
         if (event.type === 'seek') { if (event.clientId !== clientId) setSeek(s => ({ t: event.t, n: (s?.n ?? 0) + 1 })); return; }
         // Sequence numbers restart when the player switches to another project.
-        if (event.snapshot.projectDir !== projectDir.current) { projectDir.current = event.snapshot.projectDir; sequence.current = -1; }
+        if (event.snapshot.projectDir !== projectDir.current) { clearTimeout(playheadTimer.current); projectDir.current = event.snapshot.projectDir; sequence.current = -1; setSeek(null); }
         if (event.snapshot.sequence < sequence.current) return;
         sequence.current = event.snapshot.sequence;
         setSnapshot(event.snapshot);
@@ -51,18 +45,20 @@ export function useSession(): Session {
       socket.onclose = () => { if (stopped) return; setConnection('offline'); retry = setTimeout(connect, delay); delay = Math.min(delay * 2, 4000); };
     };
     connect();
-    return () => { stopped = true; clearTimeout(retry); socket?.close(); };
+    return () => { stopped = true; clearTimeout(retry); clearTimeout(playheadTimer.current); socket?.close(); };
   }, [clientId]);
 
-  return useMemo<Session>(() => ({
-    snapshot, connection, clientId, seek,
-    async patchProject(patch) { await call('project', 'PATCH', { patch, clientId }); },
+  const scopedDir = snapshot?.projectDir;
+  const actions = useMemo<Pick<Session, 'patchProject' | 'reportPlayhead' | 'startRender' | 'cancelRender' | 'review'>>(() => ({
+    async patchProject(patch) { await callApi('project', 'PATCH', { patch, clientId }, scopedDir); },
     reportPlayhead(t) {
       clearTimeout(playheadTimer.current);
-      playheadTimer.current = setTimeout(() => { void call('state', 'PATCH', { playhead: t, clientId }).catch(() => {}); }, 400);
+      const dir = scopedDir;
+      playheadTimer.current = setTimeout(() => { if (dir === projectDir.current) void callApi('state', 'PATCH', { playhead: t, clientId }, dir).catch(() => {}); }, 400);
     },
-    startRender: (request = {}) => call<RenderStatus>('render', 'POST', request),
-    async cancelRender(id) { await call('render/cancel', 'POST', id ? { id } : {}); },
-    review: () => call('review', 'POST', {}),
-  }), [snapshot, connection, clientId, seek]);
+    startRender: (request = {}) => callApi<RenderStatus>('render', 'POST', request, scopedDir),
+    async cancelRender(id) { await callApi('render/cancel', 'POST', id ? { id } : {}, scopedDir); },
+    review: () => callApi('review', 'POST', {}, scopedDir),
+  }), [clientId, scopedDir]);
+  return useMemo(() => ({ snapshot, connection, clientId, seek, ...actions }), [snapshot, connection, clientId, seek, actions]);
 }

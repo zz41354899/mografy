@@ -1,6 +1,7 @@
 // Left panel: every project this computer knows about, and a way to start a new one.
 // Opening a project switches this same player over to it.
 import { useCallback, useEffect, useState } from 'react';
+import { callApi } from './api.js';
 import type { ProjectList, ProjectSummary } from '@mografy/core';
 
 const GROUPS: { kind: ProjectSummary['kind']; title: string }[] = [
@@ -18,13 +19,6 @@ function ago(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
-async function call<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`/__mografy/${path}`, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.error?.message ?? `HTTP ${response.status}`);
-  return data as T;
-}
-
 export function Projects({ current, refreshKey }: { current: string | undefined; refreshKey: string }) {
   const [list, setList] = useState<ProjectList | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,21 +26,21 @@ export function Projects({ current, refreshKey }: { current: string | undefined;
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
 
-  const refresh = useCallback(() => { void call<ProjectList>('projects').then(setList, e => setError(String(e.message))); }, []);
+  const refresh = useCallback(() => { void callApi<ProjectList>('projects').then(setList, e => setError(String(e.message))); }, []);
   useEffect(() => { refresh(); }, [refresh, refreshKey]);
   useEffect(() => { window.addEventListener('focus', refresh); return () => window.removeEventListener('focus', refresh); }, [refresh]);
 
   const open = async (dir: string) => {
     if (dir === current || busy) return;
     setBusy(dir); setError('');
-    try { await call('projects/open', { dir }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    try { await callApi('projects/open', 'POST', { dir }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(null); }
   };
   const create = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setBusy('new'); setError('');
-    try { await call('projects/new', { name: trimmed }); setCreating(false); setName(''); refresh(); }
+    try { await callApi('projects/new', 'POST', { name: trimmed }); setCreating(false); setName(''); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(null); }
   };

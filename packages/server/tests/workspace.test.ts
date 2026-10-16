@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir } from '../src/workspace.js';
+import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir, readRecent, writeActive, clearActive } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
 import { Project } from '../src/project.js';
 import { seedComponentThumbnail } from '../src/component-thumbnails.js';
@@ -47,6 +47,24 @@ test('projects: create in the library, remember, list without duplicates', async
     await rememberProject(outside);
     assert.equal(await defaultProject(sandbox), outside, 'falls back to the last opened project');
   } finally { await rm(sandbox, { recursive: true, force: true }); delete process.env.MOGRAFY_HOME; delete process.env.MOGRAFY_STATE; }
+});
+
+test('listing projects is read-only; component installation is explicit', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-list-readonly-'));
+  const previousHome = process.env.MOGRAFY_HOME;
+  const previousState = process.env.MOGRAFY_STATE;
+  process.env.MOGRAFY_HOME = join(sandbox, 'library');
+  process.env.MOGRAFY_STATE = join(sandbox, 'state');
+  try {
+    assert.equal((await listProjects()).projects.filter(p => p.kind === 'component').length, 0);
+    await assert.rejects(access(join(sandbox, 'library')), { code: 'ENOENT' });
+    await ensureComponentProjects();
+    assert.equal((await listProjects()).projects.filter(p => p.kind === 'component').length, 16);
+  } finally {
+    await rm(sandbox, { recursive: true, force: true });
+    if (previousHome === undefined) delete process.env.MOGRAFY_HOME; else process.env.MOGRAFY_HOME = previousHome;
+    if (previousState === undefined) delete process.env.MOGRAFY_STATE; else process.env.MOGRAFY_STATE = previousState;
+  }
 });
 
 test('bundled thumbnails seed unchanged existing components and preserve customized artwork', async () => {
@@ -192,4 +210,31 @@ test('new portrait projects reopen with effective dimensions and reject a broken
     assert.equal(await readFile(join(dir,'mografy.json'),'utf8'),before);
     assert.equal(project.snapshot().scene!.meta.width,1920);
   } finally {await project?.close(); await rm(dir,{recursive:true,force:true});}
+});
+
+
+test('concurrent library creation and recent writes retain every project', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-workspace-concurrent-'));
+  const previousHome = process.env.MOGRAFY_HOME, previousState = process.env.MOGRAFY_STATE;
+  process.env.MOGRAFY_HOME = join(sandbox, 'library');
+  process.env.MOGRAFY_STATE = join(sandbox, 'state');
+  try {
+    assert.equal(folderName('.'), 'untitled');
+    assert.equal(folderName('..'), 'untitled');
+    const projects = await Promise.all(Array.from({ length: 4 }, () => createInLibrary('Same name')));
+    assert.equal(new Set(projects).size, 4);
+    await Promise.all(projects.map(rememberProject));
+    assert.deepEqual(new Set((await readRecent()).projects), new Set(projects));
+    const first = { pid: process.pid, url: 'http://localhost:1/', token: 'first', project: projects[0]! };
+    const second = { ...first, token: 'second' };
+    await writeActive(first);
+    await Promise.all([writeActive(second), clearActive(first.token)]);
+    assert.equal(JSON.parse(await readFile(join(sandbox, 'state/active.json'), 'utf8')).token, 'second');
+    process.env.MOGRAFY_STATE = join(sandbox, 'state/active.json');
+    await assert.doesNotReject(rememberProject(projects[0]!));
+  } finally {
+    await rm(sandbox, { recursive: true, force: true });
+    if (previousHome === undefined) delete process.env.MOGRAFY_HOME; else process.env.MOGRAFY_HOME = previousHome;
+    if (previousState === undefined) delete process.env.MOGRAFY_STATE; else process.env.MOGRAFY_STATE = previousState;
+  }
 });

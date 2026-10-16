@@ -1,6 +1,25 @@
 # Development status
 
-Updated: 2026-10-14
+Updated: 2026-10-16
+
+## Project and player refactoring (2026-10-16)
+
+- Completed the staged [refactoring plan](refactoring-plan.md), preserving browser-only scenes, the six-package structure, and shared runtime/output effects. `ProjectWatcher`, `ProjectFrames`, and `RenderJobs` own their resources while Project coordinates publication and queued atomic writes.
+- Asset filename allocation and writes now share one Project queue operation. Inspection, stills, and the player share runtime identity covering version, seed, canvas, font descriptors, and the audio beat grid. Runtime-affecting API changes trial before persistence; failed disk inputs cannot replace the last working configuration through an unrelated patch. Closing drains in-flight still captures.
+- Playback frame subscriptions moved into `Playback`; `Inspector` owns tabs and controls. Session actions remain stable across snapshots, and delayed playhead reports are cancelled on switch/unmount. Superseded or disposed player loads discard their runtimes. Export visibility/job reducers and shared progress/cancellation logic retain hide, resume, retry, completion, and fresh-settings behavior.
+- Core owns HTTP request schemas, with malformed envelopes returning 400 and invalid project settings retaining 422. The player uses one JSON/error client. CLI flags, export transport, and terminal progress are separate; failed startup closes an owned Project. Workspace listing is read-only, with explicit component initialization and separate installation/recent-state modules.
+- Browser cases are grouped by player, exports, and projects/audio, each owning a temporary project, installation state, server, and browser. `pnpm check` passed build, typecheck, and 94 tests; two additional owned-CLI export/failed-startup tests passed separately, for 96 cases total. `pnpm test:browser` passed 17 checks. Desktop, effects, portrait/export, completion, and background progress captures were visually reviewed.
+- In one local 1280 × 800 Chromium comparison using the same current dependencies, App function executions during one second of playback fell from 60 to 0; playback still advanced normally and the paused Canvas hash matched. This measures shell subscription work, not export throughput. Evidence is in `artifacts/refactoring/playback-comparison.json` and adjacent captures.
+- Completed the remaining ownership boundaries: App now composes player/keyboard/parameter/effects hooks, Inspector composes separate panels, and export draft transitions and settings presentation are separate from job/modal orchestration. Per-format choices remain independent; strict output sizes exclude preset display metadata and Retry retains submitted settings.
+- HTTP transport, parsing, workspace routes, project routes, and Project/lock lifecycle now have separate owners. Request dispatch captures its Project before reading bodies, and player actions carry their displayed project directory. Delayed actions from a previous project receive 409; legacy unscoped API calls remain compatible. Startup failure releases locks, and shutdown is idempotent and rejects later switches.
+- Project scaffolding and built-in initialization are separate from listing. Library name selection/creation and recent/active-state updates are serialized. Concurrent identical names create distinct folders; an old server token cannot clear a newer active record. Unavailable recent-history storage remains best effort.
+- Completion validation: `pnpm check` passed build/typecheck and all 105 tests, including delayed browser auto-save across a project switch, slow request bodies, lock cleanup, concurrent workspace state, and export drafts. `pnpm test:browser` passed all 17 checks. Additional unused-symbol typechecks and diff checks passed. Fresh desktop player/effects/export and 390px export captures were visually reviewed in `artifacts/refactoring-completion/`; Server/workspace checks were rerun after the final best-effort history safeguard.
+
+## Post-export video compression Skill (2026-10-16)
+
+- The shared `mografy` Skill now routes oversized finished videos to a Python/FFmpeg helper. `packages/core/src/guide.ts` owns the compression instructions; `scripts/compress-video.py` owns the executable, copied into the Skill by `pnpm sync:skills` for both Codex and Claude.
+- The helper creates a separate H.264 MP4 with CRF quality or a two-pass decimal MB budget, optional resolution caps without upscaling/cropping, and AAC audio retained by default. Existing files are never overwritten. It validates duration/audio and decodes the result before atomic publication; failures, cancellation, and candidates that do not save bytes leave no new output.
+- `pnpm check` passed 81 tests, `pnpm test:browser` passed 17 checks, and `pnpm test:compression` passed eight real-FFmpeg integration checks including SIGINT cleanup. The Skill validator passed and the generated helper matches its maintained source. The existing twelve-second intro shrank from 699,932 to 441,250 bytes (36.96%), retaining 1280 × 720, audio, and duration; a sampled original/compressed frame comparison was visually inspected. Compression remains lossy and target mode reports failure if actual bytes exceed the requested limit.
 
 ## Centered portrait component previews (2026-10-14)
 

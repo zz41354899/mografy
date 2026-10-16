@@ -1,24 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowCounterClockwise';
 import { WarningCircleIcon } from '@phosphor-icons/react/dist/csr/WarningCircle';
 import { PauseIcon } from '@phosphor-icons/react/dist/csr/Pause';
-import type { ExportSize, RenderSettings, RenderStatus, Snapshot } from '@mografy/core';
+import type { RenderStatus } from '@mografy/core';
 import type { Session } from './session.js';
 import { ExportPreview } from './ExportPreview.js';
 import { ExportMascot } from './ExportMascot.js';
 
-export interface ExportJobPreview { snapshot: Snapshot; size: ExportSize; settings: RenderSettings }
+import { exportProgress } from './export-state.js';
+import type { ExportJobPreview } from './export-state.js';
+import { useExportCancellation } from './useExportCancellation.js';
+import { ExportProgressBar } from './ExportProgressBar.js';
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
 export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, starting, requestError }: {
   job: RenderStatus; preview: ExportJobPreview | null; session: Session;
   onClose(): void; onRetry(): void; onEdit(): void; starting: boolean; requestError: string;
 }) {
-  const running = job.state === 'running', ready = job.state === 'done', failed = job.state === 'failed';
-  const [now, setNow] = useState(Date.now()), [cancelling, setCancelling] = useState(false), [error, setError] = useState('');
+  const { running, ready, failed, percentage, indeterminate, stageLabel } = exportProgress(job);
+  const { stopped, error, cancel } = useExportCancellation(job, session);
+  const [now, setNow] = useState(Date.now());
   const title = useRef<HTMLHeadingElement>(null);
   useEffect(() => { title.current?.focus(); }, [job.id, job.state]);
   useEffect(() => {
@@ -26,19 +29,10 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
     setNow(Date.now()); const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [running, job.id]);
-  useEffect(() => { setError(''); setCancelling(false); }, [job.id]);
-  const stopped = job.cancelling || cancelling;
   const elapsed = Math.max(0, ((job.finishedAt ? Date.parse(job.finishedAt) : now) - Date.parse(job.startedAt)) / 1000);
-  const percentage = Math.min(100, Math.round(job.done / Math.max(1, job.total) * 100));
-  const indeterminate = running && job.stage !== 'capture';
-  const heading = ready ? 'Export ready' : failed ? 'Export failed' : !running ? 'Export cancelled' : stopped ? 'Cancelling' : indeterminate ? job.format === 'mp4' ? 'Encoding' : 'Packaging' : 'Exporting';
+  const heading = ready ? 'Export ready' : failed ? 'Export failed' : !running ? 'Export cancelled' : stopped ? 'Cancelling' : stageLabel;
   const url = `/__mografy/files/${job.output.slice(session.snapshot!.projectDir.length + 1).split(/[\\/]/).map(encodeURIComponent).join('/')}`;
   const filename = job.output.split(/[\\/]/).pop();
-  const cancel = async () => {
-    setCancelling(true); setError('');
-    try { await session.cancelRender(job.id); }
-    catch (e) { setCancelling(false); setError(e instanceof Error ? e.message : String(e)); }
-  };
   return <div className={`export-job-view ${ready ? 'is-ready' : failed ? 'is-failed' : !running ? 'is-cancelled' : 'is-rendering'}`} data-testid="export-job" data-state={job.state}>
     <div className="export-job-scene">
       <div className="export-job-art">
@@ -52,9 +46,7 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
       <h3 ref={title} tabIndex={-1}><span role="status" aria-live="polite">{heading}</span>{ready ? <CheckIcon size={21} weight="bold" aria-hidden="true" /> : null}</h3>
       {running ? <>
         <div className="export-job-metric"><span>{indeterminate ? '···' : String(percentage)}{indeterminate ? null : <small>%</small>}</span></div>
-        <div className={`export-job-progress ${indeterminate ? 'indeterminate' : ''}`} role="progressbar" aria-label={indeterminate ? 'Finalizing export' : 'Frame capture'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={indeterminate ? undefined : percentage}>
-          <i style={{ '--progress': `${percentage}%` } as CSSProperties} />
-        </div>
+        <ExportProgressBar percentage={percentage} indeterminate={indeterminate} />
         <div className="export-job-detail"><span>{job.done.toLocaleString()} / {job.total.toLocaleString()} frames</span><time title="Elapsed time">{clock(elapsed)}</time></div>
       </> : ready ? <p className="export-job-file" title={filename}>{filename}</p> : null}
       {job.error || error || requestError ? <p className="export-job-error" role="alert">{requestError || error || job.error}</p> : null}

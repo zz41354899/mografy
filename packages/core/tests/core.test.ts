@@ -1,6 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { sceneRuntimeKey } from '../src/scene-inputs.js';
+import { projectPatchRequestSchema, sheetRequestSchema } from '../src/index.js';
 import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema } from '../src/index.js';
+test('runtime identity includes setup and beat inputs, excluding output settings and audio gain', () => {
+ const project = validateSceneProject({ version: 1, name: 'identity', scene: 'scenes/main.ts', audio: { path: 'assets/music.wav', bpm: 60 } });
+ const key = sceneRuntimeKey('version', project);
+ for (const changed of [
+  { ...project, seed: 2 }, { ...project, aspectRatio: '9:16' as const },
+  { ...project, fonts: [{ family: 'Other', path: 'assets/font.ttf' }] },
+  { ...project, audio: { ...project.audio!, bpm: 120 } },
+  { ...project, audio: { ...project.audio!, offset: 0.5 } },
+  { ...project, audio: undefined },
+ ]) assert.notEqual(sceneRuntimeKey('version', changed), key);
+ assert.notEqual(sceneRuntimeKey('other-version', project), key);
+ assert.equal(sceneRuntimeKey('version', { ...project, audio: { ...project.audio!, gain: 2 } }), key);
+ assert.equal(sceneRuntimeKey('version', validateSceneProject({ ...project, name: 'Renamed', render: { ...project.render, glow: 0 } })), key);
+});
+test('HTTP patch schemas validate shapes and preserve omitted settings', () => {
+ const request = projectPatchRequestSchema.parse({ patch: { render: { glow: 0 }, review: {} } });
+ assert.deepEqual(request.patch.render, { glow: 0 });
+ assert.deepEqual(request.patch.review, {});
+ for (const patch of [[], null, { unknown: true }, { params: [] }, { audio: { path: '../escape.wav', bpm: 120 } }])
+  assert.equal(projectPatchRequestSchema.safeParse({ patch }).success, false);
+ assert.equal(sheetRequestSchema.safeParse({ times: 'wrong' }).success, false);
+ assert.equal(sheetRequestSchema.safeParse({ transition: { start: 2, end: 1 } }).success, false);
+});
 test('manifest stores configuration only and rejects animation payload', () => {
  const input = { version: 1, name: 'demo', scene: 'scenes/main.ts' };
  assert.equal(validateSceneProject(input).render.mixing, 'srgb');

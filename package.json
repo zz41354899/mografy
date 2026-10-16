@@ -18,6 +18,7 @@
     "thumbnails:generate": "pnpm build && node --import tsx scripts/generate-component-thumbnails.ts",
     "test": "pnpm --filter './packages/**' -r --workspace-concurrency=1 test",
     "test:browser": "pnpm --filter './packages/**' -r --workspace-concurrency=1 --if-present test:browser",
+    "test:compression": "python3 -B -m unittest discover -s scripts/tests -p 'test_*.py'",
     "check": "pnpm build && pnpm typecheck && pnpm test",
     "mografy": "node packages/cli/bin/mografy.js",
     "install:tool": "pnpm install --filter mografy-workspace --filter './packages/**'",

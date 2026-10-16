@@ -1,5 +1,5 @@
 // Shapes shared by the server, player, and CLI (types only).
-import type { ExportFormat, ParameterDefinitions, ParameterIssue, ParameterValue, SceneMeta, SceneProject } from './index.js';
+import type { ExportFormat, ParameterDefinitions, ParameterIssue, SceneMeta, SceneProject } from './index.js';
 
 export interface SceneInfo {
   version: string; meta: SceneMeta; params: ParameterDefinitions;
@@ -35,16 +35,6 @@ export interface Snapshot {
 export type ServerEvent =
   | { type: 'snapshot'; reason: string; clientId?: string | undefined; snapshot: Snapshot }
   | { type: 'seek'; t: number; clientId?: string | undefined };
-export interface ProjectPatch {
-  name?: string;
-  /** null removes a saved value (back to the scene default). */
-  params?: Record<string, ParameterValue | null>;
-  seed?: number;
-  aspectRatio?: SceneProject['aspectRatio'] | null;
-  audio?: SceneProject['audio'] | null;
-  render?: Partial<SceneProject['render']>;
-  review?: Partial<SceneProject['review']>;
-}
 export interface ApiErrorBody { error: { code: string; message: string } }
 export interface ProjectSummary {
   dir: string; name: string;

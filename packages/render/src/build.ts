@@ -3,8 +3,8 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { build } from 'esbuild';
-import type { Plugin } from 'esbuild';
+import { build, stop } from 'esbuild';
+import type { BuildOptions, Plugin } from 'esbuild';
 import { checkSceneSource } from '@mografy/core';
 import type { SceneProject } from '@mografy/core';
 
@@ -85,10 +85,17 @@ export async function buildScene(projectDir: string, project: SceneProject, over
   if (!overrideFiles.has(entry)) await readFile(entry).catch(() => { throw new SceneBuildError(`Scene entry not found: ${project.scene}`); });
   let code: string;
   try {
-    const result = await build({
+    const options = {
       entryPoints: [entry], bundle: true, format: 'esm', platform: 'browser', target: 'es2022',
       write: false, logLevel: 'silent', plugins: [guard], sourcemap: 'inline', sourcesContent: false,
       absWorkingDir: root,
+    } satisfies BuildOptions;
+    const result = await build(options).catch(async (error: unknown) => {
+      // esbuild keeps one child process; once it exits, every later build fails until it is restarted.
+      if (!String((error as Error | undefined)?.message).includes('service is no longer running')) throw error;
+      await stop();
+      sources.length = 0; problems.length = 0;
+      return build(options);
     });
     code = result.outputFiles[0]!.text;
   } catch (error) {

@@ -1,0 +1,18 @@
+{
+  "note": "Local Chromium comparison: HEAD App versus current App, same current dependencies, 1280x800 viewport, one-second playback window. Counts App function executions, not total React commits or export speed.",
+  "results": [
+    {
+      "variant": "before",
+      "appRendersInOneSecond": 60,
+      "playbackAdvancedSeconds": 1,
+      "pausedFrameHash": "9b74126d0fc208fcd0699abf63885951e44699b141ffc523943190d909870422"
+    },
+    {
+      "variant": "after",
+      "appRendersInOneSecond": 0,
+      "playbackAdvancedSeconds": 1.0166999999999997,
+      "pausedFrameHash": "9b74126d0fc208fcd0699abf63885951e44699b141ffc523943190d909870422"
+    }
+  ],
+  "samePausedFrame": true
+}

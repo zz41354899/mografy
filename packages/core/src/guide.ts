@@ -330,6 +330,47 @@ mografy review examples/mografy-intro
 The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using \`mografy export examples/mografy-intro --format mp4|lottie|svga\`.
 `;
 
+const VIDEO_COMPRESSION_REFERENCE = `# Compress an exported video
+
+Use this workflow when a finished render is too large to upload or share, or when the user requests a smaller video. Work from the actual exported video (normally in the project's \`renders/\` folder). Scene edits, a new render, and a storyboard are unnecessary for compression alone. This helper outputs H.264 MP4; it does not compress Lottie JSON or SVGA packages, and does not preserve transparency or HDR.
+
+## Run the bundled Python helper
+
+Requires Python 3.10+ and FFmpeg with \`libx264\`, AAC, and \`ffprobe\` on PATH. No pip packages are needed. On macOS, \`brew install ffmpeg\` supplies FFmpeg and ffprobe. The helper accepts \`--ffmpeg\` / \`--ffprobe\` or \`MOGRAFY_FFMPEG\` / \`MOGRAFY_FFPROBE\` executable overrides; it does not automatically discover Mografy's bundled FFmpeg. If a dependency is absent, report it and use the environment's normal installation process.
+
+Resolve \`../scripts/compress-video.py\` relative to this reference's local Skill directory, not the animation project's directory. From the owning repository root, these commands invoke the shared Skill copy (quote paths containing spaces):
+
+\`\`\`sh
+# Balanced quality, same dimensions and frame timing; keeps audio when present.
+python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/renders/film.mp4"
+
+# Better detail retention; optionally trade encoding time for compression.
+python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/renders/film.mp4" --crf 20 --preset slow -o "projects/my-animation/renders/film-share.mp4"
+
+# Fit a landscape video within 1280 x 720 without upscaling or cropping.
+python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/renders/film.mp4" --max-width 1280 --max-height 720
+
+# Target a 10 MB upload limit (decimal MB), using two-pass encoding.
+python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/renders/film.mp4" --target-mb 10
+\`\`\`
+
+The maintained source is [scripts/compress-video.py](__REPOSITORY__/scripts/compress-video.py); \`pnpm sync:skills\` copies it into the shared Skill's \`scripts/\` directory. Edit the repository source, then sync, rather than editing the generated copy. For an animation outside this repository, use the absolute path to the loaded Skill's helper and the actual input video.
+
+## Choose settings and verify
+
+- Default: CRF 23, medium preset, AAC 128 kbps, original frame timing and dimensions (rounded down to even pixels for H.264). It preserves the first video and first audio stream; additional streams, selectable subtitles, and attachments are omitted. Burned-in captions remain visible.
+- CRF 18–20 keeps more detail; 26–28 trades detail for smaller files. CRF is lossy and does not guarantee a file size or reduction. \`--crf\` and \`--target-mb\` are mutually exclusive.
+- Use \`--target-mb\` for a stated upload limit. The budget reserves space for audio and container overhead, then checks actual bytes. An impossible budget or oversize result fails without publishing an output; report that failure rather than promising the limit was met.
+- Change resolution only when appropriate to the request. For portrait 720p, use \`--max-width 720 --max-height 1280\`. Both caps preserve aspect ratio without cropping or upscaling. Small text and fine artwork may need a higher resolution or lower CRF.
+- Audio stays unless \`--no-audio\` is explicitly appropriate; \`--audio-kbps 96\` can reduce its budget. Do not silently remove narration or music to hit a limit.
+
+The helper never overwrites any existing file or the original export. It defaults to \`<stem>-compressed.mp4\` beside the input; pass a new \`-o\` path for another attempt. It encodes in a temporary folder, verifies duration/audio and decodes the result before publishing. Failed or cancelled operations clean up temporary output. If the candidate is larger than or equal to the source, it is discarded and stdout JSON reports \`status: "skipped"\`, \`output: null\`, and a reason; no compressed file exists in that case.
+
+Read the stdout JSON and report the actual output path, original/result bytes, and percentage saved. For a skipped result, explain that the original is already smaller with these settings. Inspect the compressed video for text legibility, banding, motion artifacts, and audio sync before delivery; automated decoding does not prove visual quality. Keep the original as the master. Do not automatically replace a website asset or upload a file unless that is part of the user's request.
+
+Option semantics: [FFmpeg documentation](https://ffmpeg.org/ffmpeg.html) and [libx264 encoder options](https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb).
+`;
+
 /** Generated references are colocated with each host's skill for portable relative links. */
 export const SKILL_REFERENCES = {
   'scene-authoring.md': GUIDE_BODY,
@@ -339,17 +380,18 @@ export const SKILL_REFERENCES = {
 
 export const SKILL = `---
 name: mografy
-description: Develop Mografy, plan storyboards, and create, edit, validate, visually review, and export Canvas animations. Use for Mografy repository work, scene projects with mografy.json, and Mografy storyboard requests.
+description: Develop Mografy, plan storyboards, create and export Canvas animations, and compress oversized exported videos with the bundled Python helper. Use for Mografy repository work, scene projects with mografy.json, storyboards, and smaller video files for sharing.
 ---
 
 # Mografy
 
-Read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
+For scene work, read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
 
 - Before editing a scene, read [references/scene-authoring.md](references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.
 - For a storyboard or a new animation that needs shot planning, read [references/storyboard.md](references/storyboard.md). Codex uses image generation; Claude uses Artifacts when available, with an explicit local HTML fallback in Claude Code.
 - When creating an animation, choosing storyboard motifs, or reusing examples, read [references/built-in-components.md](references/built-in-components.md) for the sixteen scene components and [references/intro.md](references/intro.md) for the existing twelve-second intro. Inspect the relevant original scene code before adapting it.
 - For new motion or animation polish, read [references/animation-principles.md](references/animation-principles.md) and apply the relevant principles.
+- When an exported video is too large or the user asks to compress it, read [references/video-compression.md](references/video-compression.md) and run the bundled \`scripts/compress-video.py\` on the finished file. Preserve the original, check the reported size, and review the compressed result.
 - When developing Mografy itself, read [references/project.md](references/project.md) for the GitHub sources and required checks. Inspect the current checkout's local files before editing.
 
 Animation content belongs only in scene modules, never in \`mografy.json\`. Render synchronously from absolute \`time\`, resolved params, and prepared assets; do not use GSAP, SVG scene layers, resvg, clocks, or previous-frame state. Scene code executes only in the browser. Write plans and prompts in English; preserve supplied copy unless translation is requested.
@@ -415,6 +457,7 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
   const references = Object.fromEntries(Object.entries({ ...SKILL_REFERENCES,
     'built-in-components.md': BUILTIN_COMPONENTS_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'intro.md': INTRO_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
   })
     .map(([name, contents]) => [`references/${name}`, contents]));

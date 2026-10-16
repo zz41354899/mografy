@@ -86,6 +86,7 @@ Its English references cover:
 | [Intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
 | [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
 | [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
+| [Video compression](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | Python helper for smaller exported MP4s, quality controls, and upload-size budgets |
 
 [packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) owns the generated entrypoint and references. After editing it, run `pnpm build` and `pnpm sync:skills`. Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
 
@@ -168,6 +169,15 @@ mografy export ./projects/my-animation --format svga -o preview.svga
 
 MP4 supports audio, motion sampling, glow, grain, and H.264 encoding settings. Lottie and SVGA package embedded PNG frames, preserving Canvas artwork and effects without editable vector layers or audio. Lottie output is `.lottie.json`; SVGA output is compressed SVGA 2 protobuf. Finished files are written under `renders/`.
 
+If a finished video is too large, ask the shared `mografy` Skill to compress it, or run the Python helper directly (Python 3.10+, FFmpeg and ffprobe on PATH):
+
+```sh
+python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4
+python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4 --target-mb 10 -o ./projects/my-animation/renders/film-share.mp4
+```
+
+The default writes a separate `film-compressed.mp4` using CRF 23 and retains audio. `--target-mb` uses two passes and checks the actual decimal MB limit. Existing files are never overwritten; candidates that do not reduce size are discarded. See the [compression reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) for quality, resolution, dependency overrides, and result verification. The maintained script is `scripts/compress-video.py`; `pnpm sync:skills` copies it into the shared Skill for both Codex and Claude.
+
 The player's Export dialog offers these output sizes:
 
 | Format | Sizes |
@@ -215,10 +225,13 @@ Use `mografy dev --yes` to create a missing project without a prompt, `--no-open
 
 ```text
 mografy/
-  .agents/skills/mografy/       Shared Skill and six reference documents
+  .agents/skills/mografy/       Shared Skill, references, and video-compression helper
   .claude/skills/mografy       Link to the same Skill
   packages/server/template/   Source component library and project template
   examples/mografy-intro/      Twelve-second reference animation
+  examples/analytics-product/  Eight-second analytics interaction demo
+  examples/mografy-brand/      Eight-second brand introduction
+  examples/follow-interaction/ Eight-second Follow button interaction
   projects/                   Editable animation projects and installed components
   docs/                       Architecture and development status
 

@@ -7,3 +7,18 @@ dist/
 .nuxt/
 .output/
 .data/
+
+# Local animation projects stay off GitHub. The sixteen built-in components that
+# installation creates in projects/.components/ are tracked defaults: keep them.
+/projects/*
+!/projects/.components/
+
+# Local examples not ready to publish.
+/examples/analytics-product/
+/examples/follow-interaction/
+/examples/mografy-brand/
+
+# Local reference films (docs) and their Skill.
+/docs/ref/
+/.agents/skills/mografy-ref/
+/.claude/skills/mografy-ref

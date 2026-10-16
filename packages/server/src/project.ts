@@ -1,26 +1,20 @@
 // Project state: the only writer of mografy.json and scene sources.
 // Every change goes compile → Chromium trial render → publish, in one queue.
 import { EventEmitter } from 'node:events';
-import { createReadStream, watch } from 'node:fs';
-import type { FSWatcher } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, realpath, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, relative, resolve } from 'node:path';
-import { exportRequestSchema, outputFrameCount, reconcileParams, resolveParams, validateExportFrameRate, validateSceneProject } from '@mografy/core';
-import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, RenderStatus, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
-import { buildScene, renderAnimation, renderReview, renderVideo, SceneHost, slug, validateAnimationSize } from '@mografy/render';
-import type { Cell, HostPage, SceneBuild } from '@mografy/render';
-import { atomicWrite, readJson, sha256, sourcePath } from './files.js';
+import { mkdir, readFile, realpath } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, validateSceneProject } from '@mografy/core';
+import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
+import { buildScene, renderReview, SceneHost } from '@mografy/render';
+import type { Cell, SceneBuild } from '@mografy/render';
+import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
 
-export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string, readonly details?: Record<string, unknown>) { super(message); }
-}
+import { ProjectWatcher } from './project-watcher.js';
+import { ProjectFrames } from './project-frames.js';
+import { RenderJobs } from './render-jobs.js';
+import { ApiError, describe } from './errors.js';
+export { ApiError } from './errors.js';
 const now = () => new Date().toISOString();
-type Issue = { path: PropertyKey[]; message: string };
-const describe = (error: unknown) => error instanceof Error && error.name === 'ZodError' && Array.isArray((error as { issues?: unknown }).issues)
-  ? ((error as unknown as { issues: Issue[] }).issues).map(i => `${i.path.map(String).join('.') || '(root)'}: ${i.message}`).join('\n')
-  : error instanceof Error ? error.message : String(error);
-const IGNORED = new Set(['.mografy', 'renders', 'node_modules', '.git']);
 
 // Scaffolding and live updates share the same writer for each project directory.
 const writers = new Map<string, Promise<unknown>>();
@@ -36,33 +30,32 @@ export async function queueProjectWrite<T>(dir: string, task: () => Promise<T>):
 export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   readonly manifestFile: string;
   private queue: Promise<unknown> = Promise.resolve();
-  private stillQueue: Promise<unknown> = Promise.resolve();
   private sequence = 0;
   private raw = '';
   private project: SceneProject | null = null;
   private scene: SceneInfo | null = null;
-  private sceneAspectRatio: SceneProject['aspectRatio'];
+  private preparedKey = '';
   private error: SceneError | null = null;
   private issues: ParameterIssue[] = [];
   private state = { playhead: 0 };
-  private renderStatus: RenderStatus | null = null;
-  private renderTask: Promise<void> | undefined;
-  private renderAbort: AbortController | undefined;
   private builds = new Map<string, SceneBuild>();
-  private stillPage: { key: string; page: HostPage } | undefined;
-  private watcher: FSWatcher | undefined;
-  private poller: ReturnType<typeof setInterval> | undefined;
-  private fingerprint = '';
-  private debounce: ReturnType<typeof setTimeout> | undefined;
   private stateTimer: ReturnType<typeof setTimeout> | undefined;
-  private thumbTimer: ReturnType<typeof setTimeout> | undefined;
   private thumbnail: string | null = null;
   private closed = false;
+  private readonly watcher: ProjectWatcher;
+  private readonly frames: ProjectFrames;
+  private readonly jobs: RenderJobs;
   url = '';
 
   private constructor(readonly dir: string, readonly host: SceneHost) {
     super();
     this.manifestFile = join(dir, 'mografy.json');
+    this.watcher = new ProjectWatcher(dir, () => this.rebuild('watch'));
+    this.frames = new ProjectFrames(host, () => this.current());
+    this.jobs = new RenderJobs(dir, host, (file, data, signal) => this.run(async () => {
+      signal.throwIfAborted();
+      await atomicWrite(file, data);
+    }), () => { if (!this.closed) this.publish('render'); });
   }
 
   static async open(projectDir: string) {
@@ -75,46 +68,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return project;
   }
 
-  /** Size + mtime of every project file that can affect a build. */
-  private async scan() {
-    const parts: string[] = [];
-    const walk = async (rel: string): Promise<void> => {
-      const entries = await readdir(join(this.dir, rel), { withFileTypes: true }).catch(() => []);
-      for (const e of entries) {
-        if (e.name.startsWith('.') || (!rel && IGNORED.has(e.name))) continue;
-        const path = rel ? `${rel}/${e.name}` : e.name;
-        if (e.isDirectory()) { if (parts.length < 5000) await walk(path); }
-        else if (e.isFile()) { const s = await stat(join(this.dir, path)).catch(() => undefined); if (s) parts.push(`${path}:${s.size}:${s.mtimeMs}`); }
-      }
-    };
-    await walk('');
-    return parts.sort().join('|');
-  }
-
-  /**
-   * Watch the project folder; any scene, asset or manifest change rebuilds.
-   * fs.watch reacts fast; a 1 s fingerprint poll catches events some platforms drop
-   * (for example after a file is replaced by rename).
-   */
-  watch() {
-    const trigger = () => {
-      clearTimeout(this.debounce);
-      this.debounce = setTimeout(() => { void this.scan().then(f => { this.fingerprint = f; return this.rebuild('watch'); }).catch(() => {}); }, 150);
-    };
-    try {
-      this.watcher = watch(this.dir, { recursive: true }, (_event, name) => {
-        const path = String(name ?? '').split('\\').join('/');
-        if (!path || IGNORED.has(path.split('/')[0]!) || /(^|\/)\.|~$|\.swp$/.test(path)) return;
-        trigger();
-      });
-      this.watcher.on('error', () => {});
-    } catch { /* polling still works */ }
-    void this.scan().then(f => { this.fingerprint = f; });
-    this.poller = setInterval(() => {
-      void this.scan().then(f => { if (f !== this.fingerprint) { this.fingerprint = f; trigger(); } });
-    }, 1000);
-    this.poller.unref();
-  }
+  watch() { this.watcher.start(); }
 
   private run<T>(task: () => Promise<T>): Promise<T> {
     if (this.closed) return Promise.reject(new ApiError(503, 'CLOSED', 'Server is closing'));
@@ -127,7 +81,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return structuredClone({
       sequence: this.sequence, url: this.url, projectDir: this.dir, revision: sha256(this.raw),
       project: this.project, scene: this.scene, error: this.error, issues: this.issues,
-      state: this.state, render: this.renderStatus, thumbnail: this.thumbnail,
+      state: this.state, render: this.jobs.status, thumbnail: this.thumbnail,
     });
   }
   private publish(reason: string, clientId?: string) {
@@ -157,9 +111,10 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   /** Compile and trial-render in Chromium. Nothing is published or written here. */
   private async prepare(project: SceneProject, overrides?: Record<string, string>) {
     const build = await buildScene(this.dir, project, overrides);
-    const known = this.scene?.version === build.version && this.sceneAspectRatio === project.aspectRatio ? this.scene : undefined;
+    const key = sceneRuntimeKey(build.version, project);
+    const known = this.preparedKey === key ? this.scene : undefined;
     const loaded = known ? { meta: known.meta, params: known.params } : await this.host.inspect(build, project);
-    return { build, meta: loaded.meta, params: loaded.params };
+    return { build, meta: loaded.meta, params: loaded.params, key };
   }
 
   /** Make a prepared build current: keep compatible saved values, persist the build, publish. */
@@ -169,10 +124,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     if (issues.length) await this.writeManifest({ ...project, params: values });
     this.builds.set(build.version, build);
     for (const key of [...this.builds.keys()].slice(0, -8)) this.builds.delete(key);
-    await writeFile(join(this.dir, '.mografy', 'builds', `${build.version}.js`), build.code).catch(() => {});
+    await atomicWrite(join(this.dir, '.mografy', 'builds', `${build.version}.js`), build.code).catch(() => {});
     const changed = this.scene?.version !== build.version || this.scene.meta.width !== meta.width || this.scene.meta.height !== meta.height;
     if (changed) this.scene = { version: build.version, meta, params, sources: build.sources, publishedAt: now(), reason };
-    this.sceneAspectRatio = project.aspectRatio;
+    this.project = issues.length ? { ...project, params: values } : project;
+    this.preparedKey = prepared.key;
     this.state.playhead = Math.min(this.state.playhead, meta.duration);
     this.issues = issues.length ? issues : changed ? [] : this.issues;
     this.error = null;
@@ -185,7 +141,8 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       try {
         const { raw, project } = await this.readManifest();
         const manifestChanged = raw !== this.raw;
-        this.raw = raw; this.project = project;
+        this.raw = raw;
+        if (!this.scene) this.project = project;
         const prepared = await this.prepare(project);
         const hadError = !!this.error;
         const { changed } = await this.commit(project, prepared, reason);
@@ -209,7 +166,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         try { return sourcePath(this.dir, path); } catch (error) { throw new ApiError(400, 'INVALID_PATH', describe(error)); }
       });
       const { raw, project } = await this.readManifest().catch(error => { throw new ApiError(422, 'MANIFEST', describe(error)); });
-      this.raw = raw; this.project = project;
+      this.raw = raw;
       let prepared;
       try { prepared = await this.prepare(project, files); }
       catch (error) { throw new ApiError(422, 'SCENE_ERROR', describe(error)); }
@@ -228,10 +185,13 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return { entry, files };
   }
 
-  patchProject(patch: ProjectPatch, expected?: string, clientId?: string) {
+  patchProject(input: ProjectPatch, expected?: string, clientId?: string) {
     return this.run(async () => {
+      let patch: ProjectPatch;
+      try { patch = projectPatchSchema.parse(input); }
+      catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
       const { raw, project } = await this.readManifest().catch(error => { throw new ApiError(422, 'MANIFEST', describe(error)); });
-      this.raw = raw; this.project = project;
+      this.raw = raw;
       if (expected && expected !== sha256(raw)) throw new ApiError(409, 'REVISION_CONFLICT', 'mografy.json changed since you last read it. Reload and try again.');
       const next: Record<string, unknown> = structuredClone(project);
       if (patch.params) {
@@ -249,69 +209,51 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       if (patch.review) next.review = { ...project.review, ...patch.review };
       let validated: SceneProject;
       try { validated = validateSceneProject(next); } catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
-      // Trial the new logical canvas before persisting it; a failed layout keeps the current canvas.
-      const prepared = patch.aspectRatio !== undefined ? await this.prepare(validated).catch(error => { throw new ApiError(422, 'CANVAS', describe(error)); }) : undefined;
+      // Seed, canvas and the audio grid change the runtime even when compiled code is unchanged.
+      const needsTrial = patch.aspectRatio !== undefined || patch.seed !== undefined || patch.audio !== undefined
+        || (this.scene !== null && sceneRuntimeKey(this.scene.version, validated) !== this.preparedKey);
+      const prepared = needsTrial ? await this.prepare(validated).catch(error => {
+        throw new ApiError(422, patch.aspectRatio !== undefined ? 'CANVAS' : 'SCENE_ERROR', describe(error));
+      }) : undefined;
       await this.writeManifest(validated);
       if (prepared) await this.commit(validated, prepared, 'update');
-      if (patch.audio || patch.seed !== undefined) {
-        // Assets and seed feed setup; re-run the trial so a bad audio path surfaces now.
-        try { await this.commit(validated, await this.prepare(validated), 'update'); }
-        catch (error) { this.error = { message: describe(error), reason: 'watch', at: now() }; }
-      }
       this.publish('project', clientId);
       return this.snapshot();
     });
   }
 
+  /** Filename allocation and the write form one serialized project operation. */
+  saveAsset(name: string, data: Buffer) {
+    return this.run(() => saveAsset(this.dir, name, data));
+  }
+
   setPlayhead(t: number, clientId?: string, seek = false) {
+    if (this.closed) throw new ApiError(503, 'CLOSED', 'Server is closing');
     if (!Number.isFinite(t) || t < 0) throw new ApiError(400, 'INVALID', 'Invalid time');
     this.state.playhead = Math.min(t, this.scene?.meta.duration ?? t);
     clearTimeout(this.stateTimer);
-    this.stateTimer = setTimeout(() => { void atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n').catch(() => {}); }, 300);
+    this.stateTimer = setTimeout(() => { void this.run(() => atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n')).catch(() => {}); }, 300);
     if (seek) { this.sequence++; this.emit('event', { type: 'seek', t: this.state.playhead, clientId }); }
     return this.state;
   }
 
-  /** Run `task` with a host page for the current version, seed and params (reused while they stay the same). */
-  private withStillPage<T>(task: (page: HostPage, project: SceneProject, scene: SceneInfo) => Promise<T>) {
-    const run = async () => {
-      const { project, scene, build } = this.current();
-      const key = `${scene.version}|${project.aspectRatio ?? ''}|${project.seed}|${JSON.stringify(project.params)}`;
-      if (this.stillPage?.key !== key) {
-        await this.stillPage?.page.close();
-        this.stillPage = { key, page: await this.host.open(build, project, { renderScale: 1 }) };
-      }
-      return task(this.stillPage.page, project, scene);
-    };
-    const next = this.stillQueue.then(run);
-    this.stillQueue = next.catch(() => {});
-    return next;
-  }
-
   /** PNG of the current version, raw at time t or as the output frame containing t. */
   still(cell: { kind: 'raw'; t: number } | { kind: 'output'; t: number }, sheet?: { title: string[]; cells: Cell[]; columns: number; cellWidth: number }) {
-    return this.withStillPage((page, project, scene) => {
+    return this.frames.withPage((page, project, scene) => {
       const settings = project.render;
       if (sheet) return page.sheet({ ...sheet, settings });
       const t = Math.min(Math.max(0, cell.t), scene.meta.duration);
-      const frames = Math.max(1, Math.ceil(scene.meta.duration * settings.fps - 1e-9));
+      const frames = outputFrameCount(scene.meta.duration, settings.fps);
       return page.png(cell.kind === 'raw' ? { kind: 'raw', t, label: '' } : { kind: 'output', k: Math.min(frames - 1, Math.floor(t * settings.fps + 1e-9)), label: '' }, settings);
     });
   }
 
-  /** Thumbnail for the project list, refreshed shortly after the picture changes. */
-  private scheduleThumb() {
-    clearTimeout(this.thumbTimer);
-    this.thumbTimer = setTimeout(() => {
-      void this.refreshThumbnail().catch(() => {});
-    }, 300);
-    this.thumbTimer.unref();
-  }
+  private scheduleThumb() { this.frames.scheduleThumbnail(() => this.refreshThumbnail()); }
 
   /** Capture then queue the write; discard a capture superseded by a source/parameter update. */
   async refreshThumbnail(time?: number) {
-    clearTimeout(this.thumbTimer);
-    const { png, revision, version } = await this.withStillPage(async (page, _project, scene) => {
+    this.frames.cancelThumbnail();
+    const { png, revision, version } = await this.frames.withPage(async (page, _project, scene) => {
       const revision = sha256(this.raw), version = scene.version;
       return { png: await page.thumb(Math.max(0, Math.min(time ?? scene.meta.duration * .45, scene.meta.duration)), 480), revision, version };
     });
@@ -324,72 +266,12 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     });
   }
 
-  startRender(input: ExportRequest | string = {}) {
-    if (this.renderStatus?.state === 'running') throw new ApiError(409, 'BUSY', 'A render is already running');
-    const { project, scene, build } = this.current();
-    let request, snapshot: SceneProject;
-    try {
-      request = exportRequestSchema.parse(typeof input === 'string' ? { output: input } : input);
-      snapshot = validateSceneProject({ ...structuredClone(project), render: { ...project.render, ...request.render } });
-      validateExportFrameRate(request.format, snapshot.render.fps);
-    } catch (error) { throw new ApiError(400, 'INVALID_EXPORT', describe(error)); }
-    const { format } = request, settings = snapshot.render;
-    const width = request.size?.width ?? Math.round(scene.meta.width * settings.scale), height = request.size?.height ?? Math.round(scene.meta.height * settings.scale);
-    const total = outputFrameCount(scene.meta.duration, settings.fps);
-    if (format === 'mp4' && (width % 2 || height % 2)) throw new ApiError(400, 'INVALID_EXPORT', 'MP4 needs even pixel dimensions. Adjust the resolution.');
-    if (format !== 'mp4') {
-      try { validateAnimationSize(width, height, total); } catch (error) { throw new ApiError(400, 'INVALID_EXPORT', describe(error)); }
-    }
-    const ext = format === 'lottie' ? '.lottie.json' : `.${format}`;
-    const orientation = format === 'mp4' && height > width ? '-portrait' : '';
-    const file = resolve(this.dir, request.output ?? join('renders', `${slug(project.name)}${orientation}${ext}`));
-    const local = relative(this.dir, file);
-    if (local.split(/[\\/]/)[0] !== 'renders' || !file.endsWith(format === 'lottie' ? '.json' : ext)) throw new ApiError(400, 'INVALID_PATH', `Output must be a ${format === 'lottie' ? '.json' : ext} file inside renders/`);
-    const status: RenderStatus = { id: Math.random().toString(36).slice(2, 10), format, state: 'running', stage: 'capture', done: 0, total, version: scene.version, output: file, startedAt: now() };
-    this.renderStatus = status;
-    const controller = new AbortController(); this.renderAbort = controller;
-    let last = 0;
-    this.publish('render');
-    const onProgress = (done: number, total: number, stage: 'capture' | 'encode' | 'package') => {
-      Object.assign(status, { done, total, stage });
-      if (!this.closed && (Date.now() - last > 250 || done === total)) { last = Date.now(); this.publish('render'); }
-    };
-    this.renderTask = (async () => {
-      if (format === 'mp4') {
-        const temp = await mkdtemp(join(tmpdir(), 'mografy-export-'));
-        try {
-          const result = await renderVideo({ projectDir: this.dir, project: snapshot, build, output: join(temp, 'output.mp4'), host: this.host, size: request.size, signal: controller.signal, onProgress });
-          if (controller.signal.aborted) throw new Error('Render cancelled');
-          await this.run(() => atomicWrite(file, createReadStream(result.output)));
-        } finally { await rm(temp, { recursive: true, force: true }); }
-      } else {
-        const result = await renderAnimation({ project: snapshot, build, host: this.host, format, size: request.size, signal: controller.signal, onProgress });
-        if (controller.signal.aborted) throw new Error('Render cancelled');
-        await this.run(() => atomicWrite(file, result.data));
-      }
-    })().then(() => { Object.assign(status, { state: 'done', stage: 'done', finishedAt: now() }); })
-      .catch(error => { Object.assign(status, controller.signal.aborted
-        ? { state: 'cancelled', stage: 'done', cancelling: false, finishedAt: now() }
-        : { state: 'failed', error: describe(error), finishedAt: now() }); })
-      .finally(() => { if (!this.closed) this.publish('render'); });
-    return status;
-  }
-
-  cancelRender(id?: string) {
-    const status = this.renderStatus;
-    if (!status || status.state !== 'running') throw new ApiError(409, 'NO_RENDER', 'No export is running');
-    if (id && status.id !== id) throw new ApiError(409, 'RENDER_CHANGED', 'That export is no longer running');
-    if (!status.cancelling) {
-      status.cancelling = true;
-      this.renderAbort?.abort();
-      this.publish('render');
-    }
-    return status;
-  }
+  startRender(input: ExportRequest | string = {}) { return this.jobs.start(input, this.current()); }
+  cancelRender(id?: string) { return this.jobs.cancel(id); }
 
   review(video?: string) {
     const { project, build } = this.current();
-    const comparisonVideo = video ?? (this.renderStatus?.state === 'done' && this.renderStatus.format === 'mp4' && this.renderStatus.version === build.version ? this.renderStatus.output : undefined);
+    const comparisonVideo = video ?? (this.jobs.status?.state === 'done' && this.jobs.status.format === 'mp4' && this.jobs.status.version === build.version ? this.jobs.status.output : undefined);
     return this.run(() => renderReview({
       projectDir: this.dir,
       project: structuredClone(project),
@@ -403,12 +285,13 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   async close() {
     if (this.closed) return;
     this.closed = true;
-    this.renderAbort?.abort();
-    this.watcher?.close(); clearInterval(this.poller); clearTimeout(this.debounce); clearTimeout(this.thumbTimer);
-    if (this.stateTimer) { clearTimeout(this.stateTimer); await atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n').catch(() => {}); }
-    await this.queue.catch(() => {});
-    await this.renderTask?.catch(() => {});
-    await this.stillPage?.page.close();
+    this.watcher.close();
+    this.frames.cancelThumbnail();
+    clearTimeout(this.stateTimer);
+    await this.jobs.close();
+    await this.queue;
+    if (this.stateTimer) await queueProjectWrite(this.dir, () => atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n')).catch(() => {});
+    await this.frames.close();
     await this.host.close();
     this.removeAllListeners();
   }

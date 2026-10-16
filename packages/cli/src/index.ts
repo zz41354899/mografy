@@ -6,28 +6,21 @@ import { homedir, platform } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
-import { exportFormatSchema, EXPORT_SIZES, MP4_PORTRAIT_SIZES } from '@mografy/core';
-import type { ExportFormat, RenderStatus } from '@mografy/core';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
+import { responseJson } from './api.js';
+import { displayPath, requireProject } from './paths.js';
+import { monitorDevExports } from './progress.js';
+import { exportProject } from './export.js';
+import { parse } from './options.js';
+import type { Flags } from './options.js';
+export { displayPath } from './paths.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, '..');
 const workspaceRoot = resolve(packageRoot, '..', '..');
 const BIN = join(packageRoot, 'bin', 'mografy.js');
 const VERSION = '0.1.0';
-
-/** Keep terminal output useful without exposing the user's absolute home path. */
-export function displayPath(value: string) {
-  const absolute = resolve(value);
-  const fromWorkspace = relative(workspaceRoot, absolute);
-  if (fromWorkspace === '') return '.';
-  if (fromWorkspace !== '..' && !fromWorkspace.startsWith(`..${sep}`) && !isAbsolute(fromWorkspace)) return fromWorkspace;
-  const fromHome = relative(homedir(), absolute);
-  if (fromHome === '') return '~';
-  if (fromHome !== '..' && !fromHome.startsWith(`..${sep}`) && !isAbsolute(fromHome)) return join('~', fromHome);
-  return absolute;
-}
 
 const HELP = `Mografy ${VERSION} — AI writes animation; Mografy previews, checks, and exports it
 
@@ -62,7 +55,6 @@ Examples
   mografy export ./my-animation --cancel`;
 
 const hasProject = isProject;
-const delay = (ms: number) => new Promise(resolveDelay => setTimeout(resolveDelay, ms));
 
 function isInsideWorkspace(value: string) {
   const fromWorkspace = relative(workspaceRoot, resolve(value));
@@ -132,10 +124,6 @@ async function confirm(question: string) {
   return answer === '' || answer === 'y' || answer === 'yes';
 }
 
-async function requireProject(dir: string) {
-  if (!await hasProject(dir)) throw new Error(`${displayPath(dir)} has no mografy.json. Run \`mografy init ${displayPath(dir)}\` first.`);
-}
-
 async function dev(dir: string, flags: Flags) {
   try {
     const server = await startServer(dir, flags.port === undefined ? {} : { port: flags.port });
@@ -158,12 +146,6 @@ async function dev(dir: string, flags: Flags) {
     }
     throw error;
   }
-}
-
-async function responseJson<T>(response: Response): Promise<T> {
-  const data = await response.json().catch(() => ({})) as T & { error?: { message?: string } };
-  if (!response.ok) throw new Error(data.error?.message ?? `${response.status} ${response.statusText}`);
-  return data;
 }
 
 async function checkProject(dir: string) {
@@ -196,192 +178,6 @@ async function reviewProject(dir: string, video?: string) {
   const project = await Project.open(dir);
   try { printReview(await project.review(video ? resolve(video) : undefined)); }
   finally { await project.close(); }
-}
-
-function exportOutput(value: string | undefined) {
-  if (!value) return undefined;
-  const path = value.replaceAll('\\', '/');
-  if (path.startsWith('/') || path.split('/').includes('..') || path.includes(':')) throw new Error('--output must be a file inside renders/');
-  return path.startsWith('renders/') ? path : `renders/${path}`;
-}
-
-const formatName = (format: ExportFormat) => format === 'mp4' ? 'MP4' : format === 'lottie' ? 'Lottie' : 'SVGA';
-
-function progressReporter(format: ExportFormat) {
-  let lastStage = '', lastBucket = -1, captureComplete = false;
-  const finishCapture = (status: RenderStatus) => {
-    if (captureComplete) return;
-    const line = `Capturing frames ${status.total}/${status.total} (100%)`;
-    if (lastBucket < 100) {
-      if (process.stdout.isTTY) process.stdout.write(`\r${line.padEnd(52)}\n`); else console.log(line);
-    } else if (process.stdout.isTTY && lastStage === 'capture') process.stdout.write('\n');
-    lastBucket = 100;
-    captureComplete = true;
-  };
-  const update = (status: RenderStatus) => {
-    if (status.stage === 'done') return;
-    const pct = status.total ? Math.floor(status.done / status.total * 100) : 0;
-    const bucket = process.stdout.isTTY ? pct : Math.floor(pct / 10) * 10;
-    if (status.stage === 'capture' && (bucket !== lastBucket || lastStage !== status.stage)) {
-      const line = `Capturing frames ${status.done}/${status.total} (${pct}%)`;
-      if (process.stdout.isTTY) process.stdout.write(`\r${line.padEnd(52)}`); else console.log(line);
-      lastBucket = bucket;
-    } else if (status.stage !== lastStage && status.stage === 'encode') {
-      finishCapture(status);
-      console.log('Encoding MP4…');
-    } else if (status.stage !== lastStage && status.stage === 'package') {
-      finishCapture(status);
-      console.log(`Packaging ${formatName(format)}…`);
-    }
-    lastStage = status.stage;
-  };
-  const finish = (status: RenderStatus) => {
-    finishCapture(status);
-    if (lastStage !== 'encode' && lastStage !== 'package') console.log(format === 'mp4' ? 'Encoding MP4…' : `Packaging ${formatName(format)}…`);
-  };
-  const stop = () => {
-    if (process.stdout.isTTY && lastStage === 'capture' && !captureComplete && lastBucket >= 0) process.stdout.write('\n');
-  };
-  return { update, finish, stop };
-}
-
-function monitorDevExports(server: Awaited<ReturnType<typeof startServer>>) {
-  let id = '', complete = '', report: ReturnType<typeof progressReporter> | undefined, cancelling = false;
-  const tick = () => {
-    const status = server.project.snapshot().render;
-    if (!status || status.id === complete) return;
-    if (status.id !== id) {
-      id = status.id; report = progressReporter(status.format); cancelling = false;
-      console.log(`\nExporting ${formatName(status.format)} from the player…`);
-      console.log(`  Project: ${displayPath(server.project.dir)}`);
-      console.log(`  Output:  ${displayPath(status.output)}`);
-    }
-    if (!status.cancelling) report?.update(status);
-    if (status.cancelling && !cancelling) { report?.stop(); console.log('Cancelling export…'); cancelling = true; }
-    if (status.state === 'running') return;
-    complete = status.id;
-    if (status.state === 'done') { report?.finish(status); console.log(`✓ ${formatName(status.format)} export complete: ${displayPath(status.output)}`); }
-    else if (status.state === 'cancelled') { report?.stop(); console.log('Export cancelled.'); }
-    else { report?.stop(); console.error(`Export failed: ${status.error ?? 'Unknown error'}`); }
-  };
-  tick();
-  const timer = setInterval(tick, 200); timer.unref();
-  return () => clearInterval(timer);
-}
-
-async function cancelExport(dir: string) {
-  await requireProject(dir);
-  const running = await findServer(dir);
-  if (!running) throw new Error('No dev server is running for this project. Press Ctrl+C in the terminal that started the export.');
-  const before = (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
-  if (!before || before.state !== 'running') { console.log('No export is running for this project.'); return; }
-  await responseJson<RenderStatus>(await fetch(new URL('/__mografy/render/cancel', running.url), {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: before.id }),
-  }));
-  console.log(`Cancelling ${formatName(before.format)} export…`);
-  for (;;) {
-    const current = (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
-    if (!current || current.id !== before.id) throw new Error('The export job disappeared.');
-    if (current.state === 'cancelled') { console.log('Export cancelled.'); return; }
-    if (current.state === 'done') { console.log(`Export already completed: ${displayPath(current.output)}`); return; }
-    if (current.state === 'failed') throw new Error(current.error ?? 'Export failed while it was being cancelled.');
-    await delay(100);
-  }
-}
-
-async function exportProject(dir: string, flags: Flags) {
-  if (flags.cancel) return cancelExport(dir);
-  await requireProject(dir);
-  const format = flags.format ?? 'mp4';
-  if ((flags.orientation || flags.resolution) && format !== 'mp4') throw new Error('--orientation and --resolution are MP4 options');
-  const preset = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
-  const size = flags.orientation || flags.resolution ? { width: preset.width, height: preset.height, fit: 'contain' as const } : undefined;
-  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}) };
-  const running = await findServer(dir);
-  let close: (() => Promise<void>) | undefined;
-  let current: () => Promise<RenderStatus | null>;
-  let cancel: () => Promise<void>;
-  let status: RenderStatus;
-  if (running) {
-    const response = await fetch(new URL('/__mografy/render', running.url), {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(request),
-    });
-    status = await responseJson<RenderStatus>(response);
-    current = async () => (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
-    cancel = async () => { await responseJson(await fetch(new URL('/__mografy/render/cancel', running.url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: status.id }) })); };
-  } else {
-    const project = await Project.open(dir);
-    close = () => project.close();
-    status = project.startRender(request);
-    current = async () => project.snapshot().render;
-    cancel = async () => { project.cancelRender(status.id); };
-  }
-
-  console.log(`Exporting ${formatName(format)}…`);
-  console.log(`  Project: ${displayPath(dir)}`);
-  console.log(`  Output:  ${displayPath(status.output)}`);
-  const report = progressReporter(format);
-  let interrupted = false, cancelError: unknown;
-  const interrupt = () => {
-    if (interrupted) return;
-    interrupted = true; report.stop(); console.log('Cancelling export…');
-    void cancel().catch(error => { cancelError = error; });
-  };
-  process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
-  try {
-    for (;;) {
-      if (cancelError) throw cancelError;
-      const latest = await current();
-      if (!latest || latest.id !== status.id) throw new Error('The export job disappeared.');
-      report.update(latest);
-      if (latest.state === 'failed') { report.stop(); throw new Error(latest.error ?? 'Export failed.'); }
-      if (latest.state === 'cancelled') {
-        report.stop(); console.log('Export cancelled.'); process.exitCode = interrupted ? 130 : 1; return;
-      }
-      if (latest.state === 'done') {
-        report.finish(latest);
-        console.log(`✓ ${formatName(format)} export complete: ${displayPath(latest.output)}`);
-        return;
-      }
-      await delay(200);
-    }
-  } finally {
-    process.off('SIGINT', interrupt); process.off('SIGTERM', interrupt);
-    await close?.();
-  }
-}
-
-interface Flags {
-  port?: number | undefined;
-  open: boolean;
-  yes: boolean;
-  output?: string | undefined;
-  video?: string | undefined;
-  format?: ExportFormat | undefined;
-  orientation?: 'landscape' | 'portrait';
-  resolution?: '720p' | '1080p';
-  cancel: boolean;
-}
-
-function parse(argv: string[]) {
-  const flags: Flags = { open: true, yes: false, cancel: false };
-  const rest: string[] = [];
-  for (let i = 0; i < argv.length; i++) {
-    const value = argv[i]!;
-    if (value === '--no-open') flags.open = false;
-    else if (value === '--yes' || value === '-y') flags.yes = true;
-    else if (value === '--cancel') flags.cancel = true;
-    else if (value === '--port') flags.port = Number(argv[++i]);
-    else if (value === '--output' || value === '-o') flags.output = argv[++i];
-    else if (value === '--video') flags.video = argv[++i];
-    else if (value === '--format') flags.format = exportFormatSchema.parse(argv[++i]);
-    else if (value === '--orientation') { const v = argv[++i]; if (v !== 'landscape' && v !== 'portrait') throw new Error('--orientation must be landscape or portrait'); flags.orientation = v; }
-    else if (value === '--resolution') { const v = argv[++i]; if (v !== '720p' && v !== '1080p') throw new Error('--resolution must be 720p or 1080p'); flags.resolution = v; }
-    else if (value.startsWith('-') && value !== '-h' && value !== '--help' && value !== '--version') throw new Error(`Unknown option: ${value}`);
-    else rest.push(value);
-  }
-  if (flags.port !== undefined && !(Number.isInteger(flags.port) && flags.port > 0 && flags.port < 65536)) throw new Error('--port must be between 1 and 65535');
-  return { flags, rest };
 }
 
 export async function main(argv = process.argv.slice(2)) {

@@ -46,6 +46,16 @@ CLI check/review/export ---------------------------------------------+
                                                                    PNG -> Lottie / SVGA 2
 ```
 
+## Project responsibilities
+
+`Project` coordinates verified publication and remains the sole project writer through `queueProjectWrite` and `atomicWrite`. Asset uploads allocate filenames and save their bytes in the same queued operation, so concurrent different-content uploads cannot overwrite one another. Playhead persistence and cached build files use the same writer.
+
+`ProjectWatcher` owns filesystem events, debounce, and fallback polling. `ProjectFrames` owns serialized access to a cached Chromium page and thumbnail timers; closing waits for in-flight captures before releasing the host. `RenderJobs` owns export progress, cancellation, temporary storage, and cleanup, and receives a Project-owned queued write callback for completed files.
+
+`ProjectSession` owns the active Project, lock, event subscription, catalog invalidation, serialized switches, and shutdown. `http.ts` owns transport startup, static serving, and WebSockets; `http-io.ts` owns body parsing and file responses, while workspace and project routes dispatch separately. Project routes capture their Project before awaiting bodies. Player writes include a project directory header, so a delayed action from a previously displayed project returns 409 rather than modifying the newly opened project; unscoped API clients remain compatible.
+
+The shared `sceneRuntimeKey` identifies compiled version, canvas, seed, font descriptors, and the audio beat grid. Inspection, still pages, and player setup use this identity. Audio gain and output settings update without requiring scene setup. API changes to runtime inputs are trial-rendered before writing, and a failed disk configuration retains the last working runtime inputs. A later unrelated patch must also validate pending disk inputs before publishing them.
+
 ## Versions
 
 The version is the first 16 characters of a hash of the compiled scene, its imported modules, and all files under `assets/`. Builds are stored at `.mografy/builds/<version>.js`; the player loads `/__mografy/scene/<version>.js`.
@@ -70,6 +80,8 @@ Recursive `fs.watch` reacts promptly. A file-fingerprint poll once per second ca
 
 ## HTTP API (127.0.0.1, same origin)
 
+Core exports request schemas for project patches, source updates, playhead/seek, review sheets, project creation/opening, export, and cancellation. HTTP parsing validates runtime shapes instead of casting JSON to TypeScript interfaces. Malformed envelopes return 400; invalid project settings retain the existing 422 response. Player requests share one JSON/error client.
+
 | Method and path | Purpose |
 | --- | --- |
 | `GET /__mografy/snapshot` | Current state |
@@ -83,6 +95,10 @@ Recursive `fs.watch` reacts promptly. A file-fingerprint poll once per second ca
 | `GET /__mografy/scene/<version>.js`, `GET /__mografy/files/<path>` | Compiled scene and project files |
 
 ## Export jobs
+
+The player shell observes playback status changes, while `Playback` subscribes to frame time and owns the canvas/timeline/transport view. `Inspector` owns its tabs and controls. Session actions retain stable identities across snapshots, and project switches/unmounts cancel delayed playhead reports. Queued player loads skip superseded requests and dispose abandoned runtimes.
+
+Export presentation uses explicit closed/settings/job/hidden transitions and a separate settings/job reducer that retains the submitted preview with its job ID. The dialog and background toast share progress calculation, progress markup, and cancellation handling. CLI parsing, export transport, and terminal progress live in separate modules; owned CLI projects close even when export startup rejects.
 
 The player keeps one native modal across settings, job progress, cancellation/failure, and completion. `startRender` returns the exact job ID; WebSocket snapshots drive actual capture percentages and stages. Encoding/package progress is indeterminate rather than fabricated. The dialog retains the latest snapshot for its job and freezes its output reference inputs at submission. Progress uses the homepage’s teal keyframe mascot with a gentle CSS float loop in both the dialog and background toast; the scene reference is displayed only for completed image-frame formats. Settings closures reset drafts; dismissing a running job hides the dialog without cancelling and preserves it for the background progress toast’s View action or the top Exporting button. The toast shows real capture progress (indeterminate encoding/package), cancellation and connection state only while a running job is hidden. Native close events do not reopen/reset state. Completed MP4s use the actual served file in a video player, with Download and explicit dismissal. The success toast was removed; Last export in the top bar reopens the last result. Done dismisses completion; the primary Export action creates fresh settings even if a hidden job finished in the background. Failed/cancelled local jobs can retry saved settings; externally started jobs can open settings. Short stage headings, one progress metric and two primary actions replace explanatory copy and repeated stage/completion indicators. Reduced-motion mode disables the loading and entry effects.
 
@@ -103,6 +119,12 @@ The player keeps a lightweight raw live preview. All three export formats share 
 The CLI entrypoint resolves the nearest Mografy source checkout from the terminal's working directory before importing its build. A global PATH launcher can therefore be installed by another clone without redirecting local development to that clone. Unbuilt checkouts fail with setup instructions. Outside a source checkout, the launcher uses its own installation.
 
 Recent projects and active-server discovery are scoped to the installation root under `~/.mografy/installations/<root-hash>/`. The old shared state is left untouched and is not resumed automatically. `MOGRAFY_STATE` explicitly overrides this scope; `MOGRAFY_HOME` overrides the project library. Exports resolve inside the opened project's `renders/` directory.
+
+Installation paths and recent/active state live in `installation.ts` and `workspace-state.ts`. Component initialization is explicit at player-server startup or default-component selection; `listProjects` only reads existing projects and previews. Browser integration cases each own a temporary library, installation state, server, and browser, grouped into player, export, and project/audio suites.
+
+`project-scaffold.ts` owns creation and generated-file migration; `components.ts` owns built-in initialization. Library name allocation and creation share a parent queue, with project files written under their own Project queues. Recent-state read/modify/write and conditional active-record removal are serialized by installation-state directory.
+
+App composes player lifecycle, parameter persistence, effects persistence, and keyboard hooks. Inspector tabs compose separate panels. ExportDialog handles modal/job orchestration, ExportSettings renders controls, and a pure export-draft reducer retains independent settings for each format. Preset labels stay outside strict export-size requests. Retry retains the submitted output settings while allowing repaired source to render.
 
 The Skill uses [the component reference](../.agents/skills/mografy/references/built-in-components.md) as a catalog of all sixteen source entries, their reusable functions, and adaptation/review rules. [The intro reference](../.agents/skills/mografy/references/intro.md) documents the twelve-second multi-shot example and its actual assets, timing, and review settings. Both are generated from `guide.ts`; agents read the referenced scene code before adapting it.
 

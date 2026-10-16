@@ -2,12 +2,13 @@
 // The scene only ever receives t. While music plays, the audio clock advances t;
 // otherwise the browser clock does.
 import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
+import { sceneRuntimeKey } from '@mografy/core';
 import type { SceneModule, SceneRuntime } from '@mografy/runtime';
 import type { ParameterValues, SceneProject } from '@mografy/core';
 import { AudioTrack } from './audio.js';
 import type { SoundState } from './audio.js';
 
-export interface PlayerView { t: number; playing: boolean; loop: boolean; version: string | null; duration: number; fps: number; finished: boolean; sound: SoundState }
+export interface PlayerView { t: number; playing: boolean; loop: boolean; version: string | null; duration: number; fps: number; finished: boolean; sound: SoundState; error?: string }
 type Listener = (view: PlayerView) => void;
 
 export class ScenePlayer {
@@ -28,6 +29,8 @@ export class ScenePlayer {
   loop = true;
   readonly audio = new AudioTrack();
   private loadedKey = '';
+  private loadRequest = 0;
+  private disposed = false;
   error = '';
 
   constructor(private container: HTMLElement) {
@@ -40,7 +43,7 @@ export class ScenePlayer {
 
   get duration() { return this.runtime?.meta.duration ?? 0; }
   get fps() { return this.runtime?.meta.fps ?? 30; }
-  view(): PlayerView { return { t: this.t, playing: this.playing, loop: this.loop, version: this.version, duration: this.duration, fps: this.fps, finished: !this.loop && this.t >= this.duration, sound: this.audio.state }; }
+  view(): PlayerView { return { t: this.t, playing: this.playing, loop: this.loop, version: this.version, duration: this.duration, fps: this.fps, finished: !this.loop && this.t >= this.duration, sound: this.audio.state, error: this.error }; }
   subscribe(listener: Listener) { this.listeners.add(listener); listener(this.view()); return () => { this.listeners.delete(listener); }; }
   private notify() { const v = this.view(); for (const l of this.listeners) l(v); }
 
@@ -49,9 +52,12 @@ export class ScenePlayer {
    * so the old version keeps playing until the new one is ready. t is kept.
    */
   load(version: string, project: SceneProject, params: ParameterValues) {
+    this.params = params;
+    const request = ++this.loadRequest;
     const task = async () => {
+      if (this.disposed || request !== this.loadRequest) return;
       // Version, seed, fonts and the beat grid feed the runtime; anything else (volume, render settings) is applied in place.
-      const key = JSON.stringify([version, project.aspectRatio, project.seed, project.fonts, project.audio && [project.audio.path, project.audio.bpm, project.audio.offset, project.audio.beatsPerBar]]);
+      const key = sceneRuntimeKey(version, project);
       if (key === this.loadedKey) { this.project = project; this.syncAudio(project); return; }
       const url = '/__mografy/scene/' + version + '.js';
       const scene = await import(url) as SceneModule;
@@ -63,8 +69,9 @@ export class ScenePlayer {
         seed: project.seed, renderScale: scale, params, assetBase: '/__mografy/files/', fonts: project.fonts, audio: project.audio,
         aspectRatio: project.aspectRatio,
       });
+      if (this.disposed || request !== this.loadRequest) { runtime.dispose(); return; }
       this.runtime?.dispose(); this.canvas?.remove();
-      this.runtime = runtime; this.canvas = canvas; this.version = version; this.project = project; this.params = params; this.loadedKey = key;
+      this.runtime = runtime; this.canvas = canvas; this.version = version; this.project = project; this.loadedKey = key;
       this.container.append(canvas);
       this.t = Math.min(this.t, runtime.meta.duration);
       this.syncAudio(project);
@@ -78,14 +85,14 @@ export class ScenePlayer {
 
   setParams(params: ParameterValues) {
     this.params = params;
-    if (!this.playing) this.draw();
+    if (!this.playing) { this.draw(); this.notify(); }
   }
 
   /** Effects use the export pipeline on paused frames; playback keeps its responsive scene preview. */
   setEffects(effects: { glow: number; grain: number }, preview: boolean) {
     const changed = effects.glow !== this.effects.glow || effects.grain !== this.effects.grain || preview !== this.previewEffects;
     this.effects = effects; this.previewEffects = preview;
-    if (changed && !this.playing) this.draw();
+    if (changed && !this.playing) { this.draw(); this.notify(); }
   }
 
   private syncAudio(project: SceneProject) {
@@ -156,5 +163,5 @@ export class ScenePlayer {
     this.seek(Math.min(Math.max(0, index), Math.ceil(this.duration * fps) - 1) / fps);
   }
   setLoop(loop: boolean) { this.loop = loop; this.notify(); }
-  dispose() { this.pause(); this.runtime?.dispose(); this.canvas?.remove(); this.audio.dispose(); this.listeners.clear(); }
+  dispose() { this.disposed = true; this.loadRequest++; this.pause(); this.runtime?.dispose(); this.canvas?.remove(); this.audio.dispose(); this.listeners.clear(); }
 }
