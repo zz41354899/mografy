@@ -26,7 +26,7 @@ You need [Node.js](https://nodejs.org/) 22.12 or later. Then run:
 ```sh
 git clone https://github.com/zz41354899/mografy.git
 cd mografy
-corepack enable
+npm install -g pnpm
 pnpm install
 mografy dev
 ```
@@ -35,13 +35,9 @@ mografy dev
 
 To update later, run `git pull && pnpm install` in the same folder.
 
-If `corepack enable` reports a permission error, install pnpm with `npm install -g pnpm` instead. Contributors changing Mografy itself also need `pnpm sync:skills`, `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
+`npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm sync:skills`, `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
 
 ### More setup options
-
-`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, run `pnpm install` again.
-
-Inside the source checkout, `mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
 
 Create an animation or open the bundled intro:
 
@@ -50,23 +46,13 @@ mografy dev ./projects/my-animation --yes
 mografy dev ./examples/mografy-intro
 ```
 
-Source installations create projects under `projects/` by default. Set `MOGRAFY_HOME` to choose another library directory. The Projects panel switches between projects and built-in animations in the same player.
-
-All paths are resolved on the user's computer. Explicit project arguments resolve from the terminal's current folder; exports go to that project's `renders/`. To choose your own library and project:
+New projects are created in the `projects/` folder. To keep them somewhere else, set `MOGRAFY_HOME` before running `mografy dev`:
 
 ```sh
 export MOGRAFY_HOME="$HOME/Animations"
-mografy dev "$MOGRAFY_HOME/my-animation" --yes
 ```
 
-Each installation keeps separate recent-project and active-player state under `~/.mografy/installations/`; the former shared history is not imported.
-
-| Environment variable | Purpose |
-| --- | --- |
-| `MOGRAFY_HOME` | Project library directory |
-| `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
-| `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
-| `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH |
+Other settings, such as the default project and the FFmpeg path, are in [configuration](docs/configuration.md).
 
 ## Create your first animation
 
