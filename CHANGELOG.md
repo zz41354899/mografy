@@ -2,10 +2,10 @@
 
 Notable changes to Mografy. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
 
-After pulling an update, refresh your checkout and the shared Skill:
+After pulling an update, rebuild in the Mografy folder:
 
 ```sh
-git pull && pnpm install && pnpm build && pnpm sync:skills
+git pull && pnpm install
 ```
 
 ## 2026-10-17

@@ -22,7 +22,8 @@
     "check": "pnpm build && pnpm typecheck && pnpm test",
     "mografy": "node packages/cli/bin/mografy.js",
     "install:tool": "pnpm install --filter mografy-workspace --filter './packages/**'",
-    "bootstrap": "pnpm install:tool && pnpm build && pnpm exec playwright install chromium && pnpm install-command",
+    "postinstall": "pnpm build && playwright install chromium && node packages/cli/bin/mografy.js install-command",
+    "bootstrap": "pnpm install",
     "install-command": "node packages/cli/bin/mografy.js install-command"
   },
   "devDependencies": {

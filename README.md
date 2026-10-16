@@ -21,20 +21,25 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Get started
 
-Requires Node.js 22.12 or later and pnpm (the repository pins pnpm 11.18.0). Mografy currently runs from source; a standalone npm distribution is still planned. Clone the repository, then run setup in its root:
+You need [Node.js](https://nodejs.org/) 22.12 or later. Then run:
 
 ```sh
 git clone https://github.com/zz41354899/mografy.git
 cd mografy
+corepack enable
 pnpm install
-pnpm build
-pnpm sync:skills
-pnpm exec playwright install chromium
-pnpm install-command
 mografy dev
 ```
 
-`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, repeat `pnpm install`, `pnpm build`, and `pnpm sync:skills`.
+`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
+
+To update later, run `git pull && pnpm install` in the same folder.
+
+If `corepack enable` reports a permission error, install pnpm with `npm install -g pnpm` instead. Contributors changing Mografy itself also need `pnpm sync:skills`, `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
+
+### More setup options
+
+`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, run `pnpm install` again.
 
 Inside the source checkout, `mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
 
