@@ -102,6 +102,13 @@ test('projects point to the shared outer skill folder, migrate generated files, 
     await createProject(sandbox, 'Storyboard');
     assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), projectGuide(resolve(TEMPLATE_DIR, '../..', '..')));
     assert.equal(await readFile(join(sandbox, 'CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
+    const beforeWebm = projectGuide().replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga');
+    await writeFile(join(sandbox, 'AGENTS.md'), beforeWebm);
+    await ensureAgentFiles(sandbox);
+    assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), projectGuide());
+    await writeFile(join(sandbox, 'AGENTS.md'), beforeWebm + '\nCustom notes\n');
+    await ensureAgentFiles(sandbox);
+    assert.equal(await readFile(join(sandbox, 'AGENTS.md'), 'utf8'), beforeWebm + '\nCustom notes\n');
     // A guide committed by another machine must migrate without using its disk path.
     const oldPointer = projectGuide().replace(/\nShared Skill:[\s\S]*$/, '\nShared Skill: [Mografy](/some/other/checkout/.agents/skills/mografy/SKILL.md). If missing, run `pnpm build` and `pnpm sync:skills` from `/some/other/checkout`.\n');
     await writeFile(join(sandbox, 'AGENTS.md'), oldPointer);

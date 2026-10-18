@@ -20,7 +20,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { await fixture?.close(); });
 
-test('export dialog: three usable formats, keyboard choices, advanced controls and unchanged project defaults', { timeout: 120_000 }, async () => {
+test('export dialog: four usable formats, keyboard choices, advanced controls and unchanged project defaults', { timeout: 120_000 }, async () => {
   await page.getByRole('tab',{name:'Scene',exact:true}).click();
   assert.equal(await page.locator('[data-param=name]').count(),0);
   assert.equal(await page.locator('[data-param=subtitle]').count(),1);
@@ -37,6 +37,7 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
   await page.getByRole('button',{name:'Export',exact:true}).click();
   const modal = page.getByRole('dialog');
   const expectedSizes = {
+    WebM: ['1280 × 720 — 720p', '1920 × 1080 — 1080p'],
     MP4: ['1280 × 720 — 720p', '1920 × 1080 — 1080p'],
     Lottie: ['256 × 256 — Square', '640 × 360 — Landscape'],
     SVGA: ['375 × 375 — Square', '375 × 750 — Portrait'],
@@ -62,20 +63,31 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
   assert.equal(await page.getByRole('dialog').count(),1,'Escape closes the choice before the dialog');
   await page.getByRole('dialog').getByRole('button',{name:'Close export'}).press('Escape');
   await page.getByRole('dialog').waitFor({state:'hidden'});
-  for(const format of ['MP4','Lottie','SVGA']) {
+  for(const format of ['MP4','WebM','Lottie','SVGA']) {
     await page.getByRole('button',{name:'Export',exact:true}).click();
     const modal=page.getByRole('dialog',{name:'Export animation'});
     await modal.getByRole('button',{name:new RegExp('^'+format)}).click();
     const fps=modal.getByRole('combobox',{name:'Frame rate',exact:true});
     await fps.click();
     const availableRates = await modal.getByRole('option').allTextContents();
-    const maximum = format === 'MP4' ? 60 : 30;
+    const maximum = (format === 'MP4' || format === 'WebM') ? 60 : 30;
     assert.equal(availableRates.at(-1), `${maximum} fps`);
     assert.ok(availableRates.every(rate => Number.parseInt(rate) <= maximum));
     await fps.press('Home'); await fps.press('Enter');
     await modal.getByText('Advanced settings',{exact:true}).click();
     const encoding=modal.getByRole('combobox',{name:'Encoding',exact:true});
-    if(format==='MP4') {
+    if(format==='MP4' || format==='WebM') {
+      if (format === 'WebM') {
+        assert.equal(await encoding.innerText(), 'Constant quality · one-pass');
+        assert.equal(await modal.getByRole('slider', { name: 'CRF', exact: true }).inputValue(), '32');
+        assert.equal(await modal.getByRole('textbox', { name: 'Bitrate', exact: true }).count(), 0);
+        await mkdir(resolve('../../artifacts/webm-export'), { recursive: true });
+        await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-desktop.png') });
+        await page.setViewportSize({ width: 390, height: 844 });
+        assert.equal(await modal.evaluate(element => element.scrollWidth > element.clientWidth), false, 'four formats fit the mobile dialog');
+        await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-mobile.png') });
+        await page.setViewportSize({ width: 1280, height: 800 });
+      }
       await encoding.click(); await encoding.press('End'); await encoding.press('Enter');
       await modal.getByRole('slider',{name:'CRF'}).fill('20');
     } else {
@@ -90,7 +102,15 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
     assert.equal(render.state,'done',render.error); assert.equal(render.format,format.toLowerCase());
     await modal.locator('[data-testid=export-job][data-state=done]').waitFor();
     assert.equal(await modal.getByRole('link',{name:'Download',exact:true}).count(),1);
-    if(format==='MP4') assert.equal(await modal.getByLabel('Exported video').count(),1);
+    if(format==='MP4' || format==='WebM') {
+      const video = modal.getByLabel('Exported video');
+      await video.evaluate((element: HTMLVideoElement) => new Promise<void>((done, fail) => {
+        if (element.readyState >= 2) return done();
+        element.addEventListener('loadeddata', () => done(), { once: true });
+        element.addEventListener('error', () => fail(new Error('Exported video cannot play')), { once: true });
+        element.preload = 'auto'; element.load();
+      }));
+    }
     await modal.getByRole('button',{name:'Done',exact:true}).click();
     await modal.waitFor({state:'hidden'});
     assert.equal(await page.locator('.export-complete').count(),0,'completed dialog does not trigger a second success toast');
@@ -99,16 +119,19 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
     assert.equal(downloaded.status,200);
     const bytes=Buffer.from(await downloaded.arrayBuffer());
     if(format==='MP4') assert.equal(bytes.subarray(4,8).toString(),'ftyp');
+    else if(format==='WebM') { assert.match(downloaded.headers.get('content-type')!, /video\/webm/); assert.equal(bytes.subarray(0,4).toString('hex'),'1a45dfa3'); }
     else if(format==='Lottie') { const movie = JSON.parse(bytes.toString()); assert.equal(movie.layers.length,render.total); assert.equal(movie.w,256); assert.equal(movie.h,256); }
     else assert.equal(bytes[0],0x78,'zlib-compressed SVGA 2');
   }
   assert.equal((await api('render','POST',{format:'svga',render:{fps:24}})).status,400);
   assert.equal((await api('render','POST',{format:'mp4',render:{fps:61}})).status,400);
+  assert.equal((await api('render','POST',{format:'webm',render:{fps:61}})).status,400);
+  assert.equal((await api('render','POST',{format:'webm',size:{width:101,height:100,fit:'contain'}})).status,400);
   assert.equal((await api('render','POST',{format:'lottie',render:{fps:31}})).status,400);
   assert.equal((await api('render','POST',{format:'svga',render:{fps:31}})).status,400);
   assert.equal((await api('render','POST',{format:'svga',render:{fps:60}})).status,400);
   await api('project', 'PATCH', { patch: { render: { fps: 120 } } });
-  for (const format of ['mp4', 'lottie', 'svga']) assert.equal((await api('render', 'POST', { format })).status, 400, 'inherited project frame rates also obey the format cap');
+  for (const format of ['mp4', 'webm', 'lottie', 'svga']) assert.equal((await api('render', 'POST', { format })).status, 400, 'inherited project frame rates also obey the format cap');
   await page.getByRole('button', { name: 'Export', exact: true }).click();
   assert.equal(await page.getByRole('dialog').getByRole('combobox', { name: 'Frame rate', exact: true }).innerText(), '60 fps', 'dialog clamps legacy project defaults');
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -116,17 +139,19 @@ test('export dialog: three usable formats, keyboard choices, advanced controls a
   assert.equal((await api('render','POST',{format:'lottie',output:'mografy.json'})).status,400);
   const uiOutput='renders/cancel-from-player.lottie.json';
   assert.equal((await api('render','POST',{format:'lottie',output:uiOutput,render:{scale:.25,fps:30,samples:8}})).status,202);
+  assert.equal((await api('shutdown?onlyIfIdle=1', 'POST')).status, 409, 'updates cannot interrupt an active export');
+  assert.equal((await api('health')).status, 200);
   await page.getByRole('button',{name:'Cancel export',exact:true}).click();
   for(let i=0;i<200&&(await api('snapshot')).data.render.state==='running';i++) await new Promise(r=>setTimeout(r,25));
   assert.equal((await api('snapshot')).data.render.state,'cancelled');
   await assert.rejects(access(join(dir,uiOutput)),'cancelled player export does not commit a partial file');
 
-  const cliOutput='renders/cancel-from-cli.lottie.json';
-  assert.equal((await api('render','POST',{format:'lottie',output:cliOutput,render:{scale:.25,fps:30,samples:8}})).status,202);
+  const cliOutput='renders/cancel-from-cli.webm';
+  assert.equal((await api('render','POST',{format:'webm',output:cliOutput,render:{scale:.25,fps:30,samples:8}})).status,202);
   const child=spawn(process.execPath,[BIN,'export',dir,'--cancel'],{env:{...process.env,MOGRAFY_NO_OPEN:'1'}});
   let stdout='',stderr=''; child.stdout.on('data',c=>{stdout+=c;}); child.stderr.on('data',c=>{stderr+=c;});
   const code=await new Promise<number|null>(done=>child.once('close',done));
-  assert.equal(code,0,stderr); assert.match(stdout,/Cancelling Lottie export/); assert.match(stdout,/Export cancelled/);
+  assert.equal(code,0,stderr); assert.match(stdout,/Cancelling WebM export/); assert.match(stdout,/Export cancelled/);
   assert.equal((await api('snapshot')).data.render.state,'cancelled');
   await assert.rejects(access(join(dir,cliOutput)),'cancelled CLI export does not commit a partial file');
 });

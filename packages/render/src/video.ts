@@ -1,14 +1,15 @@
-// Video output: parallel segment capture → FFV1 segments → lossless concat → two-pass H.264 (+ audio).
+// Video output: parallel segment capture → FFV1 segments → lossless concat → H.264/AAC MP4 or VP9/Opus WebM.
 import { access, copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
-import type { ExportSize, SceneProject } from '@mografy/core';
+import type { ExportSize, SceneProject, VideoFormat } from '@mografy/core';
 import type { SceneBuild } from './build.js';
 import { runFfmpeg, startFfmpeg } from './ffmpeg.js';
 import { SceneHost } from './host.js';
 
 export interface VideoJob {
+  format?: VideoFormat;
   projectDir: string;
   /** Snapshot of the project at job start; later edits do not leak in. */
   project: SceneProject;
@@ -49,9 +50,10 @@ async function captureSegment(host: SceneHost, job: VideoJob, start: number, end
 
 export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const project = structuredClone(job.project), settings = project.render;
-  validateExportFrameRate('mp4', settings.fps);
+  const format = job.format ?? 'mp4', webm = format === 'webm';
+  validateExportFrameRate(format, settings.fps);
   const output = resolve(job.output);
-  if (extname(output).toLowerCase() !== '.mp4') throw new Error('Output must end with .mp4');
+  if (extname(output).toLowerCase() !== `.${format}`) throw new Error(`Output must end with .${format}`);
   if (!job.overwrite && await exists(output)) throw new Error(`Output already exists: ${output}`);
   const ownHost = !job.host, host = job.host ?? await SceneHost.start(job.projectDir);
   const work = await mkdtemp(join(tmpdir(), 'mografy-render-'));
@@ -60,7 +62,7 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
     const probe = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
     const { meta } = probe.scene, { width, height } = probe.scene;
     await probe.close();
-    if (width % 2 || height % 2) throw new Error(`H.264 yuv420p needs even dimensions; got ${width}×${height} (meta × render.scale)`);
+    if (width % 2 || height % 2) throw new Error(`Video yuv420p needs even dimensions; got ${width}×${height} (meta × render.scale)`);
     const frames = outputFrameCount(meta.duration, settings.fps);
     const segments = segmentFrames(frames, settings.workers);
     let done = 0;
@@ -85,21 +87,24 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
     // Two-pass target bitrate from the same master; audio joins on pass 2 only.
     job.onProgress?.(frames, frames, 'encode');
     const length = frames / settings.fps;
-    const passlog = join(work, 'x264');
+    const passlog = join(work, webm ? 'vp9' : 'x264');
     const twoPass = settings.encoding === 'two-pass';
-    const video = ['-c:v', 'libx264', '-preset', settings.preset,
-      ...(twoPass ? ['-b:v', settings.bitrate] : ['-crf', String(settings.crf)]), '-pix_fmt', 'yuv420p',
+    const codec = webm
+      ? ['-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', String({ ultrafast: 8, veryfast: 6, fast: 4, medium: 2, slow: 1 }[settings.preset]), '-row-mt', '1',
+        ...(twoPass ? ['-b:v', settings.bitrate] : ['-b:v', '0', '-crf', String(settings.crf)])]
+      : ['-c:v', 'libx264', '-preset', settings.preset, ...(twoPass ? ['-b:v', settings.bitrate] : ['-crf', String(settings.crf)])];
+    const video = [...codec, '-pix_fmt', 'yuv420p',
       '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
       '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
       '-r', String(settings.fps), '-passlogfile', passlog];
-    if (twoPass) await runFfmpeg(['-i', master, '-an', ...video, '-pass', '1', '-f', 'mp4', '-y', nullDevice], job.signal);
+    if (twoPass) await runFfmpeg(['-i', master, '-an', ...video, '-pass', '1', '-f', webm ? 'null' : 'mp4', '-y', nullDevice], job.signal);
     const audio = project.audio && settings.includeAudio ? resolve(job.projectDir, project.audio.path) : undefined;
     if (audio && !await exists(audio)) throw new Error(`Audio not found: ${project.audio!.path}`);
-    const partial = join(work, 'out.mp4');
+    const partial = join(work, `out.${format}`);
     await runFfmpeg([
       '-i', master, ...(audio ? ['-i', audio] : []),
-      '-map', '0:v:0', ...(audio ? ['-map', '1:a:0', '-af', `volume=${project.audio!.gain},apad,atrim=0:${length}`, '-c:a', 'aac', '-b:a', '192k'] : ['-an']),
-      ...video, ...(twoPass ? ['-pass', '2'] : []), '-t', String(length), '-movflags', '+faststart', '-y', partial,
+      '-map', '0:v:0', ...(audio ? ['-map', '1:a:0', '-af', `volume=${project.audio!.gain},apad,atrim=0:${length}`, '-c:a', webm ? 'libopus' : 'aac', '-b:a', webm ? '128k' : '192k'] : ['-an']),
+      ...video, ...(twoPass ? ['-pass', '2'] : []), '-t', String(length), ...(webm ? [] : ['-movflags', '+faststart']), '-y', partial,
     ], job.signal);
     await mkdir(dirname(output), { recursive: true });
     await rename(partial, output).catch(async error => {

@@ -12,6 +12,7 @@ import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
 import { exportProject } from './export.js';
+import { updateInstallation } from './update.js';
 import { parse } from './options.js';
 import type { Flags } from './options.js';
 export { displayPath } from './paths.js';
@@ -29,19 +30,20 @@ Usage
   mografy init [folder]            Create a starter project
   mografy check [folder]           Compile and trial-render in Chromium
   mografy review [folder]          Create visual-review sheets in renders/
-  mografy export [folder]          Export MP4, Lottie, or SVGA
+  mografy export [folder]          Export MP4, WebM, Lottie, or SVGA
   mografy stop [folder]            Stop that project's player server
   mografy install-command          Install the mografy command on PATH
+  mografy update [--check]         Update this installation, or check for updates
 
 Export options
-  --format <mp4|lottie|svga>       Output format (default: mp4)
+  --format <mp4|webm|lottie|svga>  Output format (default: mp4)
   --output, -o <file>              File name, or a path inside renders/
-  --orientation <landscape|portrait> MP4 output (16:9 or 9:16, fits the entire scene)
-  --resolution <720p|1080p>        MP4 size (default with orientation: 720p)
+  --orientation <landscape|portrait> MP4/WebM output (16:9 or 9:16, fits the entire scene)
+  --resolution <720p|1080p>        MP4/WebM size (default with orientation: 720p)
   --cancel                         Cancel this project's current export
 
 Other options
-  --video <file>                   MP4 to compare during review
+  --video <file>                   Video to compare during review
   --port <port>                    Player port (default: 4173, then next free port)
   --no-open                        Do not open a browser
   --yes                            Create a missing project without asking
@@ -182,11 +184,16 @@ async function reviewProject(dir: string, video?: string) {
 
 export async function main(argv = process.argv.slice(2)) {
   const { flags, rest } = parse(argv);
-  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'help']);
+  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(HELP); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
+  if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
+  if (command === 'update') {
+    if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
+    return updateInstallation(workspaceRoot, flags.updateCheck);
+  }
   // Installation must not initialize components or consult a previous project's state.
   if (command === 'install-command') return installCommand();
   const configured = process.env.MOGRAFY_PROJECT;

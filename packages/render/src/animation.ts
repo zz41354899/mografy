@@ -16,7 +16,7 @@ const MAX_ASSET_BYTES = 64 * 1024 * 1024;
 const MAX_SVGA_FRAME_ENTRIES = 200_000;
 export interface AnimationJob {
   project: SceneProject; build: SceneBuild; host: SceneHost;
-  format: Exclude<ExportFormat, 'mp4'>;
+  format: Exclude<ExportFormat, 'mp4' | 'webm'>;
   signal?: AbortSignal;
   size?: ExportSize | undefined;
   onProgress?: (done: number, total: number, stage: 'capture' | 'package') => void;

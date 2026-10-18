@@ -39,7 +39,7 @@ When the user requests a future 9:16 video, explicitly record **9:16 portrait** 
 
 For portrait social layouts, use conservative guides: leave about 8% above, 18% below, 6% on the left, and 12% on the right clear of critical copy and logos. Platform overlays vary; treat these as planning margins, not platform guarantees. Inspect at phone size, including long subtitles, entrances, exits, and transitions. If both outputs are requested, review both complete compositions and random seeks.
 
-MP4 exports have landscape 1280 × 720 / 1920 × 1080 and portrait 720 × 1280 / 1080 × 1920 presets, selected with orientation icons. If output orientation differs from the authored scene, show Fit: \`contain\` (Fit entire scene, the default) or \`cover\` (Fill and crop). These fit the existing artwork without reauthoring the canvas. The dialog shows an actual paused-frame preview of the output. Choose \`reflow\` (Adapt layout) for deliberately responsive scenes, including all sixteen built-in components: it passes the output canvas dimensions to scene code so portrait sizes, card arrangements, and text wrapping adapt. It is not a player orientation control. Export overrides do not change the saved canvas. CLI: \`mografy export [project] --format mp4 --orientation portrait --resolution 1080p\` (or \`landscape\`); without overrides it uses the saved canvas and render scale. Player, stills, thumbnails, review, and exports share the effective canvas and output effects.
+MP4 and WebM exports have landscape 1280 × 720 / 1920 × 1080 and portrait 720 × 1280 / 1080 × 1920 presets, selected with orientation icons. If output orientation differs from the authored scene, show Fit: \`contain\` (Fit entire scene, the default) or \`cover\` (Fill and crop). These fit the existing artwork without reauthoring the canvas. The dialog shows an actual paused-frame preview of the output. Choose \`reflow\` (Adapt layout) for deliberately responsive scenes, including all sixteen built-in components: it passes the output canvas dimensions to scene code so portrait sizes, card arrangements, and text wrapping adapt. It is not a player orientation control. Export overrides do not change the saved canvas. CLI: \`mografy export [project] --format mp4 --orientation portrait --resolution 1080p\` (or \`landscape\`); without overrides it uses the saved canvas and render scale. WebM uses VP9 video and optional Opus audio, with constant quality (CRF 32) by default; MP4 uses H.264/AAC. Use \`--format webm\` for WebM. Higher WebM CRF values produce smaller files with less detail. MP4 and VP9 CRF values are codec-specific. Both video formats support the same orientation, resolution, sampling, and output effects. Player, stills, thumbnails, review, and exports share the effective canvas and output effects.
 
 ## Required behavior
 
@@ -140,7 +140,7 @@ New projects include \`scenes/components.ts\`, \`scenes/social-components.ts\`, 
 4. Run \`mografy review [project]\`. Inspect every generated PNG in \`renders/\`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
 5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity, and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
 6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use \`mografy dev [project]\` when the user should watch the live result.
-7. Export with \`mografy export [project] --format mp4|lottie|svga\`. The command prints capture and encoding or packaging progress and writes the finished file under \`renders/\`. Press Ctrl+C to cancel a CLI export. When \`mografy dev\` is running, player exports also print progress in that terminal and can be stopped with \`mografy export [project] --cancel\`.
+7. Export with \`mografy export [project] --format mp4|webm|lottie|svga\`. The command prints capture and encoding or packaging progress and writes the finished file under \`renders/\`. Press Ctrl+C to cancel a CLI export. When \`mografy dev\` is running, player exports also print progress in that terminal and can be stopped with \`mografy export [project] --cancel\`.
 
 Only important subtitles belong in \`role: 'subtitle'\` params. Let the user edit those in Scene → Subtitles; make other copy changes in source when requested.
 
@@ -169,7 +169,7 @@ export function isLegacyAgentFile(contents: string, kind: 'guide' | 'skill', rep
     contents === (kind === 'guide' ? LEGACY_PROJECT_GUIDE : LEGACY_REPOSITORY_SKILL) ||
     (kind === 'guide' && contents === LEGACY_USER_SCOPE_GUIDE) ||
     (kind === 'guide' && repository !== undefined && contents === legacySharedProjectGuide(repository)) ||
-    (kind === 'guide' && isPreviousProjectPointer(contents));
+    (kind === 'guide' && (isPreviousProjectPointer(contents) || contents === projectGuide().replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga')));
 }
 
 const STORYBOARD = `# Storyboard planning for Mografy
@@ -444,7 +444,7 @@ mografy check examples/mografy-intro
 mografy review examples/mografy-intro
 \`\`\`
 
-The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using \`mografy export examples/mografy-intro --format mp4|lottie|svga\`.
+The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using \`mografy export examples/mografy-intro --format mp4|webm|lottie|svga\`.
 `;
 
 const VIDEO_COMPRESSION_REFERENCE = `# Compress an exported video
@@ -515,7 +515,7 @@ For scene work, read the project's \`mografy.json\`, configured scene entry, imp
 
 Animation content belongs only in scene modules, never in \`mografy.json\`. Render synchronously from absolute \`time\`, resolved params, and prepared assets; do not use GSAP, SVG scene layers, resvg, clocks, or previous-frame state. Scene code executes only in the browser. Write plans and prompts in English; preserve supplied copy unless translation is requested.
 
-For scene changes, run \`mografy check [project]\`, then \`mografy review [project]\` and inspect the generated PNGs before delivery. A generated storyboard is a concept reference; validate the actual scene separately. Export with \`mografy export [project] --format mp4|lottie|svga\` when requested.
+For scene changes, run \`mografy check [project]\`, then \`mografy review [project]\` and inspect the generated PNGs before delivery. A generated storyboard is a concept reference; validate the actual scene separately. Export with \`mografy export [project] --format mp4|webm|lottie|svga\` when requested.
 `;
 
 const LEGACY_REPOSITORY_SKILL = `---
@@ -566,6 +566,7 @@ ${introduction}
 Before product changes, read [AGENTS.md](${repository}/AGENTS.md), [architecture](${repository}/docs/architecture.md), [status](${repository}/docs/STATUS.md), and [usage](${repository}/README.md).
 
 - \`packages/core/src/guide.ts\` owns the English skill entrypoints and references. After changes, run \`pnpm build\` and \`pnpm sync:skills\` in the repository.
+- Use \`mografy update --check\` to check the executing source installation, or \`mografy update\` to fast-forward, install/build, sync guidance and restart its active player. Stop and resolve local changes or diverged history rather than overwriting them. Older installations need a one-time manual update documented in README.
 - One \`mografy\` Skill lives in the source repository's outer \`.agents/skills/\` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root \`.claude/skills/mografy\` symlink points Claude to the same folder. Root \`CLAUDE.md\` also imports the shared Skill. Never create Skill folders inside animation subprojects.
 - Animation code belongs only in scene modules. The Server must never import or evaluate scenes in Node. Do not introduce GSAP, SVG scene layers, or resvg.
 - Application writes to projects use \`queueProjectWrite\` in \`packages/server/src/project.ts\` and \`atomicWrite\`. The player and exports share \`@mografy/runtime\`, including \`post.ts\`.
@@ -638,7 +639,7 @@ Codex and Claude share the single \`mografy\` Skill in the Mografy source reposi
 
 Codex storyboards use image generation; Claude uses Artifacts when available, otherwise a standalone HTML/Canvas preview. Write plans and prompts in English and save project-specific boards under \`storyboards/\`.
 
-Open the player with \`mografy dev\`. After scene edits, run \`mografy check\` and \`mografy review\`, then inspect the generated PNGs. Export with \`mografy export --format mp4|lottie|svga\` when requested.
+Open the player with \`mografy dev\`. After scene edits, run \`mografy check\` and \`mografy review\`, then inspect the generated PNGs. Export with \`mografy export --format mp4|webm|lottie|svga\` when requested.
 `;
 
 function previousProjectGuide(repository: string) {
@@ -649,7 +650,9 @@ Shared Skill: [Mografy](${repository}/.agents/skills/mografy/SKILL.md). If missi
 
 function isPreviousProjectPointer(contents: string) {
   const match = contents.match(/\nShared Skill: \[Mografy\]\((.+)\/\.agents\/skills\/mografy\/SKILL\.md\)\. If missing, run/);
-  return !!match && contents === previousProjectGuide(match[1]!);
+  if (!match) return false;
+  const previous = previousProjectGuide(match[1]!);
+  return contents === previous || contents === previous.replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga');
 }
 
 export function projectGuide(_repository?: string) {

@@ -35,7 +35,7 @@ export function AudioPanel({ snapshot, session, sound }: { snapshot: Snapshot; s
   };
   if (!draft) return <Section title="Music">
     {picker}
-    <div className="audio-empty"><MusicNotesIcon size={28} aria-hidden="true" /><h3>Add a soundtrack</h3><p>Music plays with your animation and MP4 exports.</p><button className="primary" onClick={() => input.current?.click()} disabled={busy}>{busy ? 'Adding…' : 'Add music'}</button></div>
+    <div className="audio-empty"><MusicNotesIcon size={28} aria-hidden="true" /><h3>Add a soundtrack</h3><p>Music plays with your animation and MP4/WebM exports.</p><button className="primary" onClick={() => input.current?.click()} disabled={busy}>{busy ? 'Adding…' : 'Add music'}</button></div>
     {message ? <p className="error-text" role="alert">{message}</p> : null}
   </Section>;
   return <Section title="Music" aside={<span className="hint">{sound === 'muted' ? 'Muted' : ''}</span>}>

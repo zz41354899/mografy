@@ -1,6 +1,21 @@
 # Development status
 
-Updated: 2026-10-17
+Updated: 2026-10-18
+
+## Source update command (2026-10-18)
+
+- Added `mografy update [--check]`, resolved from the executing installation rather than a scene project. It fetches the tracked upstream, prints commit revisions and applies only fast-forward updates. Local changes, diverged/ahead history, missing upstreams and concurrent updates stop with actionable messages.
+- The updater waits for the active export, requests an idle-only shutdown, installs dependencies (including the existing build/Chromium/launcher postinstall), syncs Skill guidance and restarts the same project on the same port using the new CLI process. Browser refresh loads the new interface. Failed setup reports manual recovery commands and leaves the incomplete build stopped.
+- README, configuration and changelog document first install, the one-time manual bootstrap for older versions and later updates. User-facing bootstrap steps omit the maintainer-only `pnpm sync:skills`; the updater handles synchronization internally. Updates are exercised against temporary local Git remotes; this development checkout is not pulled or overwritten.
+- Validation: `pnpm check` passed all 121 tests, and `pnpm test:browser` passed 17 checks. The twelve updater cases include a real local HTTP export wait and detached process restart, tracked/untracked changes, divergent history, missing upstreams, detached HEADs, concurrent locks and failed installation recovery. Final build/typecheck and all twelve updater cases passed after the startup identity check was tightened. Shared Skill guidance was synchronized.
+
+## WebM video export (2026-10-18)
+
+- Added WebM alongside MP4, Lottie and SVGA in the player, API and CLI (`mografy export [project] --format webm`). WebM uses VP9 video and optional Opus audio at 128 kbps. API/CLI defaults and the initial WebM draft use CRF 32; Draft/Standard/High select CRF 38/32/26. Higher CRF generally makes smaller files with less detail. Constant quality varies bitrate with scene complexity and does not promise a fixed file size or reduction versus every MP4.
+- Reuses browser capture, FFV1 intermediates, shared Runtime sampling/effects, cancellation and queued atomic output publication. Both video formats support 720p/1080p landscape/portrait, Fit and up to 60 fps. The player retains per-format settings and plays completed WebM downloads; CLI orientation/resolution flags also accept WebM. Advanced settings retain two-pass target bitrate. Existing saved project settings and MP4 defaults are preserved.
+- Updated README, architecture and the generated shared agent guidance with WebM usage and quality behavior.
+- Validation: `pnpm check` passed build, typecheck and all 109 tests; `pnpm test:browser` passed all 17 checks. Real FFmpeg tests cover VP9 CRF/two-pass, Opus duration, silent output and frame decoding. CLI and browser tests cover portrait presets, playback/download MIME, frame-rate/dimension limits, cancellation without partial output, CRF defaults, per-format drafts and unchanged manifests. Desktop/390px WebM settings and decoded sample frames were visually reviewed. `pnpm sync:skills` regenerated shared guidance and migrated generated pointers while preserving custom notes.
+- Local example: the same twelve-second intro at 640 × 360, 30 fps, one motion sample and no glow/grain exported to MP4 (H.264 two-pass 12 Mbps/AAC 192 kbps) at 852,445 bytes and WebM (VP9 CRF 32/Opus 128 kbps) at 300,321 bytes, a 64.77% reduction. Both decoded to 360 frames. Total export times were 15.89/17.28 seconds; the observed encoding stages were about 0.71/1.51 seconds. These are default-encoding comparisons under local load, not matched-quality measurements or guaranteed savings. Data and decoded frame captures are in `artifacts/webm-export/`.
 
 ## Optional extras: camera, transitions and CJK typography (2026-10-17)
 

@@ -17,7 +17,7 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Latest updates
 
-**2026-10-17** — Optional extras for film-style videos and Chinese / Japanese copy: camera moves, sakura petal and other transitions, vertical Japanese text, and OFL CJK fonts. Ask your agent for "sakura transitions" or "vertical Japanese copy" and it adds what the project needs. Installation is unchanged. See the [changelog](CHANGELOG.md).
+**2026-10-18** — WebM export with VP9/Opus and constant quality (CRF), plus `mografy update` to fetch source updates, rebuild and restart the active player. See the [changelog](CHANGELOG.md).
 
 ## Get started
 
@@ -33,7 +33,17 @@ mografy dev
 
 `pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
 
-To update later, run `git pull && pnpm install` in the same folder.
+To check for updates, run `mografy update --check`. To install the latest commit from your branch's tracked upstream, run `mografy update` from the Mografy folder. The command checks for local changes, waits for an active export to finish, stops the active player, fast-forwards the source, runs `pnpm install` (including build, Chromium setup and launcher refresh), synchronizes the shared Skill, then restarts the same project on the same port. Refresh the browser after it restarts. Without an active player, it updates the installation without opening a project.
+
+If your installation predates the update command, stop the player with Ctrl+C and run this once in the original Mografy checkout:
+
+```sh
+git pull --ff-only
+pnpm install
+mografy dev
+```
+
+`--check` fetches Git metadata but does not change working files, install dependencies or restart the player. Updates stop for local changes (including untracked files), missing upstreams, detached HEADs or diverged history. User projects ignored by Git stay in place. If dependency setup fails after the source update, the player stays stopped and the error lists recovery commands. Separate checkouts update independently; outside a checkout, the PATH launcher selects its installed copy.
 
 `npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm sync:skills`, `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
 
@@ -161,12 +171,27 @@ Export from the player or CLI:
 
 ```sh
 mografy export ./projects/my-animation --format mp4
+mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
 
-MP4 supports audio, motion sampling, glow, grain, and H.264 encoding settings. Lottie and SVGA package embedded PNG frames, preserving Canvas artwork and effects without editable vector layers or audio. Lottie output is `.lottie.json`; SVGA output is compressed SVGA 2 protobuf. Finished files are written under `renders/`.
+MP4 uses H.264 video and AAC audio. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
+
+WebM quality presets:
+
+| Quality | VP9 CRF | Motion samples | Encoder speed |
+| --- | --- | --- | --- |
+| Draft | 38 | 1 | Very fast |
+| Standard | 32 | 4 | Medium |
+| High | 26 | 8 | Slow |
+
+The initial WebM draft inherits the project's motion samples and output effects; choosing a quality preset applies the values above. Draft also disables glow and grain. Lower CRF keeps more detail and usually produces larger files; higher CRF favors smaller files. Constant quality varies bitrate with scene complexity and does not guarantee a fixed size. VP9 may encode more slowly than H.264, and size savings depend on the scene and settings. CRF values are codec-specific, so compare actual outputs rather than matching MP4 and WebM numbers. Advanced settings also offer two-pass target bitrate. At equal average bitrate and duration, MP4 and WebM have similar file sizes.
+
+A local comparison of the twelve-second intro at 640 × 360, 30 fps and one motion sample produced an 852,445-byte MP4 and a 300,321-byte WebM (64.77% smaller). Total export times were 15.89 and 17.28 seconds. This compares the formats' default encoding settings, including different audio bitrates; it is not a matched-quality benchmark or a prediction for other scenes. See the [measured comparison](artifacts/webm-export/comparison.json).
+
+Lottie and SVGA package embedded PNG frames, preserving Canvas artwork and effects without editable vector layers or audio. Lottie output is `.lottie.json`; SVGA output is compressed SVGA 2 protobuf.
 
 If a finished video is too large, ask the shared `mografy` Skill to compress it, or run the Python helper directly (Python 3.10+, FFmpeg and ffprobe on PATH):
 
@@ -183,12 +208,12 @@ The player's Export dialog offers these output sizes:
 | --- | --- |
 | Lottie | 256 × 256 — Square; 640 × 360 — Landscape |
 | SVGA | 375 × 375 — Square; 375 × 750 — Portrait |
-| MP4 landscape (16:9) | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
-| MP4 portrait (9:16) | 720 × 1280 — 720p; 1080 × 1920 — 1080p |
+| MP4 / WebM landscape (16:9) | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
+| MP4 / WebM portrait (9:16) | 720 × 1280 — 720p; 1080 × 1920 — 1080p |
 
-MP4 starts in the authored canvas orientation, with icons to switch the output orientation while retaining 720p/1080p quality. A paused-frame preview shows the selected output. Each format remembers its size and Fit selection while the dialog stays open.
+MP4 and WebM start in the authored canvas orientation, with icons to switch the output orientation while retaining 720p/1080p quality. A paused-frame preview shows the selected output. Each format remembers its size and Fit selection while the dialog stays open.
 
-When the output aspect differs from the scene, **Fit** appears for all three formats:
+When the output aspect differs from the scene, **Fit** appears for all four formats:
 
 | Fit option | Result |
 | --- | --- |
@@ -198,13 +223,13 @@ When the output aspect differs from the scene, **Fit** appears for all three for
 
 All sixteen built-in components support landscape and portrait layouts. Choose **Adapt layout** when exporting a component in the other orientation. Custom scenes must use `ctx.width` and `ctx.height` to implement their own responsive layout; selecting this option alone does not rearrange fixed-coordinate artwork.
 
-Output choices leave the main preview and saved project settings intact. Portrait MP4 files default to `name-portrait.mp4`. CLI `--orientation` and `--resolution` presets use **Fit entire scene**; `--orientation` alone defaults to 720p, and `--resolution` alone selects landscape. CLI exports without these flags use the project's render scale. Output names supplied with `-o` must be filenames or relative paths inside the project's `renders/` directory.
+Output choices leave the main preview and saved project settings intact. Portrait video files default to `name-portrait.mp4` or `name-portrait.webm`. CLI `--orientation` and `--resolution` presets use **Fit entire scene**; `--orientation` alone defaults to 720p, and `--resolution` alone selects landscape. CLI exports without these flags use the project's render scale. Output names supplied with `-o` must be filenames or relative paths inside the project's `renders/` directory.
 
-Mografy exports allow up to **60 fps for MP4** and **30 fps for Lottie and SVGA**. SVGA uses its supported rates within this limit. The player, API, CLI, and direct render functions enforce the same limits. The export dialog caps older MP4 project defaults at 60 fps without changing saved settings.
+Mografy exports allow up to **60 fps for MP4 and WebM** and **30 fps for Lottie and SVGA**. SVGA uses its supported rates within this limit. The player, API, CLI, and direct render functions enforce the same limits. The export dialog caps inherited video frame rates at 60 fps without changing saved settings.
 
 After starting a player export, the same dialog shows an animated robot, actual frame-capture progress, and elapsed time. Encoding and packaging use an indeterminate indicator. **Hide** keeps the export running and moves progress into a toast with **View** and **Cancel**; the top **Exporting** button also reopens it.
 
-Completed MP4s can be played and downloaded in the dialog. **Done** dismisses the result, and **Last export** reopens it while the player retains that job. **Export** opens fresh settings. Failed or cancelled jobs offer **Settings** and, for exports started in this dialog, **Retry**.
+Completed MP4 and WebM videos can be played and downloaded in the dialog. **Done** dismisses the result, and **Last export** reopens it while the player retains that job. **Export** opens fresh settings. Failed or cancelled jobs offer **Settings** and, for exports started in this dialog, **Retry**.
 
 Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
 
@@ -216,7 +241,8 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | `mografy init [project]` | Create a project |
 | `mografy check [project]` | Compile and trial-render |
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
-| `mografy export [project] --format mp4\|lottie\|svga` | Export the animation |
+| `mografy export [project] --format mp4\|webm\|lottie\|svga` | Export the animation |
+| `mografy update [--check]` | Update this source installation, or check for a newer revision |
 | `mografy stop [project]` | Stop the project's player server |
 | `mografy --help` | Show commands and supported options |
 

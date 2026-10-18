@@ -10,7 +10,7 @@ test('export drafts obey inherited frame-rate limits and submit preset dimension
   const draft = createExportDraft(meta, project.render);
   assert.equal(draft.formats.mp4.settings.fps, 60);
   assert.deepEqual(draft.formats.mp4.size, { width: 720, height: 1280, fit: 'contain' });
-  for (const format of ['mp4', 'lottie', 'svga'] as const) {
+  for (const format of ['mp4', 'webm', 'lottie', 'svga'] as const) {
     const { size, settings } = draft.formats[format];
     assert.equal(exportRequestSchema.safeParse({ format, size, render: settings }).success, true);
   }
@@ -43,4 +43,19 @@ test('quality changes preserve fps and size, and custom keeps manual values', ()
   assert.equal(draft.formats.mp4.settings.crf, 16);
   assert.equal(draft.formats.mp4.settings.samples, 8);
   assert.deepEqual(draft.formats.mp4.size, { width: 720, height: 1280, fit: 'contain' });
+});
+
+test('WebM starts with VP9 quality settings and retains its own orientation and quality', () => {
+  let draft = createExportDraft(meta, project.render);
+  assert.equal(draft.formats.webm.settings.encoding, 'crf');
+  assert.equal(draft.formats.webm.settings.crf, 32);
+  draft = exportDraftReducer(draft, { type: 'format', format: 'webm' });
+  draft = exportDraftReducer(draft, { type: 'orientation', ratio: '16:9' });
+  assert.deepEqual(draft.formats.webm.size, { width: 1280, height: 720, fit: 'contain' });
+  assert.equal(draft.formats.mp4.size.height, 1280);
+  for (const [quality, crf] of [['draft', 38], ['standard', 32], ['high', 26]] as const) {
+    draft = exportDraftReducer(draft, { type: 'quality', quality, base: project.render });
+    assert.equal(draft.formats.webm.settings.crf, crf);
+    assert.equal(draft.formats.webm.settings.encoding, 'crf');
+  }
 });

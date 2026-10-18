@@ -18,4 +18,4 @@ For scene work, read the project's `mografy.json`, configured scene entry, impor
 
 Animation content belongs only in scene modules, never in `mografy.json`. Render synchronously from absolute `time`, resolved params, and prepared assets; do not use GSAP, SVG scene layers, resvg, clocks, or previous-frame state. Scene code executes only in the browser. Write plans and prompts in English; preserve supplied copy unless translation is requested.
 
-For scene changes, run `mografy check [project]`, then `mografy review [project]` and inspect the generated PNGs before delivery. A generated storyboard is a concept reference; validate the actual scene separately. Export with `mografy export [project] --format mp4|lottie|svga` when requested.
+For scene changes, run `mografy check [project]`, then `mografy review [project]` and inspect the generated PNGs before delivery. A generated storyboard is a concept reference; validate the actual scene separately. Export with `mografy export [project] --format mp4|webm|lottie|svga` when requested.

@@ -1,4 +1,4 @@
-import { EXPORT_SIZES, MP4_PORTRAIT_SIZES } from '@mografy/core';
+import { EXPORT_SIZES, isVideoFormat, MP4_PORTRAIT_SIZES } from '@mografy/core';
 import type { RenderStatus } from '@mografy/core';
 import { findServer } from '@mografy/server';
 import { responseJson } from './api.js';
@@ -39,7 +39,7 @@ export async function exportProject(dir: string, flags: Flags) {
   if (flags.cancel) return cancelExport(dir);
   await requireProject(dir);
   const format = flags.format ?? 'mp4';
-  if ((flags.orientation || flags.resolution) && format !== 'mp4') throw new Error('--orientation and --resolution are MP4 options');
+  if ((flags.orientation || flags.resolution) && !isVideoFormat(format)) throw new Error('--orientation and --resolution are MP4/WebM options');
   const preset = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
   const size = flags.orientation || flags.resolution ? { width: preset.width, height: preset.height, fit: 'contain' as const } : undefined;
   const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}) };

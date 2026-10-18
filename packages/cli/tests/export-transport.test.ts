@@ -18,8 +18,8 @@ async function fixture(t: TestContext, fps = 10) {
   return dir;
 }
 
-async function run(dir: string, format: string) {
-  const child = spawn(process.execPath, [bin, 'export', dir, '--format', format], {
+async function run(dir: string, format: string, options: string[] = []) {
+  const child = spawn(process.execPath, [bin, 'export', dir, '--format', format, ...options], {
     env: { ...process.env, MOGRAFY_NO_OPEN: '1', MOGRAFY_HOME: join(dir, 'library'), MOGRAFY_STATE: join(dir, 'state') },
     timeout: 15_000,
   });
@@ -48,4 +48,15 @@ test('CLI closes its owned project when export startup rejects', { timeout: 20_0
   assert.equal(result.code, 1, result.stderr);
   assert.equal(result.signal, null, 'the process exits without requiring its timeout to kill leaked resources');
   assert.match(result.stderr, /Lottie frame rate must be between 1 and 30/);
+});
+
+test('CLI exports WebM through an owned project with video orientation presets', { timeout: 30_000 }, async t => {
+  const dir = await fixture(t);
+  const manifest = await readFile(join(dir, 'mografy.json'), 'utf8');
+  const result = await run(dir, 'webm', ['--orientation', 'portrait', '--resolution', '720p', '-o', 'Local.webm']);
+  assert.equal(result.code, 0, result.stderr);
+  assert.match(result.stdout, /Encoding WebM/);
+  assert.match(result.stdout, /WebM export complete/);
+  assert.equal((await readFile(join(dir, 'renders/Local.webm'))).subarray(0, 4).toString('hex'), '1a45dfa3');
+  assert.equal(await readFile(join(dir, 'mografy.json'), 'utf8'), manifest);
 });

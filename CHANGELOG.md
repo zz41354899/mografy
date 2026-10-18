@@ -2,11 +2,21 @@
 
 Notable changes to Mografy. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
 
-After pulling an update, rebuild in the Mografy folder:
+Update from your Mografy checkout:
 
 ```sh
-git pull && pnpm install
+mografy update --check
+mografy update
 ```
+
+Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
+
+## 2026-10-18
+
+### Added
+
+- **WebM export** — VP9 video and optional Opus audio, available from the player and CLI with `--format webm`. Constant quality defaults to CRF 32, with Draft/Standard/High presets at 38/32/26. Both video formats support landscape/portrait sizes, Fit, effects, cancellation and completed-file playback. Size varies with scene complexity; CRF does not guarantee a byte budget.
+- **Source updates** — `mografy update --check` checks the tracked upstream; `mografy update` fast-forwards a clean installation, installs/builds, synchronizes Skill guidance and restarts the active player on its original project/port. It waits for exports and rejects local changes, concurrent updates and diverged history. Older installations need the one-time manual update above.
 
 ## 2026-10-17
 

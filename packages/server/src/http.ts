@@ -36,11 +36,13 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     socket.on('message', () => socket.close(1008, 'Use the HTTP API'));
     send(socket, { type: 'snapshot', reason: 'initial', snapshot: session.project.snapshot() });
   });
+  let stopping = false;
 
   const handle = async (request: IncomingMessage, response: ServerResponse) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const path = url.pathname, method = request.method ?? 'GET';
     if (!allowed(request)) throw new ApiError(403, 'ORIGIN', 'Only same-origin localhost requests are accepted');
+    if (stopping) throw new ApiError(503, 'CLOSED', 'Server is closing');
     if (!path.startsWith('/__mografy/')) {
       if (method !== 'GET' && method !== 'HEAD') throw new ApiError(405, 'METHOD', 'Method not allowed');
       const root = webDist(), file = normalize(join(root, path === '/' ? 'index.html' : decodeURIComponent(path)));
@@ -50,7 +52,12 @@ export async function startServer(projectDir: string, options: StartOptions = {}
       response.end(method === 'HEAD' ? undefined : data); return;
     }
     const route = `${method} ${path.replace(/^\/__mografy/, '')}`;
-    if (route === 'POST /shutdown') { json(response, 200, { ok: true }); setTimeout(() => { void close(); }, 50); return; }
+    if (route === 'POST /shutdown') {
+      if (url.searchParams.get('onlyIfIdle') === '1' && session.project.snapshot().render?.state === 'running') throw new ApiError(409, 'EXPORT_RUNNING', 'Wait for the export to finish before updating.');
+      stopping = true;
+      response.once('finish', () => { void close(); });
+      json(response, 200, { ok: true }); return;
+    }
     if (path === '/__mografy/health' || path.startsWith('/__mografy/projects')) return handleWorkspaceRequest(session, request, response, url, route);
     return handleProjectRequest(session.project, request, response, url, route);
   };

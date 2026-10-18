@@ -11,16 +11,18 @@ export interface Flags {
   orientation?: 'landscape' | 'portrait';
   resolution?: '720p' | '1080p';
   cancel: boolean;
+  updateCheck: boolean;
 }
 
 export function parse(argv: string[]) {
-  const flags: Flags = { open: true, yes: false, cancel: false };
+  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i]!;
     if (value === '--no-open') flags.open = false;
     else if (value === '--yes' || value === '-y') flags.yes = true;
     else if (value === '--cancel') flags.cancel = true;
+    else if (value === '--check') flags.updateCheck = true;
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];

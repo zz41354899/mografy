@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { BracketsCurlyIcon } from '@phosphor-icons/react/dist/csr/BracketsCurly';
 import { FilmStripIcon } from '@phosphor-icons/react/dist/csr/FilmStrip';
 import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack';
-import { EXPORT_MAX_FPS, EXPORT_SIZES, MP4_PORTRAIT_SIZES, outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
+import { EXPORT_MAX_FPS, isVideoFormat, EXPORT_SIZES, MP4_PORTRAIT_SIZES, outputFrameCount, SVGA_FRAME_RATES } from '@mografy/core';
 import type { ExportSize, RenderSettings, Snapshot } from '@mografy/core';
 import { AspectRatioToggle } from './AspectRatioToggle.js';
 import { ExportPreview } from './ExportPreview.js';
@@ -12,10 +12,11 @@ import type { ExportDraftController } from './useExportDraft.js';
 
 const FORMATS = [
   { id: 'mp4', name: 'MP4', description: 'Video', Icon: FilmStripIcon },
+  { id: 'webm', name: 'WebM', description: 'VP9 video', Icon: FilmStripIcon },
   { id: 'lottie', name: 'Lottie', description: 'Web animation', Icon: BracketsCurlyIcon },
   { id: 'svga', name: 'SVGA', description: 'App animation', Icon: StackIcon },
 ] as const;
-const formatTitle = { mp4: 'MP4', lottie: 'Lottie', svga: 'SVGA' };
+const formatTitle = { mp4: 'MP4', webm: 'WebM', lottie: 'Lottie', svga: 'SVGA' };
 const choiceOptions = (values: readonly number[], suffix = '') => values.map(v => ({ value: String(v), label: `${v}${suffix}` }));
 
 export function ExportSettings({ snapshot, draft, busy, error, clearError, onSubmit, onClose }: {
@@ -24,9 +25,9 @@ export function ExportSettings({ snapshot, draft, busy, error, clearError, onSub
 }) {
   const meta = snapshot.scene!.meta, project = snapshot.project!;
   const { format, settings, size } = draft, { width, height } = size;
-  const raster = format !== 'mp4', differentRatio = width * meta.height !== height * meta.width;
+  const raster = !isVideoFormat(format), differentRatio = width * meta.height !== height * meta.width;
   const frames = outputFrameCount(meta.duration, settings.fps);
-  const presets = format === 'mp4' && height > width ? MP4_PORTRAIT_SIZES : EXPORT_SIZES[format];
+  const presets = isVideoFormat(format) && height > width ? MP4_PORTRAIT_SIZES : EXPORT_SIZES[format];
   const resolutions = presets.map(size => ({ value: `${size.width}x${size.height}`, label: `${size.width} × ${size.height} — ${size.name}` }));
   const patch = (settings: Partial<RenderSettings>) => { draft.patch(settings); clearError(); };
   return <form onSubmit={e => { e.preventDefault(); onSubmit(); }}>
@@ -37,20 +38,21 @@ export function ExportSettings({ snapshot, draft, busy, error, clearError, onSub
         </nav>
         <div className="export-settings">
           <h3>{formatTitle[format]} settings</h3>
-          {!raster ? <div className="export-field"><span>Orientation</span><AspectRatioToggle label="MP4 orientation" value={height > width ? '9:16' : '16:9'} disabled={busy} onChange={ratio => {
+          {!raster ? <div className="export-field"><span>Orientation</span><AspectRatioToggle label={`${formatTitle[format]} orientation`} value={height > width ? '9:16' : '16:9'} disabled={busy} onChange={ratio => {
             draft.setOrientation(ratio); clearError();
           }} /></div> : null}
           <div className="export-field"><span>Resolution</span><Choice label="Resolution" value={`${width}x${height}`} options={resolutions} onChange={v => {
             const selected = presets.find(s => `${s.width}x${s.height}` === v)!;
             draft.setSize(selected); clearError();
           }} /></div>
-          {!raster ? <ExportPreview snapshot={snapshot} size={size} settings={settings} /> : null}
+          {!raster ? <ExportPreview snapshot={snapshot} size={size} settings={settings} label={`${formatTitle[format]} frame preview`} /> : null}
           {differentRatio ? <>
             <div className="export-field"><span>Fit</span><Choice label="Fit" value={size.fit} options={[{ value: 'contain', label: 'Fit entire scene' }, { value: 'cover', label: 'Fill and crop' }, { value: 'reflow', label: 'Adapt layout' }]} onChange={v => { draft.setFit(v as ExportSize['fit']); clearError(); }} /></div>
             <p className="export-note">{size.fit === 'reflow' ? 'Rearranges responsive scenes for the output canvas. Built-in components support landscape and portrait layouts.' : size.fit === 'contain' ? 'Keeps the entire scene centered. Extra space uses the scene background color.' : 'Fills the output and crops the edges. The scene stays centered.'}</p>
           </> : null}
           <div className="export-field"><span>Frame rate</span><Choice label="Frame rate" value={String(settings.fps)} options={choiceOptions(format === 'svga' ? SVGA_FRAME_RATES : [...new Set([12, 15, 20, 24, 25, 30, 60, settings.fps])].filter(fps => fps <= EXPORT_MAX_FPS[format]).sort((a,b) => a-b), ' fps')} onChange={v => patch({ fps: Number(v) })} /></div>
           <div className="export-field"><span>Quality</span><Choice label="Quality" value={draft.quality} options={[{ value: 'draft', label: 'Draft' }, { value: 'standard', label: 'Standard' }, { value: 'high', label: 'High' }, ...(draft.quality === 'custom' ? [{ value: 'custom', label: 'Custom' }] : [])]} onChange={v => draft.setQuality(v as ExportQuality)} /></div>
+          {format === 'webm' ? <p className="export-note">VP9 video with Opus audio. Constant quality keeps detail consistent; file size varies with the scene.</p> : null}
           {raster ? <p className="export-note">Embedded image frames preserve the Canvas scene. No audio or editable vector layers. Smaller sizes keep playback lighter.</p> : null}
           <details className="export-advanced"><summary>Advanced settings</summary>
             <div className="export-field"><span>Motion samples</span><Choice label="Motion samples" value={String(settings.samples)} options={choiceOptions([1, 2, 4, 8, 16])} onChange={v => patch({ samples: Number(v) })} /></div>

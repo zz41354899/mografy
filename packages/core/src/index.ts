@@ -69,9 +69,13 @@ export const renderSettingsSchema = z.strictObject({
   includeAudio: z.boolean().default(true),
 });
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
-export const exportFormatSchema = z.enum(['mp4', 'lottie', 'svga']);
+export const exportFormatSchema = z.enum(['mp4', 'webm', 'lottie', 'svga']);
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
-export const EXPORT_MAX_FPS = { mp4: 60, lottie: 30, svga: 30 } as const;
+export type VideoFormat = Extract<ExportFormat, 'mp4' | 'webm'>;
+export const isVideoFormat = (format: ExportFormat): format is VideoFormat => format === 'mp4' || format === 'webm';
+/** WebM uses quality-based VP9 by default rather than inheriting the MP4 bitrate target. */
+export const WEBM_DEFAULTS = { encoding: 'crf', crf: 32, preset: 'medium' } as const;
+export const EXPORT_MAX_FPS = { mp4: 60, webm: 60, lottie: 30, svga: 30 } as const;
 export const SVGA_FRAME_RATES = [1, 2, 3, 5, 6, 10, 12, 15, 20, 30] as const;
 export function validateExportFrameRate(format: ExportFormat, fps: number) {
   if (!Number.isInteger(fps) || fps < 1 || fps > EXPORT_MAX_FPS[format])
@@ -82,6 +86,7 @@ export function validateExportFrameRate(format: ExportFormat, fps: number) {
 export const EXPORT_SIZES = {
   lottie: [{ width: 256, height: 256, name: 'Square' }, { width: 640, height: 360, name: 'Landscape' }],
   svga: [{ width: 375, height: 375, name: 'Square' }, { width: 375, height: 750, name: 'Portrait' }],
+  webm: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
   mp4: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
 } as const;
 export const MP4_PORTRAIT_SIZES = EXPORT_SIZES.mp4.map(size => ({ ...size, width: size.height, height: size.width }));

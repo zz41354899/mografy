@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { copyFile, cp, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -6,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MP4_PORTRAIT_SIZES, EXPORT_SIZES, validateSceneProject } from '@mografy/core';
 import type { ExportFormat, SceneProject } from '@mografy/core';
-import { buildScene, SceneHost, renderAnimation, renderVideo, ffmpegOutput } from '../src/index.js';
+import { buildScene, SceneHost, renderAnimation, renderVideo, ffmpegOutput, ffmpegPath } from '../src/index.js';
 
 let dir: string, host: SceneHost, project: SceneProject;
 const template = resolve(fileURLToPath(import.meta.url), '../../../server/template');
@@ -20,7 +21,7 @@ before(async () => {
 });
 after(async () => { await host?.close(); await rm(dir, { recursive: true, force: true }); });
 
-for (const format of ['lottie', 'svga'] as const satisfies Exclude<ExportFormat, 'mp4'>[]) {
+for (const format of ['lottie', 'svga'] as const satisfies Exclude<ExportFormat, 'mp4' | 'webm'>[]) {
  for (const { width, height } of EXPORT_SIZES[format]) {
   test(`${format} ${width}×${height}: independent browser player reproduces shared output pixels, including random frame seeks`, { timeout: 60_000 }, async () => {
     const build = await buildScene(dir, project);
@@ -156,7 +157,6 @@ test('Lottie and SVGA 30fps and MP4 60fps export at their accepted frame-rate bo
   assert.equal(decoded.split('\n').filter(line => /^0,/.test(line)).length, 12);
 });
 
-
 test('portrait reflow uses tall logical coordinates in setup and drawing without letterboxing or rotation', async () => {
   const source = `export const meta = { width: 1920, height: 1080, duration: 1, fps: 1, background: '#000000' };
 export const params = {};
@@ -181,3 +181,27 @@ export function renderFrame(ctx) {
     } finally { await page.close(); }
   }
 });
+
+for (const encoding of ['crf', 'two-pass'] as const) {
+  test(`WebM ${encoding}: VP9 frames and Opus audio decode to the full duration`, { timeout: 60_000 }, async () => {
+    const p = structuredClone(project);
+    p.render = { ...p.render, encoding, crf: 32, bitrate: '100k', preset: 'veryfast', includeAudio: encoding === 'crf' };
+    await ffmpegOutput(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-f', 'wav', '-y', join(dir, 'assets/webm-beep.wav')]);
+    p.audio = { path: 'assets/webm-beep.wav', bpm: 120, offset: 0, beatsPerBar: 4, gain: .5 };
+    const build = await buildScene(dir, p), output = join(dir, `renders/${encoding}.webm`);
+    const result = await renderVideo({ format: 'webm', projectDir: dir, project: p, build, host, output });
+    assert.equal(result.audio, p.render.includeAudio);
+    const info = spawnSync(ffmpegPath(), ['-hide_banner', '-i', output], { encoding: 'utf8' }).stderr;
+    assert.match(info, /Video: vp9/);
+    const frames = await ffmpegOutput(['-i', output, '-map', '0:v:0', '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
+    assert.equal(frames.length, 8 * 96 * 54 * 4);
+    if (result.audio) {
+      assert.match(info, /Audio: opus/);
+      const pcm = await ffmpegOutput(['-i', output, '-vn', '-f', 's16le', '-ac', '1', '-ar', '8000', 'pipe:1']);
+      assert.ok(Math.abs(pcm.length / 16000 - 8) < .1);
+    } else await assert.rejects(ffmpegOutput(['-i', output, '-map', '0:a:0', '-f', 's16le', 'pipe:1']), /audio|Stream map/);
+    await assert.rejects(renderVideo({ format: 'webm', projectDir: dir, project: p, build, host, output }), /already exists/);
+    await assert.rejects(renderVideo({ format: 'webm', projectDir: dir, project: p, build, host, output: join(dir, 'renders/invalid.mp4') }), /end with .webm/);
+    await assert.rejects(renderVideo({ format: 'webm', projectDir: dir, project: { ...p, render: { ...p.render, fps: 61 } }, build, host, output: join(dir, 'renders/invalid.webm') }), /60 fps/);
+  });
+}

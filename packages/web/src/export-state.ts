@@ -1,3 +1,4 @@
+import { isVideoFormat } from '@mografy/core';
 import type { ExportSize, RenderSettings, RenderStatus, Snapshot } from '@mografy/core';
 
 export interface ExportJobPreview { snapshot: Snapshot; size: ExportSize; settings: RenderSettings }
@@ -33,6 +34,6 @@ export function exportProgress(job: RenderStatus) {
     running, ready: job.state === 'done', failed: job.state === 'failed',
     percentage: Math.min(100, Math.max(0, Math.round(job.done / Math.max(1, job.total) * 100))),
     indeterminate: running && job.stage !== 'capture',
-    stageLabel: job.stage === 'capture' ? 'Exporting' : job.format === 'mp4' ? 'Encoding' : 'Packaging',
+    stageLabel: job.stage === 'capture' ? 'Exporting' : isVideoFormat(job.format) ? 'Encoding' : 'Packaging',
   };
 }

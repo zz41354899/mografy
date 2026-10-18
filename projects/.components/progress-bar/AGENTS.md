@@ -6,6 +6,6 @@ Codex and Claude share the single `mografy` Skill in the Mografy source reposito
 
 Codex storyboards use image generation; Claude uses Artifacts when available, otherwise a standalone HTML/Canvas preview. Write plans and prompts in English and save project-specific boards under `storyboards/`.
 
-Open the player with `mografy dev`. After scene edits, run `mografy check` and `mografy review`, then inspect the generated PNGs. Export with `mografy export --format mp4|lottie|svga` when requested.
+Open the player with `mografy dev`. After scene edits, run `mografy check` and `mografy review`, then inspect the generated PNGs. Export with `mografy export --format mp4|webm|lottie|svga` when requested.
 
 Shared Skill: [Mografy](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md). For local work, use the current installation's outer `.agents/skills/mografy/` folder. If missing, run `pnpm build` and `pnpm sync:skills` from your Mografy checkout.

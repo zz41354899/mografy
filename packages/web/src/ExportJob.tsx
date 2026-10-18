@@ -1,3 +1,4 @@
+import { isVideoFormat } from '@mografy/core';
 import { useEffect, useRef, useState } from 'react';
 import { CheckIcon } from '@phosphor-icons/react/dist/csr/Check';
 import { DownloadSimpleIcon } from '@phosphor-icons/react/dist/csr/DownloadSimple';
@@ -36,7 +37,7 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
   return <div className={`export-job-view ${ready ? 'is-ready' : failed ? 'is-failed' : !running ? 'is-cancelled' : 'is-rendering'}`} data-testid="export-job" data-state={job.state}>
     <div className="export-job-scene">
       <div className="export-job-art">
-        {running ? <ExportMascot paused={stopped} /> : ready && job.format === 'mp4' ? <video className="export-result-video" src={url} controls playsInline preload="metadata" aria-label="Exported video" />
+        {running ? <ExportMascot paused={stopped} /> : ready && isVideoFormat(job.format) ? <video className="export-result-video" src={url} controls playsInline preload="metadata" aria-label="Exported video" />
           : ready && preview ? <ExportPreview {...preview} label="Export frame preview" />
           : <div className={`export-result-mark ${ready ? 'complete' : ''}`} aria-hidden="true">{ready ? <CheckIcon size={48} weight="bold" /> : failed ? <WarningCircleIcon size={48} /> : <PauseIcon size={44} />}</div>}
       </div>

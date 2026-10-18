@@ -4,7 +4,7 @@ Most people never need these settings. A default installation creates projects i
 
 ## The mografy command
 
-`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. After pulling source changes, run `pnpm install` again.
+`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders, the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. Run `mografy update --check` to check the installation selected by the launcher, or `mografy update` to update it and restart its active player. The command prints the checkout path and revision. Older installations need a one-time `git pull --ff-only` and `pnpm install` after stopping the player. The updater handles shared Skill synchronization automatically.
 
 Inside the source checkout, `mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
 

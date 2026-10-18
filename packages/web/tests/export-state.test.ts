@@ -34,6 +34,7 @@ test('capture uses actual progress while encoding and packaging remain indetermi
   assert.equal(exportProgress(job()).percentage, 20);
   assert.equal(exportProgress(job()).indeterminate, false);
   assert.equal(exportProgress(job({ stage: 'encode' })).indeterminate, true);
+  assert.equal(exportProgress(job({ format: 'webm', stage: 'encode' })).stageLabel, 'Encoding');
   assert.equal(exportProgress(job({ format: 'svga', stage: 'package' })).stageLabel, 'Packaging');
   assert.equal(exportProgress(job({ state: 'done', stage: 'done', done: 10 })).ready, true);
 });

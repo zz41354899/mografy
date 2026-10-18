@@ -271,7 +271,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
 
   review(video?: string) {
     const { project, build } = this.current();
-    const comparisonVideo = video ?? (this.jobs.status?.state === 'done' && this.jobs.status.format === 'mp4' && this.jobs.status.version === build.version ? this.jobs.status.output : undefined);
+    const comparisonVideo = video ?? (this.jobs.status?.state === 'done' && (this.jobs.status.format === 'mp4' || this.jobs.status.format === 'webm') && this.jobs.status.version === build.version ? this.jobs.status.output : undefined);
     return this.run(() => renderReview({
       projectDir: this.dir,
       project: structuredClone(project),

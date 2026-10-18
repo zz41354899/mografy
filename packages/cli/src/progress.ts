@@ -1,8 +1,9 @@
+import { isVideoFormat } from '@mografy/core';
 import type { ExportFormat, RenderStatus } from '@mografy/core';
 import type { RunningServer } from '@mografy/server';
 import { displayPath } from './paths.js';
 
-export const formatName = (format: ExportFormat) => format === 'mp4' ? 'MP4' : format === 'lottie' ? 'Lottie' : 'SVGA';
+export const formatName = (format: ExportFormat) => isVideoFormat(format) ? (format === 'webm' ? 'WebM' : 'MP4') : format === 'lottie' ? 'Lottie' : 'SVGA';
 
 export function progressReporter(format: ExportFormat) {
   let lastStage = '', lastBucket = -1, captureComplete = false;
@@ -25,7 +26,7 @@ export function progressReporter(format: ExportFormat) {
       lastBucket = bucket;
     } else if (status.stage !== lastStage && status.stage === 'encode') {
       finishCapture(status);
-      console.log('Encoding MP4…');
+      console.log(`Encoding ${formatName(format)}…`);
     } else if (status.stage !== lastStage && status.stage === 'package') {
       finishCapture(status);
       console.log(`Packaging ${formatName(format)}…`);
@@ -34,7 +35,7 @@ export function progressReporter(format: ExportFormat) {
   };
   const finish = (status: RenderStatus) => {
     finishCapture(status);
-    if (lastStage !== 'encode' && lastStage !== 'package') console.log(format === 'mp4' ? 'Encoding MP4…' : `Packaging ${formatName(format)}…`);
+    if (lastStage !== 'encode' && lastStage !== 'package') console.log(isVideoFormat(format) ? `Encoding ${formatName(format)}…` : `Packaging ${formatName(format)}…`);
   };
   const stop = () => {
     if (process.stdout.isTTY && lastStage === 'capture' && !captureComplete && lastBucket >= 0) process.stdout.write('\n');
