@@ -11,6 +11,17 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-19
+
+### Added
+
+- **Codex motion-design guidance** — the existing shared `mografy` Skill now links to a Codex-only reference for visual concepts, type hierarchy, key poses, causal choreography, rhythm, continuity and review of actual rendered output. Small edits use only the relevant guidance. Claude keeps its existing workflow.
+- **Motion-design example** — [`extras/motion-design.ts`](extras/motion-design.ts) and [rendered key poses](docs/motion-design/poses.png) demonstrate a continuous graphic handoff and a readable final hold. The authoring guidance remains generated from `packages/core/src/guide.ts`.
+
+### Changed
+
+- **Local visual-reference workflow** — private references connect actual frames and timed excerpts to specific design decisions, controlled comparisons and reconstruction practice. Human feedback is recorded for the relevant brief and kept in the local reference Skill. Disposable evaluation projects, comparison pages and test videos were removed after the useful guidance and still-image references were retained.
+
 ## 2026-10-18
 
 ### Added

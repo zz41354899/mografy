@@ -93,6 +93,7 @@ Its English references cover:
 | [Intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
 | [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
 | [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
+| [Codex motion design](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/codex-motion-design.md) | Codex-specific guidance for visual concepts, choreography, continuity, rhythm, and design review; Claude retains its existing workflow |
 | [Camera and transitions](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) | `cinema.ts` camera moves, transitions including sakura particle wipes, and atmosphere |
 | [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | Vertical Japanese / Chinese text, CJK line breaking, and the bundled OFL fonts |
 | [Video compression](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | Python helper for smaller exported MP4s, quality controls, and upload-size budgets |

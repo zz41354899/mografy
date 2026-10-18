@@ -20,6 +20,8 @@ After a build, `pnpm sync:skills` regenerates the shared Skill, removes exact ge
 
 Storyboards are project-specific planning artifacts under `storyboards/`, separate from scene execution and `mografy.json`. Codex invokes available image generation; Claude invokes Artifacts when available or writes a local HTML/Canvas preview. The Skill reports unavailable tools honestly. Motion principles translate into deterministic scene functions, never a runtime physics loop. Generated boards do not replace Chromium validation and actual frame review.
 
+For new animations and motion redesigns, Codex additionally reads `references/codex-motion-design.md`: a visual mechanism, composed key poses, causal choreography, rhythm, continuity, and evidence from actual renders. Small local edits use only the relevant guidance. The supplement is generated from `guide.ts` inside the same shared Skill; Claude skips it and retains its existing workflow. Its evaluation briefs separate technical checks from visual judgment and do not imply an improvement has already been demonstrated.
+
 ## Drawing interface
 
 `FrameContext.draw` is created once per runtime and wraps common Canvas shapes, text, images, opacity, and transforms. Every method uses the same logical-coordinate context. There is no additional draw loop or global animation state; the scene remains `renderFrame(ctx, time, params)`.
