@@ -584,6 +584,8 @@ description: Develop Mografy, plan storyboards, create and export Canvas animati
 
 # Mografy
 
+Calibration note from the maintainer's current experience: Claude's workflow is more fully calibrated. Codex may adapt its motion-design approach to the brief and rendered results while following the shared scene contract.
+
 For scene work, read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
 
 - Before editing a scene, read [references/scene-authoring.md](references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.

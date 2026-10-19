@@ -81,6 +81,8 @@ For a longer sequence, ask for a storyboard first. Scene code determines the com
 
 ## One Skill for Codex and Claude
 
+Based on the maintainer's current experience, the Claude workflow is more fully calibrated. Codex can adapt its approach to the brief and rendered results while following the shared scene contract.
+
 The Skill lives at [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) imports it. Both hosts read one maintained copy.
 
 Its English references cover:

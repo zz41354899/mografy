@@ -81,6 +81,8 @@ export MOGRAFY_HOME="$HOME/Animations"
 
 ## Codex 與 Claude 共用一個 Skill
 
+依維護者目前的使用經驗，Claude 的工作流程校調較完整；Codex 可依需求與實際算圖結果自行調整做法，並遵守共用的場景規範。
+
 Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md)。Claude 的 `.claude/skills/mografy` 入口連結到同一個資料夾，[CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) 也會匯入它。兩種代理環境讀取同一份維護中的內容。
 
 英文參考文件涵蓋：
