@@ -13,6 +13,8 @@ export class ProjectWatcher {
   private fingerprint = '';
   private stopped = true;
   private scanning = false;
+  private running = false;
+  private pending = false;
 
   constructor(private dir: string, private rebuild: () => Promise<unknown>) {}
 
@@ -38,14 +40,30 @@ export class ProjectWatcher {
   private trigger = () => {
     if (this.stopped) return;
     clearTimeout(this.debounce);
-    this.debounce = setTimeout(() => {
-      void this.scan().then(fingerprint => {
-        if (this.stopped) return;
-        this.fingerprint = fingerprint;
-        return this.rebuild();
-      }).catch(() => {});
-    }, 150);
+    this.debounce = setTimeout(() => this.flush(), 150);
   };
+
+  /**
+   * At most one rebuild runs and at most one more is pending. Changes that arrive while a rebuild
+   * compiles and trial-renders collapse into a single follow-up that reads the latest files,
+   * instead of queueing one full rebuild per intermediate save.
+   */
+  private flush() {
+    if (this.stopped) return;
+    if (this.running) { this.pending = true; return; }
+    this.running = true;
+    void (async () => {
+      try {
+        do {
+          this.pending = false;
+          const fingerprint = await this.scan().catch(() => this.fingerprint);
+          if (this.stopped) return;
+          this.fingerprint = fingerprint;
+          await this.rebuild().catch(() => {});
+        } while (this.pending && !this.stopped);
+      } finally { this.running = false; }
+    })();
+  }
 
   start() {
     if (!this.stopped) return;

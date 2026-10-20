@@ -81,6 +81,55 @@ test('editing the file on disk: broken keeps the last version with an error, fix
   await page.waitForFunction(() => !document.querySelector('.notice.error'));
 });
 
+const runCli = async (...args: string[]) => {
+  const child = spawn(process.execPath, [BIN, ...args], { env: { ...process.env, MOGRAFY_NO_OPEN: '1' } });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', chunk => { stdout += chunk; });
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  const code = await new Promise<number | null>(done => child.once('close', done));
+  return { code, stdout, stderr };
+};
+
+test('mografy check asks the running player, which shows the same result', async () => {
+  const source = await readFile(join(dir, 'scenes/main.ts'), 'utf8');
+  const ok = await runCli('check', dir);
+  assert.equal(ok.code, 0, ok.stderr);
+  assert.match(ok.stdout, /✓ Compiled and trial-rendered/);
+  await writeFile(join(dir, 'scenes/main.ts'), source + '\nexport const = 1;\n');
+  const broken = await runCli('check', dir);
+  assert.notEqual(broken.code, 0);
+  assert.match(broken.stderr, /did not compile/);
+  await page.waitForSelector('.notice.error', { timeout: 10_000 });
+  await writeFile(join(dir, 'scenes/main.ts'), source);
+  assert.equal((await runCli('check', dir)).code, 0);
+  await page.waitForFunction(() => !document.querySelector('.notice.error'), undefined, { timeout: 10_000 });
+});
+
+test('playback stopped by a renderFrame error resumes once a fixed version loads', async () => {
+  const scene = (broken: boolean) => `export const meta = { width: 320, height: 180, duration: 2, fps: 30, background: '#000000' };
+export const params = {};
+export function setup() {}
+export function renderFrame(ctx, time) {
+  if (${broken} && time > 0.6 && time < 0.9) throw new Error('mid-shot failure');
+  ctx.canvas.fillStyle = '#ffffff'; ctx.canvas.fillRect(0, 0, time * 100, 10);
+}
+`;
+  const versionOf = () => page.evaluate(() => document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.version);
+  const initial = await versionOf();
+  await writeFile(join(dir, 'scenes/main.ts'), scene(true));
+  await page.waitForFunction(v => document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.version !== v, initial, { timeout: 15_000 });
+  await api('seek', 'POST', { t: 0 });
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.getByRole('button', { name: 'Play', exact: true }).waitFor({ timeout: 10_000 });
+  const stopped = Number((await stage()).t);
+  assert.ok(stopped > 0.6 && stopped < 0.9, `stopped inside the failing range (${stopped})`);
+  const brokenVersion = await versionOf();
+  await writeFile(join(dir, 'scenes/main.ts'), scene(false));
+  await page.waitForFunction(v => document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.version !== v, brokenVersion, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Pause', exact: true }).waitFor({ timeout: 5_000 });
+  await page.waitForFunction(t => Number(document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.time) !== t, stopped, { timeout: 5_000 });
+});
+
 test('parameter panel saves values; scene updates drop incompatible ones', async () => {
   const input = page.locator('[data-param=speed] input[type=number]');
   await input.fill('1.5');

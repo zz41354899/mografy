@@ -1,6 +1,6 @@
 // Compile a scene entry (TS/JS) into one browser ES module. Nothing is executed here.
 import { createHash } from 'node:crypto';
-import { readFile, readdir, realpath } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build, stop } from 'esbuild';
@@ -35,11 +35,26 @@ async function hashAssets(root: string, project: SceneProject) {
     }
   };
   await walk('assets');
-  for (const path of [...files].sort()) {
-    const data = await readFile(join(root, path)).catch(() => { throw new SceneBuildError(`Missing asset: ${path}`); });
-    hash.update(path).update('\0').update(createHash('sha256').update(data).digest()).update('\0');
-  }
+  for (const path of [...files].sort()) hash.update(path).update('\0').update(await assetDigest(join(root, path), path)).update('\0');
   return hash.digest('hex');
+}
+
+/**
+ * Per-file content digests, reused while size, mtime, ctime and inode are unchanged. Large fonts,
+ * images and audio are then read once per process instead of on every scene save. ctime cannot be
+ * set by tools that restore mtimes (tar, rsync), and an atomic replacement changes the inode.
+ */
+const digests = new Map<string, { stamp: string; digest: Buffer }>();
+async function assetDigest(file: string, path: string) {
+  const missing = (): never => { digests.delete(file); throw new SceneBuildError(`Missing asset: ${path}`); };
+  const info = await stat(file).catch(missing);
+  if (!info.isFile()) missing();
+  const stamp = `${info.size}:${info.mtimeMs}:${info.ctimeMs}:${info.ino}`;
+  const cached = digests.get(file);
+  if (cached?.stamp === stamp) return cached.digest;
+  const digest = createHash('sha256').update(await readFile(file).catch(missing)).digest();
+  digests.set(file, { stamp, digest });
+  return digest;
 }
 
 /**

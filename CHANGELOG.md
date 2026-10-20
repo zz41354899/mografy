@@ -11,6 +11,18 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-20
+
+### Fixed
+
+- **Scene edits no longer get stuck behind a stalled scene** — work inside Chromium now has time limits: setup 30 s, the trial render 20 s, and each export, still or review frame 120 s. Previously an `await` in `setup` that never resolved (for example an image that never loads) or a loop in `renderFrame` that never ended blocked the project forever: every later edit waited silently, the player kept showing the old version and `mografy check` hung until the player was restarted. Now the scene error names the likely cause, the last working version keeps playing, and the next save is picked up normally.
+- **Review no longer blocks live updates** — `mografy review` renders outside the project's write queue, so edits keep publishing while sheets render. Review compares against a video only when you pass `--video` or the player's last finished MP4/WebM export is of the current version. Before, any older `renders/<name>.mp4` was compared, decoding the video from the beginning for every sample. That gave meaningless PSNR and could hold up updates for a minute or more.
+- **Bursts of saves collapse into one rebuild** — when several files change while a rebuild is running (multi-file edits, an extracted update archive), Mografy runs one follow-up rebuild with the latest files instead of a full compile and Chromium trial for every intermediate save.
+- **Faster rebuilds with large assets** — fonts, images and audio are hashed once and reused until the file changes, instead of being reread on every scene save.
+- **Playback resumes after a fix** — when `renderFrame` throws during playback, the player still pauses on that frame, and now resumes automatically once a fixed version loads. A player-side setup that never finishes is also limited to 30 s so later versions still appear.
+- **`mografy check` uses the running player** — while a player serves the project, `check` asks it to rebuild from disk (new `POST /__mografy/check`) instead of starting a second Chromium, and the player shows the same result.
+- **Chromium crash recovery** — a crashed or closed headless Chromium is relaunched for the next page instead of failing every later trial render.
+
 ## 2026-10-19
 
 ### Added

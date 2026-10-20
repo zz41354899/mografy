@@ -19,7 +19,8 @@ export class ProjectFrames {
     const next = this.queue.then(async () => {
       const { project, scene, build } = this.current();
       const key = JSON.stringify([sceneRuntimeKey(scene.version, project), project.params]);
-      if (this.cached?.key !== key) {
+      // A page closed by a frame timeout or a renderer crash is replaced instead of failing every later still.
+      if (this.cached?.key !== key || this.cached.page.closed) {
         await this.cached?.page.close();
         this.cached = undefined;
         this.cached = { key, page: await this.host.open(build, project, { renderScale: 1 }) };

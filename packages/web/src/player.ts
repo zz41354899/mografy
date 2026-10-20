@@ -10,6 +10,7 @@ import type { SoundState } from './audio.js';
 
 export interface PlayerView { t: number; playing: boolean; loop: boolean; version: string | null; duration: number; fps: number; finished: boolean; sound: SoundState; error?: string }
 type Listener = (view: PlayerView) => void;
+const SETUP_TIMEOUT = 30_000;
 
 export class ScenePlayer {
   private runtime: SceneRuntime | null = null;
@@ -31,6 +32,8 @@ export class ScenePlayer {
   private loadedKey = '';
   private loadRequest = 0;
   private disposed = false;
+  /** Playback stopped because renderFrame threw; resume once a working version loads. */
+  private resumeAfterError = false;
   error = '';
 
   constructor(private container: HTMLElement) {
@@ -65,10 +68,18 @@ export class ScenePlayer {
       const scale = Math.min(1, Math.max(0.25, Math.round(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
       const canvas = document.createElement('canvas');
       canvas.className = 'stage-canvas';
-      const runtime = await createSceneRuntime(canvas, scene, {
+      const creating = createSceneRuntime(canvas, scene, {
         seed: project.seed, renderScale: scale, params, assetBase: '/__mografy/files/', fonts: project.fonts, audio: project.audio,
         aspectRatio: project.aspectRatio,
       });
+      // A setup that never settles must not hold the load chain: later versions would never appear.
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const runtime = await Promise.race([creating, new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          void creating.then(late => late.dispose(), () => {});
+          reject(new Error(`Scene setup did not finish within ${SETUP_TIMEOUT / 1000}s in the player. Check setup() for an await that never resolves.`));
+        }, SETUP_TIMEOUT);
+      })]).finally(() => clearTimeout(timer));
       if (this.disposed || request !== this.loadRequest) { runtime.dispose(); return; }
       this.runtime?.dispose(); this.canvas?.remove();
       this.runtime = runtime; this.canvas = canvas; this.version = version; this.project = project; this.loadedKey = key;
@@ -77,7 +88,9 @@ export class ScenePlayer {
       this.syncAudio(project);
       if (this.playing) this.restartClock();
       this.error = '';
-      this.draw(); this.notify();
+      this.draw();
+      if (this.resumeAfterError && !this.error) { this.resumeAfterError = false; this.play(); }
+      this.notify();
     };
     this.loading = this.loading.then(task, task);
     return this.loading;
@@ -119,7 +132,9 @@ export class ScenePlayer {
       this.error = '';
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
+      const wasPlaying = this.playing;
       this.pause();
+      if (wasPlaying) this.resumeAfterError = true;
     }
   }
 
@@ -138,6 +153,7 @@ export class ScenePlayer {
   };
 
   play() {
+    this.resumeAfterError = false;
     if (this.playing || !this.runtime) return;
     if (!this.loop && this.t >= this.duration) this.t = 0;
     this.playing = true; this.restartClock();

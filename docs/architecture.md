@@ -52,7 +52,7 @@ CLI check/review/export ---------------------------------------------+
 
 `Project` coordinates verified publication and remains the sole project writer through `queueProjectWrite` and `atomicWrite`. Asset uploads allocate filenames and save their bytes in the same queued operation, so concurrent different-content uploads cannot overwrite one another. Playhead persistence and cached build files use the same writer.
 
-`ProjectWatcher` owns filesystem events, debounce, and fallback polling. `ProjectFrames` owns serialized access to a cached Chromium page and thumbnail timers; closing waits for in-flight captures before releasing the host. `RenderJobs` owns export progress, cancellation, temporary storage, and cleanup, and receives a Project-owned queued write callback for completed files.
+`ProjectWatcher` owns filesystem events, debounce, rebuild coalescing, and fallback polling. `ProjectFrames` owns serialized access to a cached Chromium page and thumbnail timers; closing waits for in-flight captures before releasing the host. `RenderJobs` owns export progress, cancellation, temporary storage, and cleanup, and receives a Project-owned queued write callback for completed files.
 
 `ProjectSession` owns the active Project, lock, event subscription, catalog invalidation, serialized switches, and shutdown. `http.ts` owns transport startup, static serving, and WebSockets; `http-io.ts` owns body parsing and file responses, while workspace and project routes dispatch separately. Project routes capture their Project before awaiting bodies. Player writes include a project directory header, so a delayed action from a previously displayed project returns 409 rather than modifying the newly opened project; unscoped API clients remain compatible.
 
@@ -76,9 +76,15 @@ The scene defines `params`; `mografy.json` stores only user overrides. When a sc
 
 Headless Chromium renders d/2, 0, d, d/4, and d/2 again. Both d/2 pixel hashes must match; otherwise `renderFrame` depends on previous calls and publication is rejected. `Math.random`, `Date.now`, and `performance.now` throw inside `renderFrame`.
 
+Work inside Chromium is bounded because `page.evaluate` has no timeout of its own. `hostTimeouts` in `render/src/host.ts` limits page load plus scene setup to 30 s, the trial to 20 s, and each frame, still, sheet or thumbnail call to 120 s. On a timeout the host closes that page's browser context, which stops the renderer, and the caller receives a scene error naming the likely cause. The project queue continues, the last working version stays published, and `ProjectFrames` replaces a closed cached page on its next use. The player applies the same 30 s limit to setup so a stalled load cannot block later versions.
+
 ## File watching
 
 Recursive `fs.watch` reacts promptly. A file-fingerprint poll once per second catches missed events, including atomic file replacements on some platforms. Ignore `.mografy/`, `renders/`, `node_modules/`, and dot-prefixed files.
+
+At most one watch rebuild runs and at most one more is pending. Saves that arrive while a rebuild compiles and trial-renders collapse into a single follow-up that reads the latest files, so multi-file edits or extracted archives do not queue one full Chromium trial per intermediate state.
+
+Asset fingerprints reuse each file's SHA-256 while its size, mtime, ctime and inode are unchanged, so large fonts, images and audio are read once per process instead of on every scene save. ctime cannot be restored by tar or rsync, and atomic replacement changes the inode.
 
 ## HTTP API (127.0.0.1, same origin)
 
@@ -89,6 +95,7 @@ Core exports request schemas for project patches, source updates, playhead/seek,
 | `GET /__mografy/snapshot` | Current state |
 | `WS /__mografy/events` | State and seek events |
 | `GET /__mografy/source`, `POST /__mografy/source` | Read/submit scene source; validate before writing |
+| `POST /__mografy/check` | Rebuild from disk now; 422 with the scene error, otherwise the snapshot |
 | `PATCH /__mografy/project` | Params, seed, audio, render and review settings |
 | `PATCH /__mografy/state`, `POST /__mografy/seek` | Playhead position |
 | `GET /__mografy/still?t=&kind=raw\|output` | Single PNG frame |
@@ -98,13 +105,15 @@ Core exports request schemas for project patches, source updates, playhead/seek,
 
 ## Export jobs
 
-The player shell observes playback status changes, while `Playback` subscribes to frame time and owns the canvas/timeline/transport view. `Inspector` owns its tabs and controls. Session actions retain stable identities across snapshots, and project switches/unmounts cancel delayed playhead reports. Queued player loads skip superseded requests and dispose abandoned runtimes.
+The player shell observes playback status changes, while `Playback` subscribes to frame time and owns the canvas/timeline/transport view. `Inspector` owns its tabs and controls. Session actions retain stable identities across snapshots, and project switches/unmounts cancel delayed playhead reports. Queued player loads skip superseded requests and dispose abandoned runtimes. When `renderFrame` throws during playback the player pauses on that frame; the next version that loads and draws cleanly resumes playback automatically.
 
 Export presentation uses explicit closed/settings/job/hidden transitions and a separate settings/job reducer that retains the submitted preview with its job ID. The dialog and background toast share progress calculation, progress markup, and cancellation handling. CLI parsing, export transport, and terminal progress live in separate modules; owned CLI projects close even when export startup rejects.
 
 The player keeps one native modal across settings, job progress, cancellation/failure, and completion. `startRender` returns the exact job ID; WebSocket snapshots drive actual capture percentages and stages. Encoding/package progress is indeterminate rather than fabricated. The dialog retains the latest snapshot for its job and freezes its output reference inputs at submission. Progress uses the homepage’s teal keyframe mascot with a gentle CSS float loop in both the dialog and background toast; the scene reference is displayed only for completed image-frame formats. Settings closures reset drafts; dismissing a running job hides the dialog without cancelling and preserves it for the background progress toast’s View action or the top Exporting button. The toast shows real capture progress (indeterminate encoding/package), cancellation and connection state only while a running job is hidden. Native close events do not reopen/reset state. Completed MP4 and WebM videos use the actual served file in a video player, with Download and explicit dismissal. The success toast was removed; Last export in the top bar reopens the last result. Done dismisses completion; the primary Export action creates fresh settings even if a hidden job finished in the background. Failed/cancelled local jobs can retry saved settings; externally started jobs can open settings. Short stage headings, one progress metric and two primary actions replace explanatory copy and repeated stage/completion indicators. Reduced-motion mode disables the loading and entry effects.
 
 `POST /__mografy/render` freezes the version, params, seed, and output settings at job start. Render overrides do not write back to `mografy.json`. MP4/WebM capture and encoding run in system temporary storage; Lottie/SVGA are packaged in memory. Finished outputs return to the Project write queue and use `atomicWrite` under `renders/`.
+
+Review renders a frozen version outside the Project queue, like exports; only its finished files are written through the queue, so scene edits keep publishing while sheets render. It compares PSNR only against an explicit `--video` or the server's last finished MP4/WebM export of the same version. `POST /__mografy/check` rebuilds from disk inside the running server; `mografy check` uses it whenever a player serves the project and otherwise opens the project itself.
 
 An optional `size: { width, height, fit: 'contain' | 'cover' | 'reflow' }` sets an exact output viewport independently of render scale. Contain/cover retain the scene's logical dimensions and center proportional artwork with background margins or cropping. Reflow gives the scene the output aspect ratio for responsive drawing. Sampling and post-processing run on the output viewport for all four formats. Requests without `size` retain the existing scale behavior. The player offers two fixed sizes per format: Lottie 256 square or 640 × 360 landscape, SVGA 375 square or 375 × 750 portrait, and MP4/WebM 720p/1080p in either landscape (1280 × 720, 1920 × 1080) or portrait (720 × 1280, 1080 × 1920), selected using icons.
 

@@ -80,6 +80,7 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
       return json(response, 202, project.cancelRender(id));
     }
     case 'POST /review': return json(response, 200, await project.review());
+    case 'POST /check': return json(response, 200, await project.check());
   }
   throw new ApiError(404, 'NOT_FOUND', `Unknown endpoint: ${route}`);
 }

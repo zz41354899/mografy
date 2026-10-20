@@ -162,7 +162,9 @@ mografy check ./projects/my-animation
 mografy review ./projects/my-animation
 ```
 
-`check` compiles and trial-renders in real Chromium. `review` creates raw stills, output frames, and transition sheets under `renders/`. Inspect those images for clipping, overlap, legibility, hierarchy, safe margins, reading time, and transition continuity.
+`check` compiles and trial-renders in real Chromium. While a player is open for that project, `check` asks the player to rebuild from disk, so the terminal and the player report the same result. `review` creates raw stills, output frames, and transition sheets under `renders/`. Inspect those images for clipping, overlap, legibility, hierarchy, safe margins, reading time, and transition continuity. Review compares against a video only when you pass `--video file.mp4` or the player's last finished MP4/WebM export is of the current version; an older export under `renders/` is ignored.
+
+Scene setup must finish within 30 seconds and the trial render within 20 seconds; each export, still or review frame has a 120-second limit. A scene that exceeds a limit (for example, an `await` in `setup` that never resolves or a loop in `renderFrame` that never ends) is reported as a scene error and the last working version keeps playing, so later edits are not blocked.
 
 ## Player and exports
 

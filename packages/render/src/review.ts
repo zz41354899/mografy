@@ -9,7 +9,9 @@ import { SceneHost } from './host.js';
 import type { Cell } from './host-page.js';
 
 export interface ReviewJob {
-  projectDir: string; project: SceneProject; build: SceneBuild; host?: SceneHost; outputDir?: string; video?: string;
+  projectDir: string; project: SceneProject; build: SceneBuild; host?: SceneHost; outputDir?: string;
+  /** Video of this exact version to compare by PSNR. Without it, review renders sheets only. */
+  video?: string | undefined;
   /** Server-owned projects provide atomicWrite so every review artifact is committed through the project queue. */
   write?: (path: string, data: string | Buffer) => Promise<void>;
 }
@@ -65,9 +67,11 @@ export async function renderReview(job: ReviewJob): Promise<ReviewResult> {
       }));
     }
 
+    // Compare only a video known to belong to this version. An older export under renders/ would
+    // give meaningless PSNR and, decoding from the first frame for every sample, make review slow.
     const comparisons: FrameComparison[] = [];
-    const video = job.video ?? join(job.projectDir, 'renders', `${slug(project.name)}.mp4`);
-    if (await access(video).then(() => true, () => false)) {
+    const video = job.video;
+    if (video && await access(video).then(() => true, () => false)) {
       const { width, height } = page.scene;
       for (const k of [...new Set(times.map(frameOf))]) {
         const decoded = await ffmpegOutput(['-i', video, '-vf', `select=eq(n\\,${k})`, '-vsync', '0', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${width}x${height}`, 'pipe:1']);

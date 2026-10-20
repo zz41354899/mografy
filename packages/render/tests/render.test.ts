@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { validateSceneProject } from '@mografy/core';
-import { buildScene, SceneHost, renderVideo, renderReview, ffmpegOutput, runFfmpeg } from '../src/index.js';
+import { buildScene, SceneHost, hostTimeouts, renderVideo, renderReview, ffmpegOutput, runFfmpeg } from '../src/index.js';
 
 const template = resolve(fileURLToPath(import.meta.url), '../../../server/template');
 let dir: string, host: SceneHost;
@@ -54,6 +54,43 @@ let n = 0; export function renderFrame(ctx) { n += 10; ctx.canvas.fillStyle = 'r
   const throws = `export const meta = { width: 64, height: 64, duration: 2, fps: 30, background: '#000000' };
 export const params = {}; export function setup() {} export function renderFrame() { throw new Error('boom at frame'); }`;
   await assert.rejects(async () => host.inspect(await buildScene(dir, p, { 'scenes/main.ts': throws }), p), /boom at frame/);
+});
+
+test('host: recovers when Chromium crashes or is closed', async () => {
+  const p = await project(), build = await buildScene(dir, p);
+  await host.inspect(build, p);
+  // Simulate a crash: close the shared browser behind the host's back.
+  const browser = await (host as unknown as { browser: Promise<import('playwright').Browser> }).browser;
+  await browser.close();
+  const scene = await host.inspect(build, p);
+  assert.equal(scene.meta.duration, 8);
+});
+
+test('host: a setup that never settles or a renderFrame that never returns times out, then the host keeps working', { timeout: 60_000 }, async () => {
+  const p = await project(), saved = { ...hostTimeouts };
+  Object.assign(hostTimeouts, { load: 1500, trial: 1500 });
+  try {
+    const head = "export const meta = { width: 64, height: 64, duration: 1, fps: 30, background: '#000000' }; export const params = {};";
+    const stuckSetup = `${head} export function setup() { return new Promise(() => {}); } export function renderFrame() {}`;
+    const endless = `${head} export function setup() {} export function renderFrame(ctx, t) { let x = 0; while (x >= 0) x = (x + 1) % 1000; }`;
+    for (const [source, pattern] of [[stuckSetup, /setup did not finish within 1\.5s/], [endless, /Trial render did not finish within 1\.5s/]] as const) {
+      const started = Date.now();
+      await assert.rejects(host.inspect(await buildScene(dir, p, { 'scenes/main.ts': source }), p), pattern);
+      assert.ok(Date.now() - started < 10_000, 'the timeout releases the caller promptly');
+    }
+  } finally { Object.assign(hostTimeouts, saved); }
+  const scene = await host.inspect(await buildScene(dir, p), p);
+  assert.equal(scene.meta.duration, 8);
+});
+
+test('build: replacing an asset with same-size content changes the version', async () => {
+  const p = await project();
+  await writeFile(join(dir, 'assets/same-size.bin'), 'aaaa');
+  const a = await buildScene(dir, p);
+  assert.equal((await buildScene(dir, p)).version, a.version, 'cached digests keep the version stable');
+  await writeFile(join(dir, 'assets/same-size.bin'), 'bbbb');
+  assert.notEqual((await buildScene(dir, p)).version, a.version);
+  await rm(join(dir, 'assets/same-size.bin'));
 });
 
 test('host: output frames are identical across separate browser contexts', async () => {

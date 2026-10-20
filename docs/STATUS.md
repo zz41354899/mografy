@@ -1,6 +1,15 @@
 # Development status
 
-Updated: 2026-10-19
+Updated: 2026-10-20
+
+## Live-update stalls (2026-10-20)
+
+- Cause: every scene change goes compile → Chromium trial → publish through one serialized project queue, and `page.evaluate` has no timeout. A setup that never settled or a `renderFrame` loop that never ended held the queue forever, so all later edits waited silently, the player kept the old version and `mografy check` hung. Long `review` runs (with PSNR against any older `renders/<name>.mp4`, decoded from the start for each sample) and one full rebuild per intermediate save also delayed updates.
+- Chromium work is now bounded by `hostTimeouts` (load/setup 30 s, trial 20 s, frame calls 120 s). A timeout closes that page's context, reports a scene error with the likely cause and keeps the last working version. Cached still/thumbnail pages that were closed are reopened. The pending Chromium crash-recovery change in `host.ts` is included.
+- Review runs outside the project queue and writes its files through it; PSNR only uses an explicit `--video` or the same-version finished export. Watch rebuilds coalesce to one running plus one pending. Asset digests are cached by size, mtime, ctime and inode.
+- Player: playback stopped by a `renderFrame` error resumes when a fixed version loads; player-side setup has a 30 s limit. `mografy check` asks a running player through `POST /__mografy/check` instead of opening a second Chromium.
+- New tests: setup/trial timeouts with host recovery, same-size asset replacement, watcher coalescing (fails on the previous watcher), `check` keeping the last good version, review not comparing an unrelated video, CLI `check` through the running player, and playback resuming after a fix (fails on the previous player).
+- Validation (Linux cloud workspace, Chromium 141, system FFmpeg): build and typecheck passed; 129 of 131 tests passed. The two failing export-dialog tests (`four usable formats…`, `continues through progress…`) fail identically on the unmodified code in that environment, where exports stay `running` past the test timeout. `test:browser` covers only the unchanged runtime package; its first 13 checks passed before the component-tile check exceeded the environment's time. Run `pnpm check` and `pnpm test:browser` on macOS to confirm.
 
 ## Visual reference calibration and cleanup (2026-10-19)
 

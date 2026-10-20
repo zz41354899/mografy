@@ -1,6 +1,6 @@
 // Mografy CLI: develop, validate, visually review, and export scene projects.
 import { spawn } from 'node:child_process';
-import { access, chmod, constants, mkdir, writeFile } from 'node:fs/promises';
+import { access, chmod, constants, mkdir, realpath, writeFile } from 'node:fs/promises';
 import { delimiter } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -8,6 +8,7 @@ import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
+import type { Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
@@ -153,12 +154,21 @@ async function dev(dir: string, flags: Flags) {
 async function checkProject(dir: string) {
   await requireProject(dir);
   console.log(`Checking ${displayPath(dir)}`);
-  const project = await Project.open(dir);
-  try {
-    const snapshot = project.snapshot();
+  const passed = (snapshot: Snapshot) => {
     if (!snapshot.scene || snapshot.error) throw new Error(snapshot.error?.message ?? 'The scene did not publish.');
     console.log(`✓ Compiled and trial-rendered in Chromium\n  ${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s, version ${snapshot.scene.version}`);
-  } finally { await project.close(); }
+  };
+  // A running player already owns this project: ask it, so the check uses its queue and Chromium
+  // and the player shows the same result, instead of starting a second Chromium beside it.
+  const running = await findServer(dir);
+  if (running) {
+    const response = await fetch(new URL('/__mografy/check', running.url), {
+      method: 'POST', headers: { 'x-mografy-project': encodeURIComponent(await realpath(resolve(dir))) },
+    });
+    if (response.status !== 409) return passed(await responseJson<Snapshot>(response));
+  }
+  const project = await Project.open(dir);
+  try { passed(project.snapshot()); } finally { await project.close(); }
 }
 
 function printReview(result: ReviewResult) {

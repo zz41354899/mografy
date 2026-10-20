@@ -42,6 +42,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private stateTimer: ReturnType<typeof setTimeout> | undefined;
   private thumbnail: string | null = null;
   private closed = false;
+  private reviews = new Set<Promise<unknown>>();
   private readonly watcher: ProjectWatcher;
   private readonly frames: ProjectFrames;
   private readonly jobs: RenderJobs;
@@ -154,6 +155,17 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         throw error;
       }
     });
+  }
+
+  /**
+   * Rebuild from disk now and report the result. `mografy check` uses this while a player serves the
+   * project, so it reuses the running Chromium and never writes outside this Project's queue.
+   */
+  async check() {
+    try { await this.rebuild('watch'); }
+    catch (error) { throw new ApiError(422, 'SCENE_ERROR', describe(error)); }
+    if (!this.scene || this.error) throw new ApiError(422, 'SCENE_ERROR', this.error?.message ?? 'The scene did not publish.');
+    return this.snapshot();
   }
 
   /** Submitted sources are compiled and trial-rendered first; only then written to disk. */
@@ -269,17 +281,25 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   startRender(input: ExportRequest | string = {}) { return this.jobs.start(input, this.current()); }
   cancelRender(id?: string) { return this.jobs.cancel(id); }
 
+  /**
+   * Review renders from a frozen version outside the project queue, so scene edits keep publishing
+   * while sheets render. Only the finished files go through the queue.
+   */
   review(video?: string) {
+    if (this.closed) return Promise.reject(new ApiError(503, 'CLOSED', 'Server is closing'));
     const { project, build } = this.current();
     const comparisonVideo = video ?? (this.jobs.status?.state === 'done' && (this.jobs.status.format === 'mp4' || this.jobs.status.format === 'webm') && this.jobs.status.version === build.version ? this.jobs.status.output : undefined);
-    return this.run(() => renderReview({
+    const task = renderReview({
       projectDir: this.dir,
       project: structuredClone(project),
       build,
       host: this.host,
-      write: atomicWrite,
-      ...(comparisonVideo ? { video: comparisonVideo } : {}),
-    }));
+      write: (file, data) => this.run(() => atomicWrite(file, data)),
+      video: comparisonVideo,
+    });
+    this.reviews.add(task);
+    void task.catch(() => {}).finally(() => this.reviews.delete(task));
+    return task;
   }
 
   async close() {
@@ -289,6 +309,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.frames.cancelThumbnail();
     clearTimeout(this.stateTimer);
     await this.jobs.close();
+    await Promise.allSettled([...this.reviews]);
     await this.queue;
     if (this.stateTimer) await queueProjectWrite(this.dir, () => atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n')).catch(() => {});
     await this.frames.close();

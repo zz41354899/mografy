@@ -93,3 +93,46 @@ test('closing waits for an in-flight still and rejects new frame or export work'
   await assert.rejects(project.still({ kind: 'raw', t: 0 }), /Server is closing/);
   assert.throws(() => project.startRender(), /Server is closing/);
 });
+
+test('rapid file changes during a slow rebuild collapse into one follow-up that reads the latest files', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-watch-test-'));
+  const { ProjectWatcher } = await import('../src/project-watcher.js');
+  let calls = 0, active = 0, overlap = false, seen = '';
+  const watcher = new ProjectWatcher(dir, async () => {
+    calls++; active++; overlap ||= active > 1;
+    await new Promise(done => setTimeout(done, 700));
+    seen = await readFile(join(dir, 'main.ts'), 'utf8');
+    active--;
+  });
+  t.after(async () => { watcher.close(); await rm(dir, { recursive: true, force: true }); });
+  await writeFile(join(dir, 'main.ts'), 'v0');
+  watcher.start();
+  await new Promise(done => setTimeout(done, 300));
+  for (let i = 1; i <= 6; i++) { await writeFile(join(dir, 'main.ts'), `v${i}`); await new Promise(done => setTimeout(done, 250)); }
+  const deadline = Date.now() + 8000;
+  while ((active || seen !== 'v6') && Date.now() < deadline) await new Promise(done => setTimeout(done, 100));
+  assert.equal(seen, 'v6', 'the last rebuild reads the final save');
+  assert.equal(overlap, false, 'rebuilds never overlap');
+  assert.ok(calls <= 4, `six saves over 1.5s ran ${calls} rebuilds, not one per save`);
+});
+
+test('check reports the current disk state and keeps the last working version after a failure', async t => {
+  const { dir, project } = await fixture(t);
+  const good = await project.check();
+  assert.equal(good.error, null);
+  await writeFile(join(dir, 'scenes/main.ts'), 'export const = ;');
+  await assert.rejects(project.check(), (error: { status?: number; message: string }) => error.status === 422 && /did not compile/.test(error.message));
+  assert.equal(project.snapshot().scene!.version, good.scene!.version);
+  await writeFile(join(dir, 'scenes/main.ts'), source);
+  assert.equal((await project.check()).error, null);
+});
+
+test('review renders outside the project queue and never compares an unrelated video', async t => {
+  const { dir, project } = await fixture(t);
+  await mkdir(join(dir, 'renders'));
+  await writeFile(join(dir, 'renders/Test.mp4'), 'stale export from an older version');
+  const [review] = await Promise.all([project.review(), project.patchProject({ seed: 2 })]);
+  assert.equal(review.comparisons.length, 0);
+  assert.ok(review.files.length >= 2);
+  for (const file of review.files) await readFile(file);
+});
