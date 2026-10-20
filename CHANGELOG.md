@@ -15,7 +15,7 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 
 ### Added
 
-- **Project style files** — a project can now fix its design and motion decisions. `scenes/style.ts` holds the values as code (palette, fonts and type scale, easing, durations, tempo, margins) and scenes import it; `style.md` at the project root holds the rules (do and don't, motion character, composition, reference stills). The shared Skill and storyboard guidance read both before planning or editing. They take precedence over the Skill's default design guidance but never over the scene contract, and the current request still wins. Agents record a decision there only when you state or approve it as lasting. Both files are optional; installation and new projects are unchanged.
+- **Project style file** — a project can now fix its design and motion decisions in `style.md` at the project root: do and don't rules, motion character, palette, type and tempo choices, composition and reference stills. Values stay in the scene code, defined once and changed there. The shared Skill and storyboard guidance read it before planning or editing. They take precedence over the Skill's default design guidance but never over the scene contract, and the current request still wins. Agents record a decision there only when you state or approve it as lasting. The file is optional; installation and new projects are unchanged.
 
 ### Fixed
 

@@ -19,7 +19,7 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Latest updates
 
-**2026-10-20** — Project style files (`scenes/style.ts` and `style.md`) let a project fix its design and motion decisions; edits no longer get stuck behind a stalled scene or a long review.
+**2026-10-20** — A project style file (`style.md`) lets a project fix its design and motion decisions; edits no longer get stuck behind a stalled scene or a long review.
 
 **2026-10-18** — WebM export with VP9/Opus and constant quality (CRF), plus `mografy update` to fetch source updates, rebuild and restart the active player. See the [changelog](CHANGELOG.md).
 
@@ -137,12 +137,9 @@ The animation reference covers squash and stretch, anticipation, staging, straig
 
 ### Project style
 
-A project can fix its own design and motion decisions so every shot and later session follows them:
+A project can fix its own design and motion decisions in `style.md` at the project root, so every shot and later session follows them: do and don't rules, motion character, palette, type and tempo choices, composition habits and reference stills. The values themselves stay in the scene code, defined once and changed there.
 
-- `scenes/style.ts` holds the values as code: palette, fonts and type scale, easing curves, durations and staggers, tempo, margins. Scenes import from it, so a change applies everywhere and check/review verify it.
-- `style.md` (project root) holds the judgment: do and don't rules, motion character, composition habits and reference stills.
-
-Tell the agent when a decision should last ("always use this teal", "titles always rise from below with a little overshoot") and it records it there. The style takes precedence over the Skill's default design guidance, never over the scene contract, and your current request still wins. Copy both files to reuse a style in another project.
+Tell the agent when a decision should last ("always use this teal", "titles always rise from below with a little overshoot") and it records it in `style.md`, updating the value in the scene code when the decision is a value. The style takes precedence over the Skill's default design guidance, never over the scene contract, and your current request still wins. Copy `style.md` to reuse a style in another project.
 
 ## Scene model
 
@@ -280,7 +277,7 @@ mografy/
 
 animation-project/
   mografy.json                 Scene entry, aspectRatio, params, fonts, audio, render, review
-  scenes/                     Animation code and local reusable components (optional style.ts)
+  scenes/                     Animation code and local reusable components
   style.md                    Optional project style rules
   assets/                     Images, fonts, and audio
   AGENTS.md / CLAUDE.md        Shared Skill pointers

@@ -4,10 +4,10 @@ Updated: 2026-10-20
 
 ## Project style files (2026-10-20)
 
-- `guide.ts` adds a Project style section to the scene contract, a Skill instruction to read `style.md` and `scenes/style.ts` first, and the same input in the storyboard reference. Precedence: current request, project style, default Skill guidance; the scene contract always applies. Agents write to the style only from decisions the user states or approves as lasting.
-- No runtime, server or scaffold change: `style.ts` is an ordinary imported scene module and `style.md` is a project file. Installation still creates only the sixteen built-in components; the project pointer guide (`AGENTS.md`) is unchanged, so no project migration is needed.
+- `guide.ts` adds a Project style section to the scene contract, a Skill instruction to read `style.md` first, and the same input in the storyboard reference. The convention is `style.md` only: values stay in scene code, defined once. Precedence: current request, project style, default Skill guidance; the scene contract always applies. Agents write to the style only from decisions the user states or approves as lasting.
+- No runtime, server or scaffold change: `style.md` is a project file. Installation still creates only the sixteen built-in components; the project pointer guide (`AGENTS.md`) is unchanged, so no project migration is needed.
 - The maintainer's local reference Skill was restructured around a house style pack that uses this convention (a `style.md` rules file and a shared kit holding the values) and a local film catalog. Its details are recorded only in the ignored local reference docs; nothing from it is published.
-- Validation: build, typecheck, `pnpm sync:skills`, core tests (15) and workspace/Skill tests (8) passed. A new project using a `style.ts` + kit module passed `mografy check`, and three existing films rendered pixel-identical frames with the style-driven kit.
+- Validation: build, typecheck, `pnpm sync:skills`, core tests (15) and workspace/Skill tests (8) passed. After the `style.md`-only change: build, typecheck, `pnpm sync:skills`, core tests (15) and workspace/Skill tests (8) passed again; a kit holding its own values rendered pixel-identical frames for three existing films.
 
 ## Live-update stalls (2026-10-20)
 
