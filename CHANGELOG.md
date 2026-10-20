@@ -13,6 +13,10 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 
 ## 2026-10-20
 
+### Added
+
+- **Project style files** — a project can now fix its design and motion decisions. `scenes/style.ts` holds the values as code (palette, fonts and type scale, easing, durations, tempo, margins) and scenes import it; `style.md` at the project root holds the rules (do and don't, motion character, composition, reference stills). The shared Skill and storyboard guidance read both before planning or editing. They take precedence over the Skill's default design guidance but never over the scene contract, and the current request still wins. Agents record a decision there only when you state or approve it as lasting. Both files are optional; installation and new projects are unchanged.
+
 ### Fixed
 
 - **Scene edits no longer get stuck behind a stalled scene** — work inside Chromium now has time limits: setup 30 s, the trial render 20 s, and each export, still or review frame 120 s. Previously an `await` in `setup` that never resolved (for example an image that never loads) or a loop in `renderFrame` that never ended blocked the project forever: every later edit waited silently, the player kept showing the old version and `mografy check` hung until the player was restarted. Now the scene error names the likely cause, the last working version keeps playing, and the next save is picked up normally.

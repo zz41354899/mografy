@@ -19,6 +19,8 @@ Mografy 是為 Claude Code 與 Codex 設計的本機 Canvas 動畫工具。共�
 
 ## 最新更新
 
+**2026-10-20** — 新增專案風格檔（`scenes/style.ts` 與 `style.md`），可固定專案的設計與動態決定；修改不會再被卡住的場景或冗長的審閱擋住。
+
 **2026-10-18** — 新增使用 VP9／Opus 與固定品質（CRF）的 WebM 匯出，以及可取得原始碼更新、重新建置並重啟目前播放器的 `mografy update` 指令。詳見[更新紀錄](CHANGELOG.md)。
 
 ## 開始使用
@@ -131,6 +133,15 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 Codex 會呼叫圖片生成工具製作視覺分鏡。Claude 在可使用 Artifacts 時會透過 Artifacts 製作，否則儲存為獨立的 `storyboards/storyboard.html` 預覽。規劃與提示詞使用英文。若也要求實作，代理會繼續編寫場景模組，並驗證實際影格。
 
 動畫參考文件涵蓋擠壓與伸展、預備動作、演出佈局、連續動作與關鍵姿勢、跟隨與重疊動作、緩入與緩出、弧線、次要動作、時間節奏、誇張、立體繪製與吸引力。請選用能支撐各鏡頭與閱讀停留時間的原則。
+
+### 專案風格
+
+專案可以把自己的設計與動態決定固定下來，讓每個鏡頭和之後的對話都遵守：
+
+- `scenes/style.ts` 用程式碼保存數值：色票、字型與字級、緩動曲線、時長與錯開間隔、節拍、邊界。場景直接 import，修改一次就套用到全部鏡頭，check 與 review 也能驗證。
+- `style.md`（專案根目錄）保存判斷：要做與不要做的規則、動態個性、構圖習慣與參考畫面。
+
+當某個決定要長期沿用時（例如「以後都用這個青綠色」、「標題一律從下方進場並帶一點 overshoot」），告訴代理，它會記錄在這兩個檔案中。專案風格優先於 Skill 的預設設計建議，但不會凌駕場景規範，而你當下的要求仍然最優先。要在其他專案沿用同一種風格，複製這兩個檔案即可。
 
 ## 場景模型
 
@@ -268,7 +279,8 @@ mografy/
 
 animation-project/
   mografy.json                 場景入口、aspectRatio、params、fonts、audio、render、review
-  scenes/                     動畫程式碼與專案內可重用元件
+  scenes/                     動畫程式碼與專案內可重用元件（可選的 style.ts）
+  style.md                    可選的專案風格規則
   assets/                     圖片、字型與音訊
   AGENTS.md / CLAUDE.md        共用 Skill 的指引入口
   storyboards/                文字與視覺規劃產物

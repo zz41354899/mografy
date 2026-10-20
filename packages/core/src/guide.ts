@@ -152,6 +152,17 @@ Only important subtitles belong in \`role: 'subtitle'\` params. Let the user edi
 - Use a consistent curve for related elements and fixed 0.05–0.08 second intervals for a text stagger.
 - Preserve whitespace and keep one dominant moving focus at a time.
 - With music, align major changes to bar starts from \`ctx.beat(time)\` when appropriate.
+
+## Project style
+
+A project can fix its own design and motion decisions so every shot and every later session follows them. Both files are optional and live in the project, never in \`mografy.json\` or a Skill.
+
+- \`scenes/style.ts\` holds the values as code: palette, font families and type scale, easing curves, standard durations and stagger intervals, transition length, tempo and bar length, margins and how much of the frame key content fills. Scenes import from it (\`import { color, type, motion } from './style'\`). Keep it a module of constants and pure functions with no state or clock, like any scene module. Font files are still registered under \`fonts\` in \`mografy.json\`; \`style.ts\` only names the families.
+- \`style.md\` (project root, English) holds judgment that code cannot: do and don't rules, the motion character, composition habits, and reference stills (paths under \`storyboards/\` or \`assets/\`). Keep each rule short enough to check against a frame.
+
+When either file exists, read it before planning a storyboard or editing a scene, and change a fixed value in \`style.ts\` rather than overriding it inline in one shot. Precedence: the user's current request, then \`style.md\` and \`style.ts\`, then this Skill's default motion and design guidance. The scene contract above (deterministic \`renderFrame\`, browser-only code, check and review) always applies. If a request conflicts with the style, follow the request for that change and ask whether the style should change too.
+
+Create or update the style only from decisions the user states or approves as lasting ("always", "from now on", "use this for every shot"), not from your own taste or a one-off fix. During review, check the frames against the \`style.md\` rules as well as the general criteria. To reuse a style in another project, copy \`style.md\` and \`scenes/style.ts\` together and register the same fonts.
 `;
 
 const LEGACY_SKILL = `---
@@ -174,7 +185,7 @@ export function isLegacyAgentFile(contents: string, kind: 'guide' | 'skill', rep
 
 const STORYBOARD = `# Storyboard planning for Mografy
 
-Read this reference when asked for a storyboard, shot list, or a new animation that needs shot planning. Read the project's scene entry, imported modules, assets, and settings first. Reuse its visual language, dimensions, fonts, palette, and existing characters or brand assets. Write planning documents, shot labels, and tool prompts in English; preserve supplied dialogue and artwork unless translation or redesign is requested.
+Read this reference when asked for a storyboard, shot list, or a new animation that needs shot planning. Read the project's scene entry, imported modules, assets, and settings first, including \`style.md\` and \`scenes/style.ts\` when present. Reuse its visual language, dimensions, fonts, palette, and existing characters or brand assets. Write planning documents, shot labels, and tool prompts in English; preserve supplied dialogue and artwork unless translation or redesign is requested.
 
 For a portrait brief, explicitly label the written plan and every image-generation prompt as **9:16 portrait**, and draw each storyboard panel as a tall 9:16 frame. Read the saved \`aspectRatio\`; design a vertical composition with stacked content, wrapped copy, and social safe margins. A landscape storyboard cropped into tall panels is not a portrait plan. When both ratios are needed, specify the layout changes for each shot and verify both versions against actual frames.
 
@@ -586,7 +597,7 @@ description: Develop Mografy, plan storyboards, create and export Canvas animati
 
 Calibration note from the maintainer's current experience: Claude's workflow is more fully calibrated. Codex may adapt its motion-design approach to the brief and rendered results while following the shared scene contract.
 
-For scene work, read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
+For scene work, read the project's \`mografy.json\`, configured scene entry, imported local modules, and relevant assets before making changes. If the project has \`style.md\` or \`scenes/style.ts\`, read them first: they fix the project's design and motion decisions and take precedence over this Skill's default design guidance, though never over the scene contract (see Project style in the scene-authoring reference). For a requested 9:16 video, create a native portrait scene (1080 × 1920), respect any saved \`aspectRatio\`, and plan vertical layout and social safe margins. The main preview follows the scene; orientation icons and Fit belong only to export. Read the scene-authoring reference for the full contract. Tailor the work to that project's visual language and brief.
 
 - Before editing a scene, read [references/scene-authoring.md](references/scene-authoring.md) for the complete runtime, drawing, validation, review, and export contract.
 - In Codex, before creating an animation or redesigning its motion, read [references/codex-motion-design.md](references/codex-motion-design.md) for visual concepts, causal choreography, rhythm, continuity, and separate design review. For a small local fix, apply only the relevant guidance. Claude keeps the existing shared workflow and skips this Codex supplement.

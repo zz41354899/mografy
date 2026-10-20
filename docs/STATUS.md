@@ -2,6 +2,13 @@
 
 Updated: 2026-10-20
 
+## Project style files (2026-10-20)
+
+- `guide.ts` adds a Project style section to the scene contract, a Skill instruction to read `style.md` and `scenes/style.ts` first, and the same input in the storyboard reference. Precedence: current request, project style, default Skill guidance; the scene contract always applies. Agents write to the style only from decisions the user states or approves as lasting.
+- No runtime, server or scaffold change: `style.ts` is an ordinary imported scene module and `style.md` is a project file. Installation still creates only the sixteen built-in components; the project pointer guide (`AGENTS.md`) is unchanged, so no project migration is needed.
+- The maintainer's local reference Skill was restructured around a house style pack that uses this convention (`style.md`, `style.ts` and a style-driven kit) and a local film catalog. Its details are recorded only in the ignored local reference docs; nothing from it is published.
+- Validation: build, typecheck, `pnpm sync:skills`, core tests (15) and workspace/Skill tests (8) passed. A new project using a `style.ts` + kit module passed `mografy check`, and three existing films rendered pixel-identical frames with the style-driven kit.
+
 ## Live-update stalls (2026-10-20)
 
 - Cause: every scene change goes compile → Chromium trial → publish through one serialized project queue, and `page.evaluate` has no timeout. A setup that never settled or a `renderFrame` loop that never ended held the queue forever, so all later edits waited silently, the player kept the old version and `mografy check` hung. Long `review` runs (with PSNR against any older `renders/<name>.mp4`, decoded from the start for each sample) and one full rebuild per intermediate save also delayed updates.

@@ -1,6 +1,6 @@
 # Storyboard planning for Mografy
 
-Read this reference when asked for a storyboard, shot list, or a new animation that needs shot planning. Read the project's scene entry, imported modules, assets, and settings first. Reuse its visual language, dimensions, fonts, palette, and existing characters or brand assets. Write planning documents, shot labels, and tool prompts in English; preserve supplied dialogue and artwork unless translation or redesign is requested.
+Read this reference when asked for a storyboard, shot list, or a new animation that needs shot planning. Read the project's scene entry, imported modules, assets, and settings first, including `style.md` and `scenes/style.ts` when present. Reuse its visual language, dimensions, fonts, palette, and existing characters or brand assets. Write planning documents, shot labels, and tool prompts in English; preserve supplied dialogue and artwork unless translation or redesign is requested.
 
 For a portrait brief, explicitly label the written plan and every image-generation prompt as **9:16 portrait**, and draw each storyboard panel as a tall 9:16 frame. Read the saved `aspectRatio`; design a vertical composition with stacked content, wrapped copy, and social safe margins. A landscape storyboard cropped into tall panels is not a portrait plan. When both ratios are needed, specify the layout changes for each shot and verify both versions against actual frames.
 

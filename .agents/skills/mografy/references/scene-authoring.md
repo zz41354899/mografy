@@ -151,3 +151,14 @@ Only important subtitles belong in `role: 'subtitle'` params. Let the user edit 
 - Use a consistent curve for related elements and fixed 0.05–0.08 second intervals for a text stagger.
 - Preserve whitespace and keep one dominant moving focus at a time.
 - With music, align major changes to bar starts from `ctx.beat(time)` when appropriate.
+
+## Project style
+
+A project can fix its own design and motion decisions so every shot and every later session follows them. Both files are optional and live in the project, never in `mografy.json` or a Skill.
+
+- `scenes/style.ts` holds the values as code: palette, font families and type scale, easing curves, standard durations and stagger intervals, transition length, tempo and bar length, margins and how much of the frame key content fills. Scenes import from it (`import { color, type, motion } from './style'`). Keep it a module of constants and pure functions with no state or clock, like any scene module. Font files are still registered under `fonts` in `mografy.json`; `style.ts` only names the families.
+- `style.md` (project root, English) holds judgment that code cannot: do and don't rules, the motion character, composition habits, and reference stills (paths under `storyboards/` or `assets/`). Keep each rule short enough to check against a frame.
+
+When either file exists, read it before planning a storyboard or editing a scene, and change a fixed value in `style.ts` rather than overriding it inline in one shot. Precedence: the user's current request, then `style.md` and `style.ts`, then this Skill's default motion and design guidance. The scene contract above (deterministic `renderFrame`, browser-only code, check and review) always applies. If a request conflicts with the style, follow the request for that change and ask whether the style should change too.
+
+Create or update the style only from decisions the user states or approves as lasting ("always", "from now on", "use this for every shot"), not from your own taste or a one-off fix. During review, check the frames against the `style.md` rules as well as the general criteria. To reuse a style in another project, copy `style.md` and `scenes/style.ts` together and register the same fonts.
