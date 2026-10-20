@@ -19,7 +19,7 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Latest updates
 
-**2026-10-20** — A project style file (`style.md`) lets a project fix its design and motion decisions; edits no longer get stuck behind a stalled scene or a long review.
+**2026-10-20** — A project style file (`style.md`) lets a project fix its design and motion decisions; edits no longer get stuck behind a stalled scene or a long review; the `mografy` command keeps working when the folder it was installed from is moved or deleted.
 
 **2026-10-18** — WebM export with VP9/Opus and constant quality (CRF), plus `mografy update` to fetch source updates, rebuild and restart the active player. See the [changelog](CHANGELOG.md).
 
