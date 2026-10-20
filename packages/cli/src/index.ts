@@ -77,6 +77,30 @@ async function implicitProject(command: string) {
   throw new Error(`No mografy.json found in ${displayPath(cwd)}. Run \`mografy ${command} <project>\` or change into a Mografy project.`);
 }
 
+/** Show a path from the user's home, so it is clear which checkout or repository it is in. */
+function fromHome(value: string) {
+  const path = relative(homedir(), resolve(value));
+  return path && !path.startsWith('..') && !isAbsolute(path) ? join('~', path) : resolve(value);
+}
+
+/**
+ * A relative project path is read from the current folder first. When it is not a
+ * project there but is one inside this Mografy installation (for example
+ * `mografy dev projects/launch` typed from another repository's terminal), open the
+ * installation's project instead of offering to create an empty starter beside
+ * unrelated files.
+ */
+async function resolveProjectArg(arg: string) {
+  const local = resolve(arg);
+  if (isAbsolute(arg) || await hasProject(local)) return local;
+  const installed = resolve(workspaceRoot, arg);
+  if (installed !== local && await hasProject(installed)) {
+    console.log(`${arg} is not in ${fromHome(process.cwd())}; using ${fromHome(installed)} from the Mografy installation.`);
+    return installed;
+  }
+  return local;
+}
+
 /** Put a `mografy` launcher into a writable folder on PATH (no pnpm global setup needed). */
 async function installCommand() {
   const candidates = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), 'bin')];
@@ -119,12 +143,12 @@ async function switchActive(dir: string): Promise<string | undefined> {
   return data.error?.url;
 }
 
-async function confirm(question: string) {
-  if (!process.stdin.isTTY) return true;
+async function confirm(question: string, defaultYes = true) {
+  if (!process.stdin.isTTY) return defaultYes;
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = (await rl.question(`${question} (Y/n) `)).trim().toLowerCase();
+  const answer = (await rl.question(`${question} ${defaultYes ? '(Y/n)' : '(y/N)'} `)).trim().toLowerCase();
   rl.close();
-  return answer === '' || answer === 'y' || answer === 'yes';
+  return answer === 'y' || answer === 'yes' || (answer === '' && defaultYes);
 }
 
 async function dev(dir: string, flags: Flags) {
@@ -208,7 +232,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'install-command') return installCommand();
   const configured = process.env.MOGRAFY_PROJECT;
   const dir = explicit
-    ? resolve(rest[0]!)
+    ? command === 'init' ? resolve(rest[0]!) : await resolveProjectArg(rest[0]!)
     : command === 'init'
       ? process.cwd()
       : configured
@@ -218,7 +242,18 @@ export async function main(argv = process.argv.slice(2)) {
   switch (command) {
     case 'dev': {
       if (!await hasProject(dir)) {
-        if (explicit && !flags.yes && !await confirm(`${displayPath(dir)} is not a Mografy project. Create a starter project here?`)) return;
+        if (explicit && !flags.yes) {
+          // Outside the Mografy folder a missing project is usually a mistyped path or the
+          // wrong terminal, so creating one has to be chosen explicitly (default: No).
+          const inside = isInsideWorkspace(dir);
+          const question = inside
+            ? `${displayPath(dir)} is not a Mografy project. Create a starter project here?`
+            : `${fromHome(dir)} is not a Mografy project, and it is outside the Mografy folder (${fromHome(workspaceRoot)}).\nCreate a new starter project there anyway?`;
+          if (!await confirm(question, inside)) {
+            if (!inside) console.log(`Nothing created. To open an existing project: cd ${fromHome(workspaceRoot)} && mografy dev projects/<name>`);
+            return;
+          }
+        }
         await createProject(dir);
         console.log(`Created starter project: ${displayPath(dir)}`);
       } else await ensureAgentFiles(dir);

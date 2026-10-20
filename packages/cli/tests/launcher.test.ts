@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -49,5 +49,15 @@ test('bare dev outside a Mografy project does not reopen an unrelated scene', as
     assert.equal(result.code, 1);
     assert.match(result.stderr, /No mografy\.json found/);
     assert.match(result.stderr, /mografy dev <project>/);
+  } finally { await rm(sandbox, { recursive: true, force: true }); }
+});
+
+test('dev with a missing project path outside the Mografy folder creates nothing unless asked', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-other-repo-'));
+  try {
+    const result = await run(sandbox, ['dev', 'projects/not-here', '--no-open']);
+    assert.equal(result.code, 0, result.stderr);
+    assert.match(result.stdout, /Nothing created/);
+    await assert.rejects(access(join(sandbox, 'projects/not-here')));
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
