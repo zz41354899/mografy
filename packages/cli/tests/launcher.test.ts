@@ -1,10 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launcherScript } from '../src/launcher.js';
 
 const BIN = resolve(dirname(fileURLToPath(import.meta.url)), '../bin/mografy.js');
 function run(cwd: string, args: string[]) {
@@ -62,5 +63,54 @@ test('dev never creates a project; a missing path points to mografy init', async
       assert.match(result.stderr, /Open the player:  mografy dev/);
       await assert.rejects(access(join(sandbox, 'projects/not-here')));
     }
+  } finally { await rm(sandbox, { recursive: true, force: true }); }
+});
+
+test('the PATH launcher survives a moved or deleted checkout and a missing Node path', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), "mografy-path-launcher-"));
+  // A checkout whose fake CLI prints its name, like the real bin/mografy.js would start it.
+  const checkout = async (dir: string, name: string) => {
+    await mkdir(join(dir, 'packages/cli/bin'), { recursive: true });
+    await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'mografy-workspace', type: 'module' }));
+    await writeFile(join(dir, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+    await writeFile(join(dir, 'packages/cli/bin/mografy.js'), `console.log(${JSON.stringify(name)}, ...process.argv.slice(2));\n`);
+    return join(dir, 'packages/cli/bin/mografy.js');
+  };
+  const sh = (launcher: string, cwd: string) => new Promise<{ code: number | null; stdout: string; stderr: string }>((done, reject) => {
+    const child = spawn('/bin/sh', [launcher, 'dev', 'my animation'], { cwd, env: { ...process.env, PATH: `${dirname(process.execPath)}:/usr/bin:/bin` } });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', chunk => { stdout += chunk; });
+    child.stderr.on('data', chunk => { stderr += chunk; });
+    child.once('error', reject);
+    child.once('close', code => done({ code, stdout, stderr }));
+  });
+  try {
+    const old = join(sandbox, "Documents/mografy's old copy");
+    const current = join(sandbox, 'Desktop/mografy');
+    const outside = join(sandbox, 'elsewhere');
+    await mkdir(outside, { recursive: true });
+    const installedBin = await checkout(old, 'old-copy');
+    await checkout(current, 'desktop-copy');
+    const launcher = join(sandbox, 'bin/mografy');
+    await mkdir(dirname(launcher), { recursive: true });
+    // Installed from the old copy by a Node binary that has since been removed.
+    await writeFile(launcher, launcherScript(installedBin, join(sandbox, 'removed-node/bin/node')));
+    await chmod(launcher, 0o755);
+
+    const inside = await sh(launcher, join(current, 'packages'));
+    assert.equal(inside.code, 0, inside.stderr);
+    assert.equal(inside.stdout.trim(), 'desktop-copy dev my animation', 'the checkout around the current folder wins');
+    const fallback = await sh(launcher, outside);
+    assert.equal(fallback.stdout.trim(), 'old-copy dev my animation', 'outside a checkout it uses the installed one');
+
+    await rm(old, { recursive: true, force: true });
+    const stillWorks = await sh(launcher, current);
+    assert.equal(stillWorks.code, 0, stillWorks.stderr);
+    assert.equal(stillWorks.stdout.trim(), 'desktop-copy dev my animation', 'deleting the installed checkout does not break the new one');
+    const gone = await sh(launcher, outside);
+    assert.equal(gone.code, 1);
+    assert.match(gone.stderr, /no longer exists/);
+    assert.match(gone.stderr, /node packages\/cli\/bin\/mografy\.js install-command/);
+    assert.doesNotMatch(gone.stderr, /MODULE_NOT_FOUND|at Module/);
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });

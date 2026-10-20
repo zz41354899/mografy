@@ -2,6 +2,13 @@
 
 Updated: 2026-10-20
 
+## PATH launcher repair (2026-10-20)
+
+- Cause: the launcher written by `install-command` was `exec <node> <installing checkout>/packages/cli/bin/mografy.js`. After the old `~/Documents/mografy` copy was removed, every `mografy` command failed before the CLI's own checkout search could run.
+- `packages/cli/src/launcher.ts` now generates a POSIX sh launcher that searches upward from the current folder for a Mografy checkout, falls back to the installing checkout if it still exists, and otherwise prints the repair command. It prefers `node` on PATH and falls back to the installing Node. Paths are single-quoted safely (spaces and apostrophes).
+- New test: the launcher is generated, installed from an "old copy" by a Node path that no longer exists, then run inside a second checkout, outside any checkout, and again after the old copy is deleted. It runs the right checkout each time and prints the repair command instead of a stack trace when nothing is found.
+- Validation: cli build and typecheck; launcher tests (4) passed; `install-command` was run in a sandboxed home and the installed command worked inside and outside a checkout.
+
 ## Project style files (2026-10-20)
 
 - `guide.ts` adds a Project style section to the scene contract, a Skill instruction to read `style.md` first, and the same input in the storyboard reference. The convention is `style.md` only: values stay in scene code, defined once. Precedence: current request, project style, default Skill guidance; the scene contract always applies. Agents write to the style only from decisions the user states or approves as lasting.

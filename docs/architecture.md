@@ -129,7 +129,7 @@ The player keeps a lightweight raw live preview. All four export formats share `
 
 ## Built-in animation components
 
-The CLI entrypoint resolves the nearest Mografy source checkout from the terminal's working directory before importing its build. A global PATH launcher can therefore be installed by another clone without redirecting local development to that clone. Unbuilt checkouts fail with setup instructions. Outside a source checkout, the launcher uses its own installation.
+The CLI entrypoint resolves the nearest Mografy source checkout from the terminal's working directory before importing its build. A global PATH launcher can therefore be installed by another clone without redirecting local development to that clone. Unbuilt checkouts fail with setup instructions. Outside a source checkout, the launcher uses its own installation. The PATH launcher (`packages/cli/src/launcher.ts`) is a POSIX sh script that repeats the checkout search before starting Node, so the launcher file never depends on its installing checkout still existing; when no checkout is found and the installing one is gone, it prints the repair command. It prefers `node` on PATH and falls back to the Node that ran the installation.
 
 Recent projects and active-server discovery are scoped to the installation root under `~/.mografy/installations/<root-hash>/`. The old shared state is left untouched and is not resumed automatically. `MOGRAFY_STATE` explicitly overrides this scope; `MOGRAFY_HOME` overrides the project library. Exports resolve inside the opened project's `renders/` directory.
 

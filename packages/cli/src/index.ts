@@ -12,6 +12,7 @@ import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
 import { exportProject } from './export.js';
+import { launcherScript } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { parse } from './options.js';
 import type { Flags } from './options.js';
@@ -124,9 +125,9 @@ async function installCommand() {
     console.log(`${target} is not on PATH. Add this to ~/.zshrc and reopen the terminal:\n  export PATH="$HOME/.local/bin:$PATH"`);
   }
   const file = join(target, 'mografy');
-  await writeFile(file, `#!/bin/sh\n# Mografy launcher (created by \`mografy install-command\`)\nexec "${process.execPath}" "${BIN}" "$@"\n`);
+  await writeFile(file, launcherScript(BIN, process.execPath));
   await chmod(file, 0o755);
-  console.log(`Installed: ${file}\nRun \`mografy dev\` from a Mografy project.`);
+  console.log(`Installed: ${file}\nIt finds your Mografy folder each time it runs, so moving or deleting this checkout will not break it.\nRun \`mografy dev\` from a Mografy project.`);
 }
 
 export function openBrowser(url: string) {
