@@ -23,37 +23,45 @@ const workspaceRoot = resolve(packageRoot, '..', '..');
 const BIN = join(packageRoot, 'bin', 'mografy.js');
 const VERSION = '0.1.0';
 
-const HELP = `Mografy ${VERSION} — AI writes animation; Mografy previews, checks, and exports it
+/** Help text, grouped by what the user is doing. Brand colour only on an interactive terminal. */
+function helpText(color: boolean) {
+  const paint = (code: string) => (text: string) => color ? `\x1b[${code}m${text}\x1b[0m` : text;
+  const teal = paint('38;2;18;181;165'), bold = paint('1'), dim = paint('2');
+  const row = (command: string, description: string) => `    ${command.padEnd(37)}${dim(description)}`;
+  const section = (title: string, rows: string[]) => `  ${bold(title)}\n${rows.join('\n')}`;
+  return [
+    `  ${teal('●')} ${bold('Mografy')} ${dim(VERSION)}\n  ${dim('Local Canvas animation for Claude Code and Codex. Claude creates. Mografy shows.')}`,
+    section('Start', [
+      row('mografy dev', 'Open the player: built-in animations and your projects'),
+      row('mografy dev <project>', 'Open a project in the player'),
+    ]),
+    section('Review and export', [
+      row('mografy check <project>', 'Compile and trial-render in Chromium'),
+      row('mografy review <project>', 'Create visual-review sheets in renders/'),
+      row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
+    ]),
+    section('Manage', [
+      row('mografy stop [project]', "Stop a project's player"),
+      row('mografy update [--check]', 'Update Mografy, or only check for updates'),
+      row('mografy install-command', 'Put the mografy command on PATH'),
+    ]),
+    section('Export options', [
+      row('--format <mp4|webm|lottie|svga>', 'Output format (default: mp4)'),
+      row('-o, --output <file>', 'File name, or a path inside renders/'),
+      row('--orientation <landscape|portrait>', 'MP4/WebM at 16:9 or 9:16, fitting the whole scene'),
+      row('--resolution <720p|1080p>', 'MP4/WebM size (default with orientation: 720p)'),
+      row('--cancel', "Cancel the project's current export"),
+    ]),
+    section('Player and review options', [
+      row('--port <port>', 'Player port (default: 4173, then the next free port)'),
+      row('--no-open', 'Start the player without opening a browser'),
+      row('--video <file>', 'Video to compare against during review'),
+    ]),
+    `  ${teal('→')} ${dim('New animation: describe it to Claude Code or Codex in this folder.')}\n    ${dim('The agent creates the project and the player switches to it.')}`,
+  ].join('\n\n');
+}
 
-Usage
-  mografy dev [folder]             Open the live player for an existing project (default command)
-  mografy check [folder]           Compile and trial-render in Chromium
-  mografy review [folder]          Create visual-review sheets in renders/
-  mografy export [folder]          Export MP4, WebM, Lottie, or SVGA
-  mografy stop [folder]            Stop that project's player server
-  mografy install-command          Install the mografy command on PATH
-  mografy update [--check]         Update this installation, or check for updates
-
-Export options
-  --format <mp4|webm|lottie|svga>  Output format (default: mp4)
-  --output, -o <file>              File name, or a path inside renders/
-  --orientation <landscape|portrait> MP4/WebM output (16:9 or 9:16, fits the entire scene)
-  --resolution <720p|1080p>        MP4/WebM size (default with orientation: 720p)
-  --cancel                         Cancel this project's current export
-
-Other options
-  --video <file>                   Video to compare during review
-  --port <port>                    Player port (default: 4173, then next free port)
-  --no-open                        Do not open a browser
-
-Examples
-  mografy dev
-  mografy dev ./my-animation
-  mografy check ./my-animation
-  mografy review ./my-animation
-  mografy export ./my-animation --format mp4
-  mografy export ./my-animation --format lottie -o launch.lottie.json
-  mografy export ./my-animation --cancel`;
+const HELP = helpText(false);
 
 const hasProject = isProject;
 
@@ -210,7 +218,7 @@ export async function main(argv = process.argv.slice(2)) {
   const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
-  if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(HELP); return; }
+  if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(helpText(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR)); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
   if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
   if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
