@@ -17,6 +17,6 @@ export function displayPath(value: string) {
 }
 
 export async function requireProject(dir: string) {
-  if (!await isProject(dir)) throw new Error(`${displayPath(dir)} has no mografy.json. Run \`mografy init ${displayPath(dir)}\` first.`);
+  if (!await isProject(dir)) throw new Error(`${displayPath(dir)} has no mografy.json. Open the player with \`mografy dev\`, or ask Claude or Codex to create the animation.`);
 }
 

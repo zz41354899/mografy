@@ -53,14 +53,14 @@ mografy dev
 
 ### More setup options
 
-Create an animation or open the bundled intro:
+Open the bundled intro, or a project you already have:
 
 ```sh
-mografy dev ./projects/my-animation --yes
 mografy dev ./examples/mografy-intro
+mografy dev ./projects/my-animation
 ```
 
-New projects are created in the `projects/` folder. To keep them somewhere else, set `MOGRAFY_HOME` before running `mografy dev`:
+New animations are created in the `projects/` folder. To keep them somewhere else, set `MOGRAFY_HOME` before starting the player:
 
 ```sh
 export MOGRAFY_HOME="$HOME/Animations"
@@ -70,8 +70,8 @@ Other settings, such as the default project and the FFmpeg path, are in [configu
 
 ## Create your first animation
 
-1. Run `mografy dev ./projects/my-animation --yes` to create a project and open its player.
-2. Open the repository in Codex or Claude Code and describe the animation, naming the project folder. The shared Skill guides scene authoring and review.
+1. Run `mografy dev` to open the player. No starter project is needed; after `pnpm install` it opens with the built-in animations.
+2. Open the repository in Codex or Claude Code and describe the animation, naming the project folder. The agent creates the project and the player switches to it. The shared Skill guides scene authoring and review.
 3. Watch the player update after each successful compile and Chromium trial render. Scrub to check timing and adjust the exposed scene controls.
 4. Run `mografy check ./projects/my-animation` and `mografy review ./projects/my-animation`, then inspect the generated images. Export from the player or CLI when ready.
 
@@ -252,8 +252,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 
 | Command | Purpose |
 | --- | --- |
-| `mografy dev [project]` | Open the player |
-| `mografy init [project]` | Create a project |
+| `mografy dev [project]` | Open the player for an existing project |
 | `mografy check [project]` | Compile and trial-render |
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
 | `mografy export [project] --format mp4\|webm\|lottie\|svga` | Export the animation |
@@ -261,7 +260,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | `mografy stop [project]` | Stop the project's player server |
 | `mografy --help` | Show commands and supported options |
 
-Use `mografy dev --yes` to create a missing project without a prompt, `--no-open` to start the player without opening a browser, and `--port <port>` to choose its port (default: 4173, then the next free port). For `dev`, `check`, `review`, `export`, and `stop`, omitted project paths use `MOGRAFY_PROJECT` when set, otherwise the current project or the source checkout's default project. `mografy init` without a path creates a project in the current folder.
+`--yes` is deprecated and ignored: `mografy dev` no longer creates missing projects; ask Claude or Codex for a new animation. Use `--no-open` to start the player without opening a browser, and `--port <port>` to choose its port (default: 4173, then the next free port). For `dev`, `check`, `review`, `export`, and `stop`, omitted project paths use `MOGRAFY_PROJECT` when set, otherwise the current project or the source checkout's default project. `mografy init` without a path creates a project in the current folder.
 
 ```text
 mografy/

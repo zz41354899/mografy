@@ -134,6 +134,8 @@ New projects include \`scenes/components.ts\`, \`scenes/social-components.ts\`, 
 
 ## Edit and visual-review workflow
 
+For a new animation, create the project first with \`mografy init projects/<name>\` (an internal command for agents; it starts as a blank stage with the component modules), then replace \`scenes/main.ts\` and open it with \`mografy dev projects/<name>\` so the running player switches to it. \`mografy dev\` only opens existing projects and fails on a folder without \`mografy.json\`. Do not tell the user to run \`init\` themselves.
+
 1. Read \`mografy.json\`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
 2. Edit scene source files directly. Keep animation data out of \`mografy.json\`; use it only for project, parameter, font, audio, render, and review settings.
 3. Run \`mografy check [project]\`. This compiles the scene and trial-renders it in real Chromium. Fix every reported error before judging the design.

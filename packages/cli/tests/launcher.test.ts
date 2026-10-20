@@ -52,12 +52,15 @@ test('bare dev outside a Mografy project does not reopen an unrelated scene', as
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 
-test('dev with a missing project path outside the Mografy folder creates nothing unless asked', async () => {
+test('dev never creates a project; a missing path points to mografy init', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-other-repo-'));
   try {
-    const result = await run(sandbox, ['dev', 'projects/not-here', '--no-open']);
-    assert.equal(result.code, 0, result.stderr);
-    assert.match(result.stdout, /Nothing created/);
-    await assert.rejects(access(join(sandbox, 'projects/not-here')));
+    for (const args of [['dev', 'projects/not-here', '--no-open'], ['dev', 'projects/not-here', '--yes', '--no-open']]) {
+      const result = await run(sandbox, args);
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /is not a Mografy project/);
+      assert.match(result.stderr, /Open the player:  mografy dev/);
+      await assert.rejects(access(join(sandbox, 'projects/not-here')));
+    }
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });

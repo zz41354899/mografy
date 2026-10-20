@@ -51,7 +51,10 @@ export function folderName(name: string) {
   return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : 'untitled';
 }
 
-/** Copy the starter project into `dir`, which must not already be a project. */
+/**
+ * Create a project in `dir`, which must not already be a project. Without `scene` the entry
+ * is the blank stage; the shared component modules are always copied so scenes can import them.
+ */
 export async function createProject(dir: string, name?: string, scene?: string, aspectRatio?: AspectRatio) {
   if (aspectRatio !== undefined) aspectRatioSchema.parse(aspectRatio);
   return queueProjectWrite(dir, async () => {

@@ -4,7 +4,6 @@ import { access, chmod, constants, mkdir, realpath, writeFile } from 'node:fs/pr
 import { delimiter } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
@@ -27,8 +26,7 @@ const VERSION = '0.1.0';
 const HELP = `Mografy ${VERSION} — AI writes animation; Mografy previews, checks, and exports it
 
 Usage
-  mografy dev [folder]             Open the live player (default command)
-  mografy init [folder]            Create a starter project
+  mografy dev [folder]             Open the live player for an existing project (default command)
   mografy check [folder]           Compile and trial-render in Chromium
   mografy review [folder]          Create visual-review sheets in renders/
   mografy export [folder]          Export MP4, WebM, Lottie, or SVGA
@@ -47,10 +45,10 @@ Other options
   --video <file>                   Video to compare during review
   --port <port>                    Player port (default: 4173, then next free port)
   --no-open                        Do not open a browser
-  --yes                            Create a missing project without asking
 
 Examples
   mografy dev
+  mografy dev ./my-animation
   mografy check ./my-animation
   mografy review ./my-animation
   mografy export ./my-animation --format mp4
@@ -87,8 +85,7 @@ function fromHome(value: string) {
  * A relative project path is read from the current folder first. When it is not a
  * project there but is one inside this Mografy installation (for example
  * `mografy dev projects/launch` typed from another repository's terminal), open the
- * installation's project instead of offering to create an empty starter beside
- * unrelated files.
+ * installation's project.
  */
 async function resolveProjectArg(arg: string) {
   const local = resolve(arg);
@@ -141,14 +138,6 @@ async function switchActive(dir: string): Promise<string | undefined> {
   if (response.ok) return active.url;
   const data = await response.json().catch(() => ({})) as { error?: { url?: string } };
   return data.error?.url;
-}
-
-async function confirm(question: string, defaultYes = true) {
-  if (!process.stdin.isTTY) return defaultYes;
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = (await rl.question(`${question} ${defaultYes ? '(Y/n)' : '(y/N)'} `)).trim().toLowerCase();
-  rl.close();
-  return answer === 'y' || answer === 'yes' || (answer === '' && defaultYes);
 }
 
 async function dev(dir: string, flags: Flags) {
@@ -223,6 +212,7 @@ export async function main(argv = process.argv.slice(2)) {
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(HELP); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
+  if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
   if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
@@ -241,22 +231,15 @@ export async function main(argv = process.argv.slice(2)) {
 
   switch (command) {
     case 'dev': {
+      // `dev` only opens projects (agents create them with the internal `init`), so a mistyped path or a
+      // terminal in the wrong repository can never leave an empty starter behind.
       if (!await hasProject(dir)) {
-        if (explicit && !flags.yes) {
-          // Outside the Mografy folder a missing project is usually a mistyped path or the
-          // wrong terminal, so creating one has to be chosen explicitly (default: No).
-          const inside = isInsideWorkspace(dir);
-          const question = inside
-            ? `${displayPath(dir)} is not a Mografy project. Create a starter project here?`
-            : `${fromHome(dir)} is not a Mografy project, and it is outside the Mografy folder (${fromHome(workspaceRoot)}).\nCreate a new starter project there anyway?`;
-          if (!await confirm(question, inside)) {
-            if (!inside) console.log(`Nothing created. To open an existing project: cd ${fromHome(workspaceRoot)} && mografy dev projects/<name>`);
-            return;
-          }
-        }
-        await createProject(dir);
-        console.log(`Created starter project: ${displayPath(dir)}`);
-      } else await ensureAgentFiles(dir);
+        const target = explicit ? rest[0]! : fromHome(dir);
+        throw new Error(`${fromHome(dir)} is not a Mografy project (no mografy.json).\n`
+          + `  Open the player:  mografy dev   (built-in animations and your projects)\n`
+          + `  New animation:    ask Claude or Codex`);
+      }
+      await ensureAgentFiles(dir);
       await rememberProject(dir);
       const running = await findServer(dir);
       if (running) { console.log(`Mografy dev is already running: ${running.url}`); if (flags.open) openBrowser(running.url); return; }
@@ -264,9 +247,10 @@ export async function main(argv = process.argv.slice(2)) {
       if (switched) { console.log(`Opened the project in the current player: ${switched}`); if (flags.open) openBrowser(switched); return; }
       return dev(dir, flags);
     }
+    // Internal: agents create a new animation's project with this; it is not in --help or the README.
     case 'init':
       await createProject(dir);
-      console.log(`Created starter project: ${displayPath(dir)}\nRun \`mografy dev ${displayPath(dir)}\` to open it.`);
+      console.log(`Created project: ${displayPath(dir)}\nRun \`mografy dev ${displayPath(dir)}\` to open it, then describe the animation to Claude or Codex.`);
       return;
     case 'check': return checkProject(dir);
     case 'review': return reviewProject(dir, flags.video);

@@ -12,11 +12,11 @@ Inside the source checkout, `mografy dev` opens the current project when the fol
 
 Source installations create projects under `projects/` by default. Set `MOGRAFY_HOME` to choose another library directory. The Projects panel switches between projects and built-in animations in the same player.
 
-All paths are resolved on your computer. Explicit project arguments resolve from the terminal's current folder; exports go to that project's `renders/`. To choose your own library and project:
+All paths are resolved on your computer. Explicit project arguments resolve from the terminal's current folder; exports go to that project's `renders/`. To keep new animations in your own library:
 
 ```sh
 export MOGRAFY_HOME="$HOME/Animations"
-mografy dev "$MOGRAFY_HOME/my-animation" --yes
+mografy dev
 ```
 
 Each installation keeps its own recent-project and active-player state under `~/.mografy/installations/`.

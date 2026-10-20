@@ -53,14 +53,14 @@ mografy dev
 
 ### 其他安裝與設定選項
 
-建立動畫，或開啟隨附的介紹影片：
+開啟隨附的介紹影片，或既有的專案：
 
 ```sh
-mografy dev ./projects/my-animation --yes
 mografy dev ./examples/mografy-intro
+mografy dev ./projects/my-animation
 ```
 
-新專案會建立在 `projects/` 資料夾。若要放在其他位置，請在執行 `mografy dev` 前設定 `MOGRAFY_HOME`：
+新專案會建立在 `projects/` 資料夾。若要放在其他位置，請在啟動播放器前設定 `MOGRAFY_HOME`：
 
 ```sh
 export MOGRAFY_HOME="$HOME/Animations"
@@ -70,8 +70,8 @@ export MOGRAFY_HOME="$HOME/Animations"
 
 ## 製作第一個動畫
 
-1. 執行 `mografy dev ./projects/my-animation --yes`，建立專案並開啟播放器。
-2. 在 Codex 或 Claude Code 中開啟儲存庫，描述想製作的動畫，並指定專案資料夾。共用 Skill 會引導場景編寫與審閱。
+1. 執行 `mografy dev` 開啟播放器。不需要初始專案；`pnpm install` 完成後，播放器會直接顯示內建動畫。
+2. 在 Codex 或 Claude Code 中開啟儲存庫，描述想製作的動畫，並指定專案資料夾。代理會建立專案，播放器會切換過去。共用 Skill 會引導場景編寫與審閱。
 3. 每次編譯與 Chromium 試算圖成功後，播放器都會更新。拖曳時間軸檢查節奏，並調整場景提供的控制項。
 4. 執行 `mografy check ./projects/my-animation` 與 `mografy review ./projects/my-animation`，檢查產生的圖片。確認完成後，即可從播放器或 CLI 匯出。
 
@@ -251,8 +251,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 
 | 指令 | 用途 |
 | --- | --- |
-| `mografy dev [project]` | 開啟播放器 |
-| `mografy init [project]` | 建立專案 |
+| `mografy dev [project]` | 開啟既有專案的播放器 |
 | `mografy check [project]` | 編譯並試算圖 |
 | `mografy review [project] [--video file.mp4]` | 產生審閱圖片及選用的影片比較 |
 | `mografy export [project] --format mp4\|webm\|lottie\|svga` | 匯出動畫 |
@@ -260,7 +259,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 | `mografy stop [project]` | 停止專案的播放器伺服器 |
 | `mografy --help` | 顯示指令與支援的選項 |
 
-使用 `mografy dev --yes` 可直接建立不存在的專案，不再詢問；`--no-open` 會啟動播放器但不開啟瀏覽器；`--port <port>` 可指定連接埠（預設為 4173，若被占用則依序尋找下一個可用連接埠）。對於 `dev`、`check`、`review`、`export` 與 `stop`，省略專案路徑時會優先使用已設定的 `MOGRAFY_PROJECT`，否則使用目前專案或原始碼工作副本的預設專案。`mografy init` 未指定路徑時，會在目前資料夾建立專案。
+`--yes` 已廢棄且不再有作用：`mografy dev` 不再建立不存在的專案；要做新動畫，請交給 Claude 或 Codex。`--no-open` 會啟動播放器但不開啟瀏覽器；`--port <port>` 可指定連接埠（預設為 4173，若被占用則依序尋找下一個可用連接埠）。對於 `dev`、`check`、`review`、`export` 與 `stop`，省略專案路徑時會優先使用已設定的 `MOGRAFY_PROJECT`，否則使用目前專案或原始碼工作副本的預設專案。`mografy init` 未指定路徑時，會在目前資料夾建立專案。
 
 ```text
 mografy/
