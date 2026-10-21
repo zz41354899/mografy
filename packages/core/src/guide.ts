@@ -294,7 +294,7 @@ The reusable implementations live in [components.ts](__REPOSITORY__/packages/ser
 - New projects receive the component modules and scene entries. Import the needed function from the project's local \`scenes/components.ts\` or \`scenes/social-components.ts\`. Preserve required imports, including brand geometry. Do not import files outside the animation project; compilation allows project-local modules and \`@mografy/runtime\` only.
 - Copy the useful motion and composition into the selected project's own scene modules. Adapt layout, copy, palette, scale, and timing to its brief. Keep pure time evaluation and isolated Canvas state; retain the project's existing assets and visual identity.
 - Use these examples to choose a motif in the storyboard and connect it to a concrete scene function. For a longer sequence with transitions and a brand ending, read [intro.md](intro.md).
-- Optional extras are not installed with Mografy; installation contains only the sixteen built-in components. They live in the repository's [extras/](__REPOSITORY__/extras/) folder on GitHub and are copied into a project when a brief needs them: camera moves and transitions for film-style sequences ([camera-transitions.md](camera-transitions.md)) and Chinese / Japanese typography with OFL fonts ([cjk-typography.md](cjk-typography.md)).
+- Optional extras are not installed with Mografy; installation contains only the sixteen built-in components. They live in the repository's [extras/](__REPOSITORY__/extras/) folder on GitHub and are copied into a project when a brief needs them: camera moves and transitions for film-style sequences ([camera-transitions.md](camera-transitions.md)), Chinese / Japanese typography with OFL fonts ([cjk-typography.md](cjk-typography.md)), Three.js 3D layers ([three-d.md](three-d.md)), and contextual music generated from the film's cues ([music.md](music.md)).
 - Keep important subtitle params distinct from ordinary scene copy. The source entries may contain string params that are edited by an agent in source rather than shown in the subtitle inspector.
 
 ## Review
@@ -459,6 +459,146 @@ mografy review examples/mografy-intro
 The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using \`mografy export examples/mografy-intro --format mp4|webm|lottie|svga\`.
 `;
 
+const THREE_D_REFERENCE = `# 3D layers with Three.js
+
+[three.ts](__REPOSITORY__/extras/three/three.ts) renders a [Three.js](https://threejs.org/) scene as a layer inside a normal Mografy frame: draw 2D backgrounds first, then the 3D layer, then type and overlays. [three-demo.ts](__REPOSITORY__/extras/three/three-demo.ts) is an eight-second tour: a device with a drawn screen orbits into a hero pose among floating shapes.
+
+## When to use it
+
+Use a 3D layer when the brief needs real depth: objects that turn and catch light, product or device models (glTF / GLB), orbiting cameras, depth between layers, reflective or glassy materials. For flat cards, type, UI, flips and parallax, stay in 2D Canvas with the built-in components and \`cinema.ts\`; they are lighter, sharper for text, and export faster.
+
+## Add to a project
+
+The helper and library are an optional extra, not part of the installed template. If the project already has \`scenes/three.ts\` and \`assets/three.module.js\`, read and reuse those local copies. Otherwise copy from the current Mografy checkout (\`extras/three/\`) or download from GitHub:
+
+\`\`\`sh
+curl -fsSL -o scenes/three.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/three.ts
+curl -fsSL -o assets/three.module.js https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/three.module.js
+curl -fsSL -o assets/LICENSE-three.txt https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/LICENSE-three.txt
+\`\`\`
+
+\`three.module.js\` is a single minified Three.js r186 bundle (about 0.8 MB, MIT) that also exports \`GLTFLoader\`, \`RoomEnvironment\` and \`RoundedBoxGeometry\`. It lives in \`assets/\` because scene modules may import only project sources and \`@mografy/runtime\`; \`prepareStage\` loads it at runtime from the project. Import the helper locally (\`import { prepareStage, stage, orbit } from './three.js'\`). Copy \`three-demo.ts\` too only when the user wants the tour.
+
+## Contract
+
+The scene contract still holds; Three.js only adds where state lives.
+
+- **Build in \`setup\`, pose in \`renderFrame\`.** Create every mesh, geometry, material, light, texture and loaded model inside \`prepareStage\`'s \`build\` callback and store the stage in \`ctx.assets\`. In \`renderFrame\`, only set properties (positions, rotations, scales, colours, opacity, camera) from \`time\` and params. Creating Three.js objects in \`renderFrame\` throws, because their ids use \`Math.random\`.
+- **Set everything you animate, every frame.** The scene graph persists between frames, so a property that is only set in some time ranges keeps a stale value after seeking. Write each animated value from \`time\` on every call, as with any Mografy pose.
+- **No animation mixers, clocks or physics.** Do not use \`AnimationMixer.update(delta)\`, \`Clock\` or simulation steps. For a glTF animation clip, set \`mixer.setTime(time)\` from absolute time.
+- **Randomness** comes from \`ctx.random()\` in setup or \`ctx.noise()\` per frame, never \`Math.random\`.
+
+## API
+
+| Helper | Use |
+| --- | --- |
+| \`prepareStage(ctx, build, { fov?, width?, height?, antialias?, toneMapping?, exposure?, library? })\` | In \`setup\`: load Three.js, create the WebGL layer, and call \`build({ THREE, scene, camera, renderer, setup })\`. Whatever \`build\` returns becomes \`stage.objects\`. The camera starts at (0, 0, 10) looking at the origin. Tone mapping defaults to ACES filmic. |
+| \`stage(ctx, stage, pose, { x?, y?, width?, height?, alpha? })\` | In \`renderFrame\`: \`pose({ THREE, scene, camera, objects })\` sets this frame, then the layer renders at output resolution and is drawn into the frame (default: covering the canvas). |
+| \`orbit(camera, yaw, pitch, distance, target?)\` | Place the camera on a sphere around a target, in radians. Ease yaw, pitch and distance for camera moves. |
+| \`studioLight(build, intensity?)\` | Soft studio reflections (RoomEnvironment) so metal, glass and clearcoat read well without an HDR file. Add one key and one rim \`DirectionalLight\` for shape. |
+| \`loadModel(build, path)\` | Load an uncompressed glTF / GLB from \`assets/\`; returns \`{ scene, animations }\`. Add \`scene\` to the stage; for a clip, create an \`AnimationMixer\` in setup and call \`mixer.setTime(time)\` in the pose. Draco or Meshopt compressed files are not supported. |
+| \`canvasTexture(THREE, width, height, draw)\` | Draw a 2D canvas once in setup and use it as a texture: screens, labels, posters. It uses the project's registered fonts. |
+
+\`\`\`ts
+export async function setup(ctx: SetupContext) {
+  ctx.assets.stage = await prepareStage(ctx, b => {
+    const { THREE, scene } = b;
+    studioLight(b);
+    const cube = new THREE.Mesh(new THREE.RoundedBoxGeometry(2, 2, 2, 6, 0.2), new THREE.MeshPhysicalMaterial({ color: 0x7c5cff, roughness: 0.3, clearcoat: 1 }));
+    scene.add(cube);
+    return { cube };
+  });
+}
+
+export function renderFrame(ctx: FrameContext, time: number) {
+  const s = ctx.assets.stage as Stage<{ cube: ThreeModule }>;
+  stage(ctx, s, ({ camera, objects }) => {
+    orbit(camera, 0.3 * Math.sin(time * 0.5), 0.15, 8);
+    objects.cube.rotation.y = ease.inOutCubic(pr(time, 0, 2)) * Math.PI;
+  });
+}
+\`\`\`
+
+## Direction
+
+- Keep one hero object and a motivated camera: a slow orbit, a push-in, or a reveal swing that settles. Ease camera moves with \`ease.outCubic\` / \`ease.inOutCubic\` and keep idle drift subtle.
+- Put headlines and subtitles in 2D after the 3D layer, not on 3D surfaces; Canvas text is sharper and easier to edit. Use \`canvasTexture\` for text that belongs to an object, such as a phone screen.
+- Leave layout room for type: frame the object with the camera target and distance rather than by moving the object off-centre.
+- In portrait (1080 × 1920) the layer follows \`ctx.width\` / \`ctx.height\`; pull the camera back or narrow the composition so objects fit the width.
+
+## Rendering and review
+
+- 3D renders with WebGL 2 in the player and in exports, so MP4, WebM, Lottie and SVGA all include it. Exports render each sample on the GPU when Chromium has one; on machines without a GPU, Chromium falls back to software rendering, which is correct but slower.
+- Review the camera's extreme poses and the first frames of a reveal, check that objects never clip the frame edge or the type, and seek out of order to confirm every animated property is set from time.
+`;
+
+const MUSIC_REFERENCE = `# Contextual music
+
+[score.py](__REPOSITORY__/extras/music/score.py) generates a film's score from its context. Instead of finding a track and cutting the animation to it, the agent describes what each part of the film needs in a cue file, \`music.json\`, and the generator synthesises music that follows it: sections with a mood and an energy level, and hits on the exact seconds where something happens on screen. When the animation's timing changes, update the cues and generate again; the music stays in sync. [music-example.json](__REPOSITORY__/extras/music/music-example.json) scores the twelve-second intro.
+
+## When to use it
+
+Use it when the user wants music and has none, or asks for music that fits the film: product intros, logo stings, explainers, and abstract or particle pieces where atmosphere, rhythm and hits matter more than a memorable melody. If the user supplies a track, use theirs and align the scene to \`ctx.beat(time)\` instead. For a song with vocals or a strong hook, write the same cues as a text brief for an external music tool or library search, and use the generator only as a placeholder.
+
+## Add to a project
+
+The generator is an optional extra, not part of the installed template. It needs Python 3 with numpy; MP3 output uses ffmpeg, and the timeline image uses Pillow. If the project already has \`music-src/score.py\`, reuse it. Otherwise copy it from the current Mografy checkout (\`extras/music/\`) or download it:
+
+\`\`\`sh
+mkdir -p music-src
+curl -fsSL -o music-src/score.py https://raw.githubusercontent.com/zz41354899/mografy/main/extras/music/score.py
+\`\`\`
+
+\`music-src/\` is outside \`scenes/\` and \`assets/\`: the scene never imports it, and only the generated audio file goes in \`assets/\`.
+
+## Workflow
+
+1. **Storyboard first.** Write the cues after the shot plan (or after reading an existing scene), so every time comes from the actual animation. For a finished scene, read its source for the real transition and event times rather than the storyboard's approximations.
+2. **Write \`music-src/music.json\`.** One section per shot or phase; choose its mood and energy from the shot's purpose. Add one hit for every on-screen event the audience should hear, at the scene's exact second, with a \`note\` naming the event. Put the main changes on bar starts where the scene allows it.
+3. **Generate:** \`python3 music-src/score.py music-src/music.json assets/music.mp3 --timeline storyboards/music-timeline.png\`. The output is deterministic for the same cues and seed.
+4. **Connect it** in \`mografy.json\` so the player, \`ctx.beat(time)\` and exports use it. Copy \`bpm\`, \`offset\` and \`beatsPerBar\` from the cues:
+
+\`\`\`json
+"audio": { "path": "assets/music.mp3", "bpm": 120, "offset": 0, "beatsPerBar": 4, "gain": 1 }
+\`\`\`
+
+5. **Check the timeline image.** Each section is a block whose colour is its mood and height its energy; white lines are hits; the waveform is underneath. Confirm that swells and impacts land on the hit lines and that the loudest passages match the film's climax. You cannot hear the result: say so, and ask the user to listen with the animation in the player.
+6. **Iterate from the cues, never the audio file.** When the user says it is too busy, too dark or too loud, or when the scene's timing changes, edit \`music.json\` and regenerate. Keep the previous audio file under a new name if the user may want to compare.
+
+## Cue file
+
+| Field | Meaning |
+| --- | --- |
+| \`duration\`, \`bpm\`, \`beatsPerBar\`, \`offset\` | Length and beat grid; keep them equal to the scene duration and \`mografy.json\` audio settings. |
+| \`key\`, \`mode\` | \`C\` … \`B\`; \`major\` or \`minor\`. One chord per bar. |
+| \`mood\` | Default mood for sections that do not set one. |
+| \`rhythm\` | \`pulse\` (default): beat pulses and eighth or sixteenth arpeggios. \`flowing\`: half and quarter notes, one long bass note per bar, soft bells for ticks. Prefer \`flowing\` for calm, cinematic or particle pieces, and when the user finds the music busy or choppy. |
+| \`texture\` | \`particles\` adds a shimmer of tiny grains on the chord tones, denser with energy. A section can set its own. |
+| \`seed\` | Fixes the random choices. |
+| \`sections[]\` | \`name\`, \`start\`, \`end\`, \`mood\`, \`energy\`, \`texture?\`, \`note\`. |
+| \`hits[]\` | \`at\`, \`kind\`, \`strength?\` (1 is normal), kind-specific fields, \`note\`. |
+
+**Energy** is 0–1, or \`[from, to]\` for a ramp across the section. Below 0.3 there is only a pad and a sparse motif; from 0.3 bass and a quarter-note pattern enter; from 0.5 eighths (quarters in \`flowing\`); from 0.75 sixteenths in \`pulse\`.
+
+**Moods:** \`calm\`, \`warm\`, \`hopeful\`, \`playful\`, \`tech\`, \`tense\` (minor harmony), \`cosmic\`, \`epic\`. Each sets the lead instrument (felt piano, pluck or bell), register, pad brightness and reverb.
+
+| Hit | Use for | Fields |
+| --- | --- | --- |
+| \`pop\` | Something appears | |
+| \`burst\` | A burst or big transition; includes a riser | \`build\` (seconds, default 1.5) |
+| \`impact\` | A collision or collapse | \`build\` (default 0) |
+| \`gather\` | Scattered elements converge on \`at\` | \`length\` |
+| \`swirl\` | Elements stream round or morph | \`length\` |
+| \`sweep\` | A light or wipe crosses the frame | \`length\` |
+| \`whoosh\` | A camera move or cut | \`length\` |
+| \`fall\` | Something drops | |
+| \`sparkle\` | Highlights, small reveals | \`count\`, \`every\` |
+| \`ticks\` | Typing, letters landing one by one | \`count\`, \`every\` |
+| \`resolve\` | The final chord; only its ring-out follows | |
+
+The rhythm drops out for half a second before each \`burst\` and \`impact\`, so they land with more weight. Use few hits: one per event the audience should notice, not one per moving element.
+`;
+
 const VIDEO_COMPRESSION_REFERENCE = `# Compress an exported video
 
 Use this workflow when a finished render is too large to upload or share, or when the user requests a smaller video. Work from the actual exported video (normally in the project's \`renders/\` folder). Scene edits, a new render, and a storyboard are unnecessary for compression alone. This helper outputs H.264 MP4; it does not compress Lottie JSON or SVGA packages, and does not preserve transparency or HDR.
@@ -606,6 +746,8 @@ For scene work, read the project's \`mografy.json\`, configured scene entry, imp
 - When creating an animation, choosing storyboard motifs, or reusing examples, read [references/built-in-components.md](references/built-in-components.md) for the sixteen scene components and [references/intro.md](references/intro.md) for the existing twelve-second intro. Inspect the relevant original scene code before adapting it.
 - For a film-style sequence built from stills or key art (camera moves, transitions such as sakura petal wipes, atmosphere), read [references/camera-transitions.md](references/camera-transitions.md) and add the optional \`cinema.ts\` extra to the project.
 - For Chinese or Japanese copy, vertical text (tategaki), or CJK line breaking, read [references/cjk-typography.md](references/cjk-typography.md) and add the optional \`cjk.ts\` extra and CJK fonts to the project.
+- For real 3D (objects that turn and catch light, product or device models, orbiting cameras, depth), read [references/three-d.md](references/three-d.md) and add the optional \`three.ts\` extra and Three.js bundle to the project.
+- When the film needs music and the user has no track, or asks for music that fits the film, read [references/music.md](references/music.md): write the film's context as \`music.json\` cues and generate a matching score with the optional \`score.py\` extra.
 - For new motion or animation polish, read [references/animation-principles.md](references/animation-principles.md) and apply the relevant principles.
 - When an exported video is too large or the user asks to compress it, read [references/video-compression.md](references/video-compression.md) and run the bundled \`scripts/compress-video.py\` on the finished file. Preserve the original, check the reported size, and review the compressed result.
 - When developing Mografy itself, read [references/project.md](references/project.md) for the GitHub sources and required checks. Inspect the current checkout's local files before editing.
@@ -662,7 +804,7 @@ ${introduction}
 
 Before product changes, read [AGENTS.md](${repository}/AGENTS.md), [architecture](${repository}/docs/architecture.md), [status](${repository}/docs/STATUS.md), and [usage](${repository}/README.md).
 
-- \`packages/core/src/guide.ts\` owns the English skill entrypoints and references. After changes, run \`pnpm build\` and \`pnpm sync:skills\` in the repository.
+- \`packages/core/src/guide.ts\` owns the English skill entrypoints and references. After changes, run \`pnpm build\` in the repository; it ends with \`pnpm sync:skills\`, which regenerates the Skill. \`mografy dev\` also regenerates it when its sources changed since the last sync.
 - Use \`mografy update --check\` to check the executing source installation, or \`mografy update\` to fast-forward, install/build, sync guidance and restart its active player. Stop and resolve local changes or diverged history rather than overwriting them. Older installations need a one-time manual update documented in README.
 - One \`mografy\` Skill lives in the source repository's outer \`.agents/skills/\` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root \`.claude/skills/mografy\` symlink points Claude to the same folder. Root \`CLAUDE.md\` also imports the shared Skill. Never create Skill folders inside animation subprojects.
 - Animation code belongs only in scene modules. The Server must never import or evaluate scenes in Node. Do not introduce GSAP, SVG scene layers, or resvg.
@@ -676,6 +818,8 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'intro.md': INTRO_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'camera-transitions.md': CAMERA_TRANSITIONS_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'cjk-typography.md': CJK_TYPOGRAPHY_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'three-d.md': THREE_D_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
   })
@@ -765,6 +909,8 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/intro.md'];
   delete files['references/camera-transitions.md'];
   delete files['references/cjk-typography.md'];
+  delete files['references/three-d.md'];
+  delete files['references/music.md'];
   delete files['references/codex-motion-design.md'];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",

@@ -14,6 +14,7 @@ import { monitorDevExports } from './progress.js';
 import { exportProject } from './export.js';
 import { launcherScript } from './launcher.js';
 import { updateInstallation } from './update.js';
+import { refreshSkill } from './skills.js';
 import { parse } from './options.js';
 import type { Flags } from './options.js';
 export { displayPath } from './paths.js';
@@ -248,6 +249,7 @@ export async function main(argv = process.argv.slice(2)) {
           + `  Open the player:  mografy dev   (built-in animations and your projects)\n`
           + `  New animation:    ask Claude or Codex`);
       }
+      await refreshSkill(workspaceRoot);
       await ensureAgentFiles(dir);
       await rememberProject(dir);
       const running = await findServer(dir);

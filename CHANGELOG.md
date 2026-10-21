@@ -1,5 +1,7 @@
 # Changelog
 
+[English](CHANGELOG.md) | [繁體中文](CHANGELOG.zh-TW.md)
+
 Notable changes to Mografy. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
 
 Update from your Mografy checkout:
@@ -11,11 +13,19 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
-## 2026-10-20
+## 2026-10-21
 
 ### Added
 
+- **Contextual music (optional extra)** — `extras/music/score.py` generates a film's score from its context instead of cutting the animation to a found track. The agent writes `music.json` after the storyboard: sections with a mood (calm, warm, hopeful, playful, tech, tense, cosmic, epic) and an energy level or ramp, and hits on the exact seconds where something happens on screen (bursts, impacts, particles gathering or swirling, light sweeps, typing, the final chord). The generator synthesises matching music with Python and numpy, deterministically, plus a timeline image for checking that swells and impacts land on the picture. `rhythm: "flowing"` gives a smoother, sustained score and `texture: "particles"` adds a shimmer for particle pieces. When the timing changes, edit the cues and generate again. Nothing is installed: the script is copied into a project's `music-src/` only when it needs music, and the shared Skill's new `music.md` reference describes the workflow. `music-example.json` scores the twelve-second intro.
+- **3D layers with Three.js (optional extra)** — `extras/three/three.ts` renders a Three.js scene as a layer inside a normal frame: 2D backgrounds before it, type after it. Build meshes, lights, materials and glTF / GLB models once in `setup` with `prepareStage`, then pose them from `time` in `renderFrame` with `stage`; helpers cover orbit cameras, studio reflections, model loading and canvas-drawn textures. It renders with WebGL in the player and in every export format. The Three.js r186 bundle (about 0.8 MB, MIT) is copied into a project's `assets/` only when it needs 3D, so installation and existing projects are unchanged. `three-demo.ts` is an eight-second tour, and the shared Skill's new `three-d.md` reference says when to use 3D and how to keep it deterministic.
 - **Project style file** — a project can now fix its design and motion decisions in `style.md` at the project root: do and don't rules, motion character, palette, type and tempo choices, composition and reference stills. Values stay in the scene code, defined once and changed there. The shared Skill and storyboard guidance read it before planning or editing. They take precedence over the Skill's default design guidance but never over the scene contract, and the current request still wins. Agents record a decision there only when you state or approve it as lasting. The file is optional; installation and new projects are unchanged.
+
+### Changed
+
+- **The shared Skill keeps itself current** — `pnpm build` now ends with `pnpm sync:skills`, so `pnpm install`, `mografy update` and every build regenerate `.agents/skills/mografy` (and the Claude link and project pointers) from `guide.ts`, including new references such as `music.md`. `mografy dev` also checks on start whether the Skill's sources changed since the last sync, for example after a `git pull` without `pnpm install`, and regenerates it with one line of output. Custom notes in project guides are preserved as before; nothing to run by hand.
+
+## 2026-10-20
 
 ### Fixed
 

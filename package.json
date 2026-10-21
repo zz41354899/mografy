@@ -12,7 +12,7 @@
     "mografy": "./packages/cli/bin/mografy.js"
   },
   "scripts": {
-    "build": "pnpm --filter './packages/**' -r --workspace-concurrency=1 build",
+    "build": "pnpm --filter './packages/**' -r --workspace-concurrency=1 build && pnpm sync:skills",
     "typecheck": "pnpm --filter './packages/**' -r typecheck",
     "sync:skills": "node --import tsx scripts/sync-agent-docs.ts",
     "thumbnails:generate": "pnpm build && node --import tsx scripts/generate-component-thumbnails.ts",

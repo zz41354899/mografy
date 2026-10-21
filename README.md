@@ -19,9 +19,9 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Latest updates
 
-**2026-10-20** — A project style file (`style.md`) lets a project fix its design and motion decisions; edits no longer get stuck behind a stalled scene or a long review; the `mografy` command keeps working when the folder it was installed from is moved or deleted.
+**2026-10-21** — Contextual music: the agent describes what each part of the film needs and an optional generator composes a score that lands on its moments; 3D layers with Three.js; a project style file (`style.md`) that fixes a project's design and motion decisions; and the shared Skill now keeps itself up to date after every install, build or update.
 
-**2026-10-18** — WebM export with VP9/Opus and constant quality (CRF), plus `mografy update` to fetch source updates, rebuild and restart the active player. See the [changelog](CHANGELOG.md).
+**2026-10-20** — Edits no longer get stuck behind a stalled scene or a long review; the `mografy` command keeps working when the folder it was installed from is moved or deleted. See the [changelog](CHANGELOG.md).
 
 ## Get started
 
@@ -49,7 +49,7 @@ mografy dev
 
 `--check` fetches Git metadata but does not change working files, install dependencies or restart the player. Updates stop for local changes (including untracked files), missing upstreams, detached HEADs or diverged history. User projects ignored by Git stay in place. If dependency setup fails after the source update, the player stays stopped and the error lists recovery commands. Separate checkouts update independently; outside a checkout, the PATH launcher selects its installed copy.
 
-`npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm sync:skills`, `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
+`npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
 
 ### More setup options
 
@@ -102,7 +102,7 @@ Its English references cover:
 | [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | Vertical Japanese / Chinese text, CJK line breaking, and the bundled OFL fonts |
 | [Video compression](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | Python helper for smaller exported MP4s, quality controls, and upload-size budgets |
 
-[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) owns the generated entrypoint and references. After editing it, run `pnpm build` and `pnpm sync:skills`. Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
+[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) owns the generated entrypoint and references. After editing it, run `pnpm build`: it ends with `pnpm sync:skills`, which regenerates the Skill. `pnpm install` and `mografy update` build too, and `mografy dev` regenerates the Skill on start when its sources changed since the last sync (for example after a `git pull`). Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
 
 ## Working examples
 

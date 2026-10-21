@@ -7,6 +7,7 @@ import { obsoleteStoryboardFiles, sharedSkillFiles } from '../packages/core/src/
 import { atomicWrite } from '../packages/server/src/files.js';
 import { queueProjectWrite } from '../packages/server/src/project.js';
 import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js';
+import { recordSkillSources } from '../packages/cli/src/skills.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 if (process.argv.length > 2) throw new Error('Usage: pnpm sync:skills');
@@ -63,3 +64,4 @@ async function install(dir: string): Promise<void> {
 await install(join(root, 'examples'));
 await install(join(root, 'projects'));
 console.log(`Updated guidance in ${projects} local projects; both hosts share one repository-root Mografy Skill.`);
+await recordSkillSources(root);

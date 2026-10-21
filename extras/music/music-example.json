@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "film": "Mografy intro (examples/mografy-intro): code becomes an idea, playback and scrubbing, an edit updates the player, brand ending",
+  "duration": 12,
+  "bpm": 120,
+  "beatsPerBar": 4,
+  "offset": -0.1,
+  "key": "D",
+  "mode": "major",
+  "mood": "tech",
+  "rhythm": "flowing",
+  "seed": 3,
+  "sections": [
+    { "name": "code",  "start": 0,    "end": 2.4,  "mood": "calm",    "energy": [0.2, 0.4], "note": "Code types on with a caret; caption." },
+    { "name": "scrub", "start": 2.4,  "end": 6.8,  "mood": "tech",    "energy": 0.55, "note": "A preview frame plays and scrubs back and forth." },
+    { "name": "chat",  "start": 6.8,  "end": 9.85, "mood": "playful", "energy": [0.5, 0.7], "note": "A chat edit arrives; the player updates; a toast." },
+    { "name": "logo",  "start": 9.85, "end": 12,   "mood": "hopeful", "energy": 0.35, "note": "Logo pieces reveal, wordmark letters stagger in, tagline." }
+  ],
+  "hits": [
+    { "at": 0.1,  "kind": "ticks",   "count": 6, "every": 0.12, "strength": 0.6, "note": "first characters type" },
+    { "at": 2.4,  "kind": "whoosh",  "note": "into the player" },
+    { "at": 4.6,  "kind": "swirl",   "length": 0.9, "strength": 0.6, "note": "scrub backwards" },
+    { "at": 6.8,  "kind": "pop",     "strength": 0.6, "note": "chat bubble appears" },
+    { "at": 8.9,  "kind": "sparkle", "count": 3, "note": "player updates; toast" },
+    { "at": 9.9,  "kind": "burst",   "build": 0.8, "note": "logo entrance" },
+    { "at": 11.0, "kind": "resolve", "note": "tagline settles; hold" }
+  ]
+}

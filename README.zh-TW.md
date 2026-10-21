@@ -19,9 +19,9 @@ Mografy 是為 Claude Code 與 Codex 設計的本機 Canvas 動畫工具。共�
 
 ## 最新更新
 
-**2026-10-20** — 新增專案風格檔（`style.md`），可固定專案的設計與動態決定；修改不會再被卡住的場景或冗長的審閱擋住；安裝 `mografy` 指令的資料夾即使被搬走或刪除，指令也能繼續使用。
+**2026-10-21** — 新增情境配樂：agent 描述影片每個段落需要什麼，選用的生成器就會譜出對準畫面時間點的配樂；新增 Three.js 3D 圖層；新增專案風格檔（`style.md`），可固定專案的設計與動態決定；共用 Skill 現在會在每次安裝、建置或更新後自動保持最新。
 
-**2026-10-18** — 新增使用 VP9／Opus 與固定品質（CRF）的 WebM 匯出，以及可取得原始碼更新、重新建置並重啟目前播放器的 `mografy update` 指令。詳見[更新紀錄](CHANGELOG.md)。
+**2026-10-20** — 修改不會再被卡住的場景或冗長的審閱擋住；安裝 `mografy` 指令的資料夾即使被搬走或刪除，指令也能繼續使用。詳見[更新紀錄](CHANGELOG.zh-TW.md)。
 
 ## 開始使用
 
@@ -49,7 +49,7 @@ mografy dev
 
 `--check` 會取得 Git 中繼資料，但不會修改工作檔案、安裝相依套件或重啟播放器。若有本機修改（包含尚未追蹤的檔案）、缺少上游分支、處於 detached HEAD 狀態，或提交歷史已分歧，更新會停止。被 Git 忽略的使用者專案會保留。若原始碼更新後的相依套件設定失敗，播放器會維持停止，錯誤訊息會列出復原指令。不同工作副本會各自更新；若在工作副本以外執行，PATH 啟動器會選用安裝它的那份副本。
 
-`npm install -g pnpm` 用來安裝 pnpm 套件管理工具；若已安裝 pnpm，可略過此步驟。pnpm 會自行切換成 Mografy 在 `package.json` 指定的版本。若 npm 回報權限錯誤，請執行 `sudo npm install -g pnpm`。修改 Mografy 本身的貢獻者還需執行 `pnpm sync:skills`、`pnpm check` 與 `pnpm test:browser`；詳見[開發與架構](#開發與架構)。
+`npm install -g pnpm` 用來安裝 pnpm 套件管理工具；若已安裝 pnpm，可略過此步驟。pnpm 會自行切換成 Mografy 在 `package.json` 指定的版本。若 npm 回報權限錯誤，請執行 `sudo npm install -g pnpm`。修改 Mografy 本身的貢獻者還需執行 `pnpm check` 與 `pnpm test:browser`；詳見[開發與架構](#開發與架構)。
 
 ### 其他安裝與設定選項
 
@@ -101,7 +101,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 | [中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | 日文／中文直排、CJK 換行與隨附的 OFL 字型 |
 | [影片壓縮](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | 縮小已匯出 MP4 的 Python 工具、品質控制與上傳大小限制 |
 
-[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) 是產生 Skill 入口與參考文件的單一來源。修改後請執行 `pnpm build` 與 `pnpm sync:skills`。動畫專案會取得 `AGENTS.md` 與 `CLAUDE.md`，指向共用 Skill。
+[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) 是產生 Skill 入口與參考文件的單一來源。修改後請執行 `pnpm build`：它最後會執行 `pnpm sync:skills` 重新產生 Skill。`pnpm install` 與 `mografy update` 也會 build；`mografy dev` 啟動時若發現來源在上次同步後有變動（例如 `git pull` 之後），也會自動重新產生 Skill。動畫專案會取得 `AGENTS.md` 與 `CLAUDE.md`，指向共用 Skill。
 
 ## 可運作的範例
 
