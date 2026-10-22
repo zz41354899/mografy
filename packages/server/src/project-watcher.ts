@@ -68,22 +68,32 @@ export class ProjectWatcher {
   start() {
     if (!this.stopped) return;
     this.stopped = false;
+    let watching = false;
     try {
       this.watcher = watch(this.dir, { recursive: true }, (_event, name) => {
         const path = String(name ?? '').replaceAll('\\', '/');
         if (!path || IGNORED.has(path.split('/')[0]!) || /(^|\/)\.|~$|\.swp$/.test(path)) return;
         this.trigger();
       });
-      this.watcher.on('error', () => {});
+      // Without filesystem events, fall back to polling every second.
+      this.watcher.on('error', () => { this.watcher?.close(); this.watcher = undefined; this.poll(1000); });
+      watching = true;
     } catch { /* Polling still works when recursive watching is unavailable. */ }
     void this.scan().then(fingerprint => { if (!this.stopped) this.fingerprint = fingerprint; });
+    // Events catch edits at once; the slow poll only covers events the platform drops.
+    this.poll(watching ? 10_000 : 1000);
+  }
+
+  private poll(ms: number) {
+    clearInterval(this.poller);
+    if (this.stopped) return;
     this.poller = setInterval(() => {
       if (this.scanning) return;
       this.scanning = true;
       void this.scan().then(fingerprint => {
         if (!this.stopped && fingerprint !== this.fingerprint) { this.fingerprint = fingerprint; this.trigger(); }
       }).catch(() => {}).finally(() => { this.scanning = false; });
-    }, 1000);
+    }, ms);
     this.poller.unref();
   }
 

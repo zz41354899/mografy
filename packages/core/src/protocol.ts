@@ -7,6 +7,8 @@ export interface SceneInfo {
   sources: string[]; publishedAt: string;
   /** What published it: startup, a file change, or a verified HTTP source update. */
   reason: 'startup' | 'watch' | 'update';
+  /** The scene lists no shots, so `meta.shots` holds Mografy's guess from the storyboard or the picture. */
+  autoShots?: 'storyboard' | 'picture';
 }
 export interface SceneError { message: string; reason: 'startup' | 'watch'; at: string }
 export interface RenderStatus {
@@ -31,6 +33,8 @@ export interface Snapshot {
   render: RenderStatus | null;
   /** Content hash of the latest thumbnail; changes after the image is actually saved. */
   thumbnail?: string | null;
+  /** One of the bundled component projects, which cannot be presented. */
+  builtIn?: boolean;
 }
 export type ServerEvent =
   | { type: 'snapshot'; reason: string; clientId?: string | undefined; snapshot: Snapshot }

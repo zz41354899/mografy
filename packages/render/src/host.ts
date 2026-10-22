@@ -48,6 +48,8 @@ type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow'
  * so a scene whose setup never resolves or whose renderFrame never returns would otherwise hold the
  * project queue forever and every later edit would wait behind it.
  */
+/** Largest frame or sheet a page may upload; Node buffers cannot hold much more. */
+const UPLOAD_LIMIT = 512 * 1024 ** 2;
 export const hostTimeouts = { load: 30_000, trial: 20_000, frame: 120_000 };
 const seconds = (ms: number) => `${Math.round(ms / 100) / 10}s`;
 
@@ -69,7 +71,8 @@ async function bounded<T>(work: Promise<T>, ms: number, message: string, abandon
 
 export class HostPage {
   private dead = false;
-  constructor(private host: SceneHost, private context: BrowserContext, readonly page: Page, readonly scene: LoadedScene) {}
+    /** `assets` collects the project files this page requests; setup loads every asset a scene draws with. */
+  constructor(private host: SceneHost, private context: BrowserContext, readonly page: Page, readonly scene: LoadedScene, readonly assets: ReadonlySet<string> = new Set()) {}
   /** True after close, a timeout or a renderer crash; callers holding a cached page must open a new one. */
   get closed() { return this.dead || this.page.isClosed(); }
   private bounded<T>(work: Promise<T>) {
@@ -86,6 +89,8 @@ export class HostPage {
   /** Post-processed RGBA of output frame k. */
   output(k: number, settings: OutputSettings) { return this.receive(token => this.page.evaluate(([k, s, token]) => window.mografyHost.output(k, s, token), [k, settings, token] as const)); }
   png(cell: Cell, settings: OutputSettings) { return this.receive(token => this.page.evaluate(([c, s, token]) => window.mografyHost.png(c, s, token), [cell, settings, token] as const)); }
+  /** Greyscale frames `width` wide at each time, concatenated (see host-page motion). */
+  motion(times: number[], width: number) { return this.receive(token => this.page.evaluate(([t, w, token]) => window.mografyHost.motion(t, w, token), [times, width, token] as const)); }
   thumb(t: number, width = 480) { return this.receive(token => this.page.evaluate(([t, w, token]) => window.mografyHost.thumb(t, w, token), [t, width, token] as const)); }
   sheet(spec: SheetSpec) { return this.receive(token => this.page.evaluate(([s, token]) => window.mografyHost.sheet(s, token), [spec, token] as const)); }
   async close() { this.dead = true; await this.context.close().catch(() => {}); }
@@ -121,12 +126,18 @@ export class SceneHost {
   private async handle(request: IncomingMessage, response: ServerResponse) {
     const url = new URL(request.url ?? '/', this.origin);
     const fail = (status: number, message: string) => { response.writeHead(status, { 'content-type': 'text/plain; charset=utf-8' }); response.end(message); };
+    // Only the headless page this host opened: refuse other hosts (DNS rebinding) and cross-site requests.
+    if (request.headers.host !== new URL(this.origin).host || request.headers['sec-fetch-site'] === 'cross-site') return fail(403, 'forbidden');
     try {
       if (request.method === 'POST' && url.pathname.startsWith('/upload/')) {
         const waiter = this.waiters.get(url.pathname.slice(8));
         if (!waiter) return fail(404, 'unknown token');
-        const chunks: Buffer[] = [];
-        for await (const chunk of request) chunks.push(chunk as Buffer);
+        const chunks: Buffer[] = []; let size = 0;
+        for await (const chunk of request) {
+          size += (chunk as Buffer).length;
+          if (size > UPLOAD_LIMIT) { this.waiters.delete(url.pathname.slice(8)); waiter.reject(new Error('Rendered data is larger than 512 MB')); return fail(413, 'too large'); }
+          chunks.push(chunk as Buffer);
+        }
         this.waiters.delete(url.pathname.slice(8));
         waiter.resolve(Buffer.concat(chunks));
         response.writeHead(204); response.end(); return;
@@ -203,8 +214,12 @@ export class SceneHost {
     const sceneUrl = this.register(build);
     const context = await this.context();
     const page = await context.newPage();
-    const errors: string[] = [];
+    const errors: string[] = [], assets = new Set<string>();
     page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if (url.origin === this.origin && url.pathname.startsWith('/project/')) assets.add(decodeURIComponent(url.pathname.slice(9)));
+    });
     try {
       await page.goto(`${this.origin}/`, { timeout: hostTimeouts.load });
       await page.waitForFunction(() => 'mografyHost' in window, undefined, { timeout: hostTimeouts.load });
@@ -218,7 +233,7 @@ export class SceneHost {
       const scene = await bounded(page.evaluate(s => window.mografyHost.load(s), spec), hostTimeouts.load,
         `Scene setup did not finish within ${seconds(hostTimeouts.load)}. Check setup() for an await that never resolves (image, font or fetch) or a loop that never ends.`,
         () => context.close()) as LoadedScene;
-      return new HostPage(this, context, page, scene);
+      return new HostPage(this, context, page, scene, assets);
     } catch (error) {
       await context.close().catch(() => {});
       const detail = cleanError(error).message;
@@ -234,6 +249,16 @@ export class SceneHost {
         `Trial render did not finish within ${seconds(hostTimeouts.trial)}. renderFrame may contain a loop that never ends, or one frame is far too slow to preview.`,
         () => page.close()).catch(e => { throw cleanError(e); });
       return page.scene;
+    } finally { await page.close(); }
+  }
+
+  /** The project files a scene loads: run setup and a trial render, recording every request. */
+  async loadedAssets(build: SceneBuild, project: SceneProject) {
+    const page = await this.open(build, project, { renderScale: 0.25 });
+    try {
+      await bounded(page.page.evaluate(() => window.mografyHost.trial()), hostTimeouts.trial,
+        `Trial render did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); });
+      return [...page.assets].sort();
     } finally { await page.close(); }
   }
 

@@ -7,12 +7,13 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
+import { deckSlides, shotIssues } from '@mografy/core';
 import type { Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
 import { exportProject } from './export.js';
-import { launcherScript } from './launcher.js';
+import { launcherScript, trustCheckout } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { refreshSkill } from './skills.js';
 import { parse } from './options.js';
@@ -48,7 +49,7 @@ function helpText(color: boolean) {
       row('mografy install-command', 'Put the mografy command on PATH'),
     ]),
     section('Export options', [
-      row('--format <mp4|webm|lottie|svga>', 'Output format (default: mp4)'),
+      row('--format <mp4|webm|lottie|svga|html>', 'Output format (default: mp4); html writes a presentation file'),
       row('-o, --output <file>', 'File name, or a path inside renders/'),
       row('--orientation <landscape|portrait>', 'MP4/WebM at 16:9 or 9:16, fitting the whole scene'),
       row('--resolution <720p|1080p>', 'MP4/WebM size (default with orientation: 720p)'),
@@ -110,6 +111,7 @@ async function resolveProjectArg(arg: string) {
 
 /** Put a `mografy` launcher into a writable folder on PATH (no pnpm global setup needed). */
 async function installCommand() {
+  await trustCheckout(workspaceRoot);
   const candidates = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), 'bin')];
   const onPath = (process.env.PATH ?? '').split(delimiter);
   let target: string | undefined;
@@ -156,6 +158,7 @@ async function dev(dir: string, flags: Flags) {
     const snapshot = server.project.snapshot();
     console.log(`Mografy dev server: ${server.url}`);
     console.log(`Project: ${displayPath(dir)}`);
+    console.log(server.hmr ? 'Player: hot reload from source (Vite)' : 'Player: built files (Vite not installed; run `pnpm install` for hot reload)');
     console.log(snapshot.scene
       ? `Scene ${snapshot.scene.version} (${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s)`
       : `Scene failed to load:\n${snapshot.error?.message ?? ''}`);
@@ -180,6 +183,17 @@ async function checkProject(dir: string) {
   const passed = (snapshot: Snapshot) => {
     if (!snapshot.scene || snapshot.error) throw new Error(snapshot.error?.message ?? 'The scene did not publish.');
     console.log(`✓ Compiled and trial-rendered in Chromium\n  ${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s, version ${snapshot.scene.version}`);
+    const { meta, autoShots } = snapshot.scene;
+    if (meta.shots && autoShots) {
+      const count = deckSlides(meta, snapshot.project?.slides).length;
+      const where = snapshot.project?.slides?.shots ? 'slides.shots in mografy.json' : 'the running player';
+      console.log(`• No shots marked in the scene: ${count} slide${count === 1 ? '' : 's'} guessed from the ${autoShots} (${where}). Mark meta.shots to set them.`);
+    } else if (meta.shots) {
+      const issues = shotIssues(meta);
+      if (issues.length) throw new Error(issues.join('\n'));
+      const count = deckSlides(meta, snapshot.project?.slides).length;
+      console.log(`✓ ${meta.shots.length} shot${meta.shots.length === 1 ? '' : 's'}, ${count} presentation slide${count === 1 ? '' : 's'}`);
+    }
   };
   // A running player already owns this project: ask it, so the check uses its queue and Chromium
   // and the player shows the same result, instead of starting a second Chromium beside it.
@@ -199,6 +213,24 @@ function printReview(result: ReviewResult) {
   for (const file of result.files) console.log(`  ${displayPath(file)}`);
   console.log(`  ${displayPath(result.report)}`);
   if (result.comparisons.length) console.log(`  PSNR: ${result.comparisons.map(c => `#${c.frame} ${c.psnr}dB`).join(', ')}`);
+}
+
+async function exportDeckProject(dir: string) {
+  await requireProject(dir);
+  console.log(`Exporting presentation for ${displayPath(dir)}…`);
+  const running = await findServer(dir);
+  let result: { output: string; bytes: number; slides: number } | undefined;
+  if (running) {
+    const response = await fetch(new URL('/__mografy/deck', running.url), {
+      method: 'POST', headers: { 'x-mografy-project': encodeURIComponent(await realpath(resolve(dir))) },
+    });
+    if (response.status !== 409) result = await responseJson(response);
+  }
+  if (!result) {
+    const project = await Project.open(dir);
+    try { result = await project.exportDeck(); } finally { await project.close(); }
+  }
+  console.log(`✓ Presentation file written (${result.slides || 'no'} slides, ${(result.bytes / 1048576).toFixed(1)} MB)\n  ${displayPath(result.output)}\n  Open it in a browser to present; it works offline.`);
 }
 
 async function reviewProject(dir: string, video?: string) {
@@ -266,7 +298,7 @@ export async function main(argv = process.argv.slice(2)) {
     case 'check': return checkProject(dir);
     case 'review': return reviewProject(dir, flags.video);
     case 'export':
-    case 'render': return exportProject(dir, flags);
+    case 'render': return flags.format === 'html' && !flags.cancel ? exportDeckProject(dir) : exportProject(dir, flags);
     case 'stop': {
       const running = await findServer(dir);
       if (!running) { console.log('This project has no running dev server.'); return; }

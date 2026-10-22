@@ -6,6 +6,8 @@ export class AudioTrack {
   private ctx: AudioContext | null = null;
   private gain: GainNode | null = null;
   private source: AudioBufferSourceNode | null = null;
+  /** Per-source gain, so a fading source never touches the next one. */
+  private fade: GainNode | null = null;
   private src = '';
   private startedCtx = 0;
   private startedT = 0;
@@ -63,22 +65,33 @@ export class AudioTrack {
   }
   setMuted(muted: boolean) { this.muted = muted; this.applyGain(); this.refresh(); }
 
-  /** Start playing at scene time t. Returns false when sound cannot play yet. */
-  start(t: number) {
+  /** Start playing at scene time t, optionally fading in. Returns false when sound cannot play yet. */
+  start(t: number, fadeIn = 0) {
     this.stop();
     const ctx = this.ctx, buffer = this.buffer;
     if (!ctx || !buffer || ctx.state !== 'running') return false;
-    const source = ctx.createBufferSource();
-    source.buffer = buffer; source.connect(this.gain!);
+    const source = ctx.createBufferSource(), fade = ctx.createGain();
+    source.buffer = buffer; source.connect(fade); fade.connect(this.gain!);
     const at = ctx.currentTime + 0.01;
+    if (fadeIn > 0) { fade.gain.setValueAtTime(0, at); fade.gain.linearRampToValueAtTime(1, at + fadeIn); }
     if (t < buffer.duration) source.start(at, Math.max(0, t));
-    this.source = source; this.startedCtx = at; this.startedT = t;
+    this.source = source; this.fade = fade; this.startedCtx = at; this.startedT = t;
     return true;
   }
   stop() {
     if (!this.source) return;
     try { this.source.stop(); } catch { /* not started */ }
-    this.source.disconnect(); this.source = null;
+    this.source.disconnect(); this.fade?.disconnect(); this.source = null; this.fade = null;
+  }
+  /** Let the current source fade out on its own; the track stops driving the clock at once. */
+  fadeOut(seconds: number) {
+    const source = this.source, fade = this.fade, ctx = this.ctx;
+    if (!source || !fade || !ctx) { this.stop(); return; }
+    this.source = null; this.fade = null;
+    const now = ctx.currentTime;
+    fade.gain.cancelScheduledValues(now); fade.gain.setValueAtTime(fade.gain.value, now); fade.gain.linearRampToValueAtTime(0, now + seconds);
+    source.onended = () => { source.disconnect(); fade.disconnect(); };
+    try { source.stop(now + seconds + 0.02); } catch { source.disconnect(); fade.disconnect(); }
   }
   /** Scene time by the audio clock while playing, otherwise undefined. */
   now() {

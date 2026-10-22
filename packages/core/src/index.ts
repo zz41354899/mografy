@@ -10,6 +10,14 @@ const scalar = z.union([z.number().finite(), z.string(), z.boolean()]);
 
 // ---------------------------------------------------------------- scene module contract
 
+const shotSchema = z.strictObject({
+  /** When the shot ends (the next one starts). */
+  end: z.number().finite().positive(),
+  /** Where its slide waits: a settled frame. Default: one frame before `end`, or `end` for the last shot. */
+  stop: z.number().finite().nonnegative().optional(),
+  title: z.string().max(120).optional(),
+});
+const shotsSchema = z.array(shotSchema).min(1).max(200).refine(shots => shots.every((shot, i) => i === 0 || shot.end > shots[i - 1]!.end), 'Shot ends must be in increasing time order');
 export const sceneMetaSchema = z.strictObject({
   width: z.number().int().min(2).max(7680),
   height: z.number().int().min(2).max(7680),
@@ -17,6 +25,8 @@ export const sceneMetaSchema = z.strictObject({
   /** Preview stepping only. Output frame rate lives in mografy.json render settings. */
   fps: z.number().int().min(1).max(240),
   background: color,
+  /** The scene's shots, in order. Present mode makes one slide per shot; video ignores them. */
+  shots: shotsSchema.optional(),
 });
 export type SceneMeta = z.infer<typeof sceneMetaSchema>;
 export const aspectRatioSchema = z.enum(['16:9', '9:16']);
@@ -141,6 +151,69 @@ export const reviewSchema = z.strictObject({
   transitions: z.array(transitionSchema).max(32).default([]),
 });
 
+/** At a stop the picture freezes, or keeps replaying the last `loop` seconds before the stop (never past the previous stop). */
+const slideHoldSchema = z.union([z.literal('freeze'), z.strictObject({ loop: z.number().finite().positive().max(60) })]);
+/** Present mode's own notes on one slide (a shot of the scene). */
+export const slidePageSchema = z.strictObject({
+  title: z.string().max(120).optional(),
+  notes: z.string().max(4000).optional(),
+  hold: slideHoldSchema.optional(),
+});
+/** Presentation settings. The slides themselves are the scene's shots; video export ignores all of this. */
+export const slidesSchema = z.strictObject({
+  hold: slideHoldSchema.default('freeze'),
+  /** duck: music plays during transitions and fades out at each stop. off: silent presentation. */
+  music: z.enum(['duck', 'off']).default('duck'),
+  /** pages[i] belongs to shot i: title override, speaker notes, how it waits. */
+  pages: z.array(slidePageSchema).max(200).default([]),
+  /** Shots for a scene whose `meta` lists none (the scene's own shots win). `mografy update` writes Mografy's guess here. */
+  shots: shotsSchema.optional(),
+  /** Set while `shots` is Mografy's guess; remove it after correcting the shots by hand. */
+  guessedFrom: z.enum(['storyboard', 'picture']).optional(),
+});
+export type Slides = z.infer<typeof slidesSchema>;
+export type SlidePage = z.infer<typeof slidePageSchema>;
+export type Shot = NonNullable<SceneMeta['shots']>[number];
+/** Problems that need the scene's duration: shots the scene cannot reach. */
+export function shotIssues(meta: Pick<SceneMeta, 'duration' | 'shots'>): string[] {
+  return (meta.shots ?? []).flatMap((shot, i) => [
+    ...(shot.end > meta.duration + 1e-6 ? [`Shot ${i + 1} ends at ${shot.end}s, after the scene ends (${meta.duration}s).`] : []),
+    ...(shot.stop !== undefined && (shot.stop > shot.end + 1e-6 || shot.stop <= (meta.shots![i - 1]?.end ?? 0) - 1e-6) ? [`Shot ${i + 1} stops at ${shot.stop}s, outside the shot.`] : []),
+  ]);
+}
+
+export interface DeckSlide {
+  index: number;
+  /** The scene shot it comes from; its notes live at slides.pages[shot]. */
+  shot: number;
+  /** Where the transition into this slide starts (the previous stop, or 0). */
+  start: number;
+  /** The stop itself. */
+  at: number;
+  title: string; notes: string;
+  /** Start of the replayed range while holding, or null to freeze. */
+  loopFrom: number | null;
+}
+/**
+ * One slide per shot of the scene, waiting at the shot's stop; a scene without shots is one slide.
+ * Shots past the end are dropped, stops are kept in order, loops are clamped to their slide.
+ */
+export function deckSlides(meta: Pick<SceneMeta, 'duration' | 'fps' | 'shots'>, slides?: Slides): DeckSlide[] {
+  const { duration } = meta, frame = 1 / meta.fps;
+  const shots = (meta.shots ?? []).filter(shot => shot.end <= duration + 1e-6);
+  const list: Shot[] = shots.length ? shots : [{ end: duration }];
+  const out: DeckSlide[] = [];
+  list.forEach((shot, i) => {
+    const last = i === list.length - 1, start = out.at(-1)?.at ?? 0;
+    const at = Math.min(duration, shot.stop ?? (last && shot.end >= duration - 1e-6 ? duration : Math.max(0, shot.end - frame)));
+    if (out.length && at <= start + 1e-6) return;
+    const page = slides?.pages[i], hold = page?.hold ?? slides?.hold ?? 'freeze', index = out.length;
+    const loopFrom = hold === 'freeze' || at - start < 0.1 ? null : Math.max(start, at - hold.loop);
+    out.push({ index, shot: i, start, at, title: page?.title ?? shot.title ?? `Slide ${index + 1}`, notes: page?.notes ?? '', loopFrom });
+  });
+  return out;
+}
+
 /**
  * mografy.json stores project configuration only.
  * Animation content lives in the scene module; this file never stores layers or keyframes.
@@ -157,6 +230,7 @@ export const sceneProjectSchema = z.strictObject({
   audio: audioSchema.optional(),
   render: renderSettingsSchema.default(renderSettingsSchema.parse({})),
   review: reviewSchema.default(reviewSchema.parse({})),
+  slides: slidesSchema.optional(),
 });
 export type SceneProject = z.infer<typeof sceneProjectSchema>;
 export type SceneProjectInput = z.input<typeof sceneProjectSchema>;
@@ -174,6 +248,8 @@ export const projectPatchSchema = z.strictObject({
     times: reviewSchema.shape.times.unwrap().optional(),
     transitions: reviewSchema.shape.transitions.unwrap().optional(),
   }).optional(),
+  /** Replaces all presentation stops; null removes them. */
+  slides: slidesSchema.nullable().optional(),
 });
 export type ProjectPatch = z.infer<typeof projectPatchSchema>;
 const clientId = z.string().optional();
@@ -295,3 +371,5 @@ export function checkSceneSource(source: string): SceneSourceIssue[] {
 export type * from './protocol.js';
 export { sceneRuntimeKey } from './scene-inputs.js';
 export { GUIDE, SKILL, SKILL_REFERENCES, sharedSkillFiles, obsoleteStoryboardFiles, projectGuide, isLegacyAgentFile } from './guide.js';
+export { autoShots, storyboardShots, pictureShotEnds, settledStop } from './auto-shots.js';
+export type { AutoShots, AutoShotSource, MotionFrames } from './auto-shots.js';

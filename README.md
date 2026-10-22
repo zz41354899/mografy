@@ -262,6 +262,8 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 
 `--yes` is deprecated and ignored: `mografy dev` no longer creates missing projects; ask Claude or Codex for a new animation. Use `--no-open` to start the player without opening a browser, and `--port <port>` to choose its port (default: 4173, then the next free port). For `dev`, `check`, `review`, `export`, and `stop`, omitted project paths use `MOGRAFY_PROJECT` when set, otherwise the current project or the source checkout's default project. `mografy init` without a path creates a project in the current folder.
 
+**Open only projects you trust.** A project's scene code runs in the player page with the same access as the editor, so it can edit project files and open your other projects. Opening a project from someone else is like running their script. The player listens only on `127.0.0.1` and refuses requests from other sites. The `mografy` command uses a checkout around the current folder only when `pnpm install` was run there, so a downloaded folder that imitates one cannot run its code.
+
 ```text
 mografy/
   .agents/skills/mografy/       Shared Skill, references, and video-compression helper

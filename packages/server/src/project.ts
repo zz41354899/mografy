@@ -1,11 +1,11 @@
 // Project state: the only writer of mografy.json and scene sources.
 // Every change goes compile → Chromium trial render → publish, in one queue.
 import { EventEmitter } from 'node:events';
-import { mkdir, readFile, realpath } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, validateSceneProject } from '@mografy/core';
-import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
-import { buildScene, renderReview, SceneHost } from '@mografy/render';
+import type { AutoShots, ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
+import { buildScene, detectShots, readStoryboard, renderReview, SceneHost } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
 import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
 
@@ -13,6 +13,11 @@ import { ProjectWatcher } from './project-watcher.js';
 import { ProjectFrames } from './project-frames.js';
 import { RenderJobs } from './render-jobs.js';
 import { ApiError, describe } from './errors.js';
+import { exportDeck } from './deck.js';
+import { libraryDir } from './installation.js';
+
+/** The sixteen bundled component projects (library/.components/<id>): references, not presentations. */
+const isBuiltIn = (dir: string) => { const rel = relative(join(libraryDir(), '.components'), dir); return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.includes(sep); };
 export { ApiError } from './errors.js';
 const now = () => new Date().toISOString();
 
@@ -43,6 +48,10 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private thumbnail: string | null = null;
   private closed = false;
   private reviews = new Set<Promise<unknown>>();
+  /** Guessed shots for a scene that lists none, for the inputs in `key` (scene, settings, storyboard). */
+  private guess: (AutoShots & { key: string; duration: number }) | undefined;
+  private guessTimer: ReturnType<typeof setTimeout> | undefined;
+  private guessing: Promise<unknown> | undefined;
   private readonly watcher: ProjectWatcher;
   private readonly frames: ProjectFrames;
   private readonly jobs: RenderJobs;
@@ -81,16 +90,35 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   snapshot(): Snapshot {
     return structuredClone({
       sequence: this.sequence, url: this.url, projectDir: this.dir, revision: sha256(this.raw),
-      project: this.project, scene: this.scene, error: this.error, issues: this.issues,
-      state: this.state, render: this.jobs.status, thumbnail: this.thumbnail,
+      project: this.project, scene: this.presented(), error: this.error, issues: this.issues,
+      state: this.state, render: this.jobs.status, thumbnail: this.thumbnail, builtIn: isBuiltIn(this.dir),
     });
   }
+  /**
+   * The scene as clients see it. One that lists no shots carries the guessed ones, so Present mode,
+   * the presentation page and the HTML export all get one slide per shot. A guess for the previous
+   * version stands in while the new one is measured, as long as the length is unchanged.
+   */
+  private presented(): SceneInfo | null {
+    const scene = this.scene, guess = this.guess, slides = this.project?.slides;
+    if (!scene || scene.meta.shots?.length || isBuiltIn(this.dir)) return scene;
+    // Shots written to mografy.json (by hand, by an agent, or by `mografy update`) come next.
+    if (slides?.shots) return { ...scene, meta: { ...scene.meta, shots: slides.shots }, ...(slides.guessedFrom ? { autoShots: slides.guessedFrom } : {}) };
+    if (!guess || guess.duration !== scene.meta.duration) return scene;
+    return { ...scene, meta: { ...scene.meta, shots: guess.shots }, autoShots: guess.source };
+  }
   private publish(reason: string, clientId?: string) {
-    if (this.scene && (reason === 'scene' || reason === 'project')) this.scheduleThumb();
+    if (this.scene && (reason === 'scene' || reason === 'project')) { this.scheduleThumb(); this.scheduleGuess(); }
     this.sequence++;
     this.emit('event', { type: 'snapshot', reason, clientId, snapshot: this.snapshot() });
   }
   build(version: string) { return this.builds.get(version); }
+  /** Write the current version as a standalone presentation file under renders/. */
+  async exportDeck() {
+    if (isBuiltIn(this.dir)) throw new ApiError(409, 'BUILT_IN', 'Built-in components cannot be presented. Create your own project to make a presentation.');
+    const { project, build } = this.current(), scene = this.presented()!;
+    return exportDeck(this.dir, project, scene, build.code, await this.host.loadedAssets(build, project));
+  }
   current() {
     if (!this.project || !this.scene) throw new ApiError(409, 'NO_SCENE', this.error?.message ?? 'No working scene yet');
     return { project: this.project, scene: this.scene, build: this.builds.get(this.scene.version)! };
@@ -126,6 +154,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.builds.set(build.version, build);
     for (const key of [...this.builds.keys()].slice(0, -8)) this.builds.delete(key);
     await atomicWrite(join(this.dir, '.mografy', 'builds', `${build.version}.js`), build.code).catch(() => {});
+    await this.pruneBuilds().catch(() => {});
     const changed = this.scene?.version !== build.version || this.scene.meta.width !== meta.width || this.scene.meta.height !== meta.height;
     if (changed) this.scene = { version: build.version, meta, params, sources: build.sources, publishedAt: now(), reason };
     this.project = issues.length ? { ...project, params: values } : project;
@@ -134,6 +163,15 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.issues = issues.length ? issues : changed ? [] : this.issues;
     this.error = null;
     return { changed, issues };
+  }
+
+  /** Keep the newest saved builds on disk, so a player still showing a recent version can reload it. */
+  private async pruneBuilds(keep = 16) {
+    const folder = join(this.dir, '.mografy', 'builds');
+    const names = (await readdir(folder)).filter(name => /^[\da-f]{16}\.js$/.test(name) && !this.builds.has(name.slice(0, -3)));
+    const dated = await Promise.all(names.map(async name => ({ name, at: (await stat(join(folder, name)).catch(() => undefined))?.mtimeMs ?? 0 })));
+    const extra = Math.max(0, names.length + this.builds.size - keep);
+    for (const { name } of dated.sort((a, b) => a.at - b.at).slice(0, extra)) await unlink(join(folder, name)).catch(() => {});
   }
 
   /** Rebuild from disk (startup and file changes). Failures keep the last good version. */
@@ -148,6 +186,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         const hadError = !!this.error;
         const { changed } = await this.commit(project, prepared, reason);
         if (changed || manifestChanged || hadError || reason === 'startup') this.publish(changed ? 'scene' : 'project');
+        else this.scheduleGuess(); // the storyboard may have changed
       } catch (error) {
         const message = describe(error);
         if (this.error?.message !== message || reason === 'startup') { this.error = { message, reason, at: now() }; this.publish('error'); }
@@ -219,6 +258,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       if (patch.audio !== undefined) { if (patch.audio === null) delete next.audio; else next.audio = patch.audio; }
       if (patch.render) next.render = { ...project.render, ...patch.render };
       if (patch.review) next.review = { ...project.review, ...patch.review };
+      if (patch.slides !== undefined) { if (patch.slides === null) delete next.slides; else next.slides = patch.slides; }
       let validated: SceneProject;
       try { validated = validateSceneProject(next); } catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
       // Seed, canvas and the audio grid change the runtime even when compiled code is unchanged.
@@ -258,6 +298,38 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       const frames = outputFrameCount(scene.meta.duration, settings.fps);
       return page.png(cell.kind === 'raw' ? { kind: 'raw', t, label: '' } : { kind: 'output', k: Math.min(frames - 1, Math.floor(t * settings.fps + 1e-9)), label: '' }, settings);
     });
+  }
+
+  /** Guess shots in the background (outside the write queue), shortly after the scene settles. */
+  private scheduleGuess() {
+    clearTimeout(this.guessTimer);
+    if (this.closed || isBuiltIn(this.dir) || !this.scene || this.scene.meta.shots?.length || this.project?.slides?.shots) return;
+    this.guessTimer = setTimeout(() => { void this.refreshGuess(); }, 400);
+  }
+  /** Guesses run one after another; each skips work when its inputs match the last guess. */
+  private refreshGuess() {
+    const next = (this.guessing ?? Promise.resolve()).then(() => this.guessNow()).catch(() => {});
+    this.guessing = next;
+    return next;
+  }
+  private async guessNow() {
+    const scene = this.scene, project = this.project, build = scene && this.builds.get(scene.version);
+    if (this.closed || !scene || !project || !build || scene.meta.shots?.length || project.slides?.shots) return;
+    const storyboard = await readStoryboard(this.dir);
+    const key = sha256(JSON.stringify(['guess-1', sceneRuntimeKey(scene.version, project), project.params, storyboard ?? null]));
+    if (this.guess?.key === key) return;
+    const file = join(this.dir, '.mografy', 'auto-shots.json');
+    const saved = await readJson<AutoShots & { key?: string }>(file);
+    let result: AutoShots;
+    if (saved?.key === key && Array.isArray(saved.shots)) result = { source: saved.source, shots: saved.shots };
+    else {
+      const page = await this.host.open(build, project, { renderScale: 0.25 });
+      try { result = await detectShots(page, storyboard); } finally { await page.close(); }
+      await this.run(() => atomicWrite(file, JSON.stringify({ key, ...result }) + '\n')).catch(() => {});
+    }
+    if (this.closed || this.scene?.version !== scene.version) return;
+    this.guess = { ...result, key, duration: scene.meta.duration };
+    this.publish('shots');
   }
 
   private scheduleThumb() { this.frames.scheduleThumbnail(() => this.refreshThumbnail()); }
@@ -307,7 +379,8 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.closed = true;
     this.watcher.close();
     this.frames.cancelThumbnail();
-    clearTimeout(this.stateTimer);
+    clearTimeout(this.stateTimer); clearTimeout(this.guessTimer);
+    await this.guessing;
     await this.jobs.close();
     await Promise.allSettled([...this.reviews]);
     await this.queue;

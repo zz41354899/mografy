@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Project } from '../src/project.js';
+import { syncProjectSlides } from '../src/slides-sync.js';
 
 const source = `
 export const meta = { width: 64, height: 64, duration: 1, fps: 10, background: '#000000' };
@@ -135,4 +136,53 @@ test('review renders outside the project queue and never compares an unrelated v
   assert.equal(review.comparisons.length, 0);
   assert.ok(review.files.length >= 2);
   for (const file of review.files) await readFile(file);
+});
+
+test('a scene without shots gets guessed slides from its storyboard, and its own shots win', async t => {
+  const { dir, project } = await fixture(t);
+  await mkdir(join(dir, 'storyboards'));
+  await writeFile(join(dir, 'storyboards/storyboard.md'), '| Shot | Time | Purpose |\n| --- | --- | --- |\n| S01 | 0–0.6 | Open |\n| S02 | 0.6–1 | Close |\n');
+  const guessed = new Promise<void>(done => project.on('event', event => { if (event.type === 'snapshot' && event.reason === 'shots') done(); }));
+  await project.check();
+  await guessed;
+  const scene = project.snapshot().scene!;
+  assert.equal(scene.autoShots, 'storyboard');
+  assert.deepEqual(scene.meta.shots!.map(s => [s.end, s.title]), [[0.6, 'Open'], [1, 'Close']]);
+  assert.match(await readFile(join(dir, '.mografy/auto-shots.json'), 'utf8'), /"storyboard"/);
+  await writeFile(join(dir, 'scenes/main.ts'), source.replace("fps: 10,", "fps: 10, shots: [{ end: 1, title: 'Own' }],"));
+  await project.check();
+  assert.equal(project.snapshot().scene!.autoShots, undefined);
+  assert.deepEqual(project.snapshot().scene!.meta.shots, [{ end: 1, title: 'Own' }]);
+});
+
+test('install writes guessed slides into mografy.json once, and the player presents them', async t => {
+  const { dir, project } = await fixture(t);
+  await project.close();
+  await mkdir(join(dir, 'storyboards'));
+  await writeFile(join(dir, 'storyboards/storyboard.md'), '| Shot | Time | Purpose |\n| --- | --- | --- |\n| S01 | 0–0.6 | Open |\n| S02 | 0.6–1 | Close |\n');
+  assert.deepEqual(await syncProjectSlides(dir), { result: 'written', slides: 2, source: 'storyboard' });
+  const written = JSON.parse(await readFile(join(dir, 'mografy.json'), 'utf8'));
+  assert.deepEqual(Object.keys(written), ['version', 'name', 'scene', 'seed', 'slides'], 'only slides is added');
+  assert.equal(written.slides.guessedFrom, 'storyboard');
+  assert.deepEqual(written.slides.shots.map((s: { end: number; title: string }) => [s.end, s.title]), [[0.6, 'Open'], [1, 'Close']]);
+  assert.deepEqual(await syncProjectSlides(dir), { result: 'skipped', reason: 'slides' });
+  const reopened = await Project.open(dir);
+  t.after(() => reopened.close());
+  const scene = reopened.snapshot().scene!;
+  assert.equal(scene.autoShots, 'storyboard');
+  assert.deepEqual(scene.meta.shots, written.slides.shots);
+});
+
+test('the presentation file embeds only the assets the scene loads', async t => {
+  const { dir, project } = await fixture(t);
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await writeFile(join(dir, 'assets/used.png'), png);
+  await writeFile(join(dir, 'assets/unused.png'), png);
+  await writeFile(join(dir, 'scenes/main.ts'), source.replace('export function setup() {}', `let image;
+export async function setup(ctx) { image = await ctx.loadImage('assets/used.png'); }`));
+  await project.check();
+  const { output } = await project.exportDeck();
+  const html = await readFile(output, 'utf8');
+  assert.match(html, /"assets\/used\.png"/);
+  assert.doesNotMatch(html, /assets\/unused\.png|assets\/music\.wav/, 'files the scene never loads stay out');
 });

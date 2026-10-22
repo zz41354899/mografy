@@ -48,7 +48,7 @@ textarea { display: block; resize: vertical; min-height: 58px; max-height: 240px
 .text-help { margin: 0 0 18px; color: var(--muted); font-size: 12px; }
 input[type=number] { font-variant-numeric: tabular-nums; }
 
-.app { display: grid; grid-template-rows: auto auto auto auto 1fr; height: 100%; }
+.app { display: grid; grid-template-rows: auto auto auto auto 1fr; height: 100%; overflow-x: clip; }
 
 /* ---------------------------------------------------------------- top bar */
 .topbar { min-width: 0; max-width: 100vw; display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-bottom: 1px solid var(--line); }
@@ -86,7 +86,10 @@ input[type=number] { font-variant-numeric: tabular-nums; }
   background: var(--scene-bg); cursor: pointer;
   box-shadow: 0 1px 0 rgba(255, 255, 255, .06), 0 24px 60px -20px rgba(0, 0, 0, .55);
 }
-.stage-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage-canvas, .stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+/* Each version runs in its own iframe; clicks and keys stay with the stage. */
+.stage-frame { border: 0; pointer-events: none; }
+.scene-scratch { position: fixed; left: 0; top: 0; width: 0; height: 0; border: 0; pointer-events: none; }
 .guides { position: absolute; inset: 0; pointer-events: none; }
 .guides i { position: absolute; border: 1px dashed rgba(255, 255, 255, .35); }
 .guides .action { inset: 3.5%; }
@@ -453,3 +456,76 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
 }
 
 @media (max-width: 600px) { .last-export { padding: 7px; }.last-export span { display: none; } }
+
+
+/* ---------------------------------------------------------------- Present mode */
+/* Slides app layout: slide rail on the left, the stage, and a desk under it (title, rehearse, hold,
+   speaker notes). No inspector and no timeline: slides come from the scene's shots. */
+.mode-switch { flex: 0 0 auto; display: grid; grid-template-columns: 1fr 1fr; position: relative; margin-left: 4px; }
+.mode-switch button { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 3px 12px; transition: color .2s; }
+.mode-switch button.on { background: none; }
+/* The highlight slides between the two modes; transform only, so it never triggers layout. */
+.mode-switch::before { content: ""; position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 3px); border-radius: inherit; background: var(--text); transition: transform .22s cubic-bezier(.3, .7, .2, 1); }
+.mode-switch[data-mode=present]::before { transform: translateX(calc(100% + 2px)); }
+/* Side panels slide in when a mode or the projects toggle brings them back; .app clips the offset so it never adds a scrollbar. */
+.projects, .slide-rail { animation: panel-in-left .22s ease-out both; }
+.workspace > .inspector { animation: panel-in-right .22s ease-out both; }
+@keyframes panel-in-left { from { opacity: 0; transform: translateX(-10px); } }
+@keyframes panel-in-right { from { opacity: 0; transform: translateX(10px); } }
+.mode-switch button.unavailable:not(.on) { color: var(--faint); }
+.topbar-secondary { display: flex; align-items: center; gap: 7px; padding: 6px 12px; }
+.workspace.presenting { grid-template-columns: 232px minmax(0, 1fr); }
+.workspace.presenting.rail-hidden { grid-template-columns: minmax(0, 1fr); }
+.stop-mark { position: absolute; bottom: 0; z-index: 2; width: 14px; height: 10px; margin-left: -7px; padding: 0; border: 0; background: none; color: var(--signal); cursor: pointer; }
+/* Slide marks sit on the seconds ruler: the triangle's tip is the stop time, a faint line runs down the lane. */
+.stop-mark::before { content: ""; position: absolute; left: 1px; top: 0; width: 12px; height: 10px; background: currentColor; clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.stop-mark::after { content: ""; position: absolute; left: 6.5px; top: 10px; width: 1px; height: 50px; background: currentColor; opacity: .3; pointer-events: none; }
+.stop-mark:hover, .stop-mark:focus-visible { color: #5ee6d6; outline: none; }
+.stop-mark:hover::after, .stop-mark:focus-visible::after { opacity: .8; }
+
+.slide-rail { border-right: 1px solid var(--line); overflow: auto; display: flex; flex-direction: column; min-height: 0; }
+.slide-rail > header { display: flex; align-items: center; gap: 8px; padding: 14px 16px 8px; }
+.slide-rail h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.slide-total { padding: 0 7px; border-radius: 9px; background: var(--ui-raised); color: var(--muted); font-size: 11.5px; line-height: 18px; }
+.slide-rail ol { list-style: none; margin: 0; padding: 4px 12px 12px; display: grid; gap: 10px; }
+.rail-slide { display: grid; grid-template-columns: 18px 1fr; grid-template-rows: auto auto; column-gap: 6px; row-gap: 5px; width: 100%; padding: 0; background: none; text-align: left; }
+.rail-slide:hover:not(:disabled) { background: none; }
+.rail-number { grid-row: 1; align-self: start; padding-top: 2px; color: var(--faint); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.rail-thumb { grid-column: 2; position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: var(--surround); outline: 2px solid transparent; outline-offset: 2px; transition: outline-color .12s; }
+.rail-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.rail-thumb i { display: block; width: 100%; height: 100%; background: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 5px, transparent 5px 10px); }
+.rail-slide:hover .rail-thumb { outline-color: var(--ui-hover); }
+.rail-slide.current .rail-thumb { outline-color: var(--signal); }
+.rail-slide.current .rail-number { color: var(--signal); font-weight: 700; }
+.rail-loop { position: absolute; right: 5px; bottom: 5px; padding: 2px; border-radius: 4px; background: rgba(0,0,0,.6); color: var(--warn); box-sizing: content-box; }
+.rail-title { grid-column: 2; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-slide.current .rail-title { color: var(--text); }
+.rail-hint { display: flex; gap: 6px; margin: 0 12px 12px; padding: 10px; border-radius: 8px; background: var(--ui-raised); color: var(--muted); font-size: 12px; line-height: 1.5; }
+.rail-hint svg { flex: none; margin-top: 2px; }
+
+
+.viewer.presenting { grid-template-rows: minmax(0, 1fr) auto; }
+/* The playback menu floats in the middle of the stage; it steps aside while you watch. */
+.slide-controls { position: absolute; left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px; padding: 6px;
+  border-radius: 999px; background: rgba(20, 21, 24, .72); box-shadow: 0 10px 40px rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .08);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); opacity: 0; transition: opacity .2s; }
+.surround:hover .slide-controls, .slide-controls:focus-within { opacity: 1; }
+.slide-controls.playing { transition-delay: .6s; }
+.surround:hover .slide-controls.playing:not(:hover) { opacity: .35; }
+.slide-controls .desk-nav { width: 40px; height: 40px; flex: none; display: grid; place-items: center; padding: 0; border-radius: 50%; background: transparent; color: var(--text); }
+.slide-controls .desk-nav:hover:not(:disabled) { background: rgba(255, 255, 255, .12); }
+.slide-controls .desk-nav:disabled { opacity: .3; }
+.desk-play { width: 56px; height: 56px; display: grid; place-items: center; padding: 0; border-radius: 50%; background: var(--signal); color: var(--signal-ink); }
+.desk-play:hover { background: #19c7b6; }
+.desk-mute { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border-radius: 50%; background: transparent; color: var(--text); }
+.desk-mute:hover:not(:disabled) { background: rgba(255, 255, 255, .12); }
+.desk-mute.on { color: var(--warn); }
+.desk-mute:disabled { opacity: .35; }
+@media (max-width: 900px) { .mode-switch button { padding: 3px 8px; } .mode-switch svg { display: none; } }
+/* Phones: icons only, so Export stays on screen; the labels remain for screen readers. */
+@media (max-width: 600px) { .mode-switch { margin-left: 0; } .mode-switch button { position: relative; padding: 3px 7px; } .mode-switch svg { display: block; } .mode-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } }
+@media (max-width: 960px) { .workspace.presenting { grid-template-columns: 1fr; } .slide-rail { border-right: 0; border-bottom: 1px solid var(--line); max-height: 40vh; } }
+/* Phones: Start and Export HTML become icons so both stay on screen; their text remains the accessible name. */
+@media (max-width: 600px) { .topbar-end .topbar-secondary, .presenting-export { gap: 0; padding: 6px 9px; font-size: 0; } }
+/* Touch screens have no hover: keep the menu visible, low on the stage. */
+@media (hover: none) { .slide-controls { top: auto; bottom: 12px; transform: translateX(-50%); opacity: 1; } }

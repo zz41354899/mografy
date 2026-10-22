@@ -136,12 +136,16 @@ New projects include `scenes/components.ts`, `scenes/social-components.ts`, and 
 For a new animation, create the project first with `mografy init projects/<name>` (an internal command for agents; it starts as a blank stage with the component modules), then replace `scenes/main.ts` and open it with `mografy dev projects/<name>` so the running player switches to it. `mografy dev` only opens existing projects and fails on a folder without `mografy.json`. Do not tell the user to run `init` themselves.
 
 1. Read `mografy.json`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
-2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render, and review settings.
+2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render, review, and presentation (`slides`) settings.
 3. Run `mografy check [project]`. This compiles the scene and trial-renders it in real Chromium. Fix every reported error before judging the design.
 4. Run `mografy review [project]`. Inspect every generated PNG in `renders/`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
 5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity, and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
 6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use `mografy dev [project]` when the user should watch the live result.
 7. Export with `mografy export [project] --format mp4|webm|lottie|svga`. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `mografy dev` is running, player exports also print progress in that terminal and can be stopped with `mografy export [project] --cancel`.
+
+## Presentations
+
+The same project can be presented live, one slide per shot, from the editor's Present mode. Slides come only from the scene: export `meta.shots` (`[{ end, stop?, title? }, …]`) in the scene's `meta`; presentation titles, notes and holds live in `mografy.json` `slides`. To mark shots, follow [presentations.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/presentations.md): read the scene files and `mografy.json`, find each shot, pick a settled stop frame, write `meta.shots`, then `mografy check` and inspect `review-<version>-slides.png` from `mografy review`. Video export ignores shots and `slides`.
 
 Only important subtitles belong in `role: 'subtitle'` params. Let the user edit those in Scene → Subtitles; make other copy changes in source when requested.
 

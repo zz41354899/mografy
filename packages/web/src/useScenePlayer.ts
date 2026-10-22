@@ -28,11 +28,13 @@ export function useScenePlayer(stage: RefObject<HTMLDivElement | null>, snapshot
     if (!player || !version || !project || !dir) return;
     let cancelled = false;
     const previous = player.version;
-    if (started.current !== dir) player.seek(snapshot?.state.playhead ?? 0);
+    // A project always opens at 0s; live edits to the same project keep the playhead where it is.
+    if (started.current !== dir) { player.pause(); player.seek(0); }
     void player.load(version, project, values).then(() => {
       if (cancelled) return;
       setError('');
-      if (started.current !== dir) { started.current = dir; player.play(); }
+      // A project opens paused; it plays only when asked.
+      if (started.current !== dir) started.current = dir;
       if (previous && previous !== version) {
         setMessage(`Updated to ${version.slice(0, 7)}`);
         clearTimeout(messageTimer.current);

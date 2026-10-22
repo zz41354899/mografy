@@ -163,15 +163,14 @@ test('portrait canvas persists, reopens, previews and exports both MP4 orientati
   await api('project','PATCH',{patch:{render:{fps:1,samples:1,glow:0,grain:0,workers:1,encoding:'crf',preset:'veryfast'}}});
   assert.equal(await page.getByRole('group',{name:'Canvas orientation'}).count(),0);
   await api('project','PATCH',{patch:{aspectRatio:'9:16'}});
-  await page.waitForFunction(() => { const c = document.querySelector<HTMLCanvasElement>('canvas.stage-canvas'); return c && c.height / c.width === 16/9; });
+  await page.waitForFunction(() => { const c = [...document.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame:not([style*=hidden])')].at(-1)?.contentDocument?.querySelector<HTMLCanvasElement>('canvas.stage-canvas'); return c && c.height / c.width === 16/9; });
   assert.equal((await api('snapshot')).data.scene.meta.width,1080);
   assert.equal(JSON.parse(await readFile(join(dir,'mografy.json'),'utf8')).aspectRatio,'9:16');
   // Rebuild with exactly the same source version must retain the effective canvas.
   await api('source','POST',{files:{'scenes/main.ts':source}});
   assert.equal((await api('snapshot')).data.scene.meta.height,1920);
   await page.reload();
-  await page.waitForFunction(() => document.querySelector<HTMLCanvasElement>('canvas.stage-canvas')?.height! > document.querySelector<HTMLCanvasElement>('canvas.stage-canvas')?.width!);
-  await page.getByRole('button',{name:'Pause',exact:true}).click();
+  await page.waitForFunction(() => [...document.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame:not([style*=hidden])')].at(-1)?.contentDocument?.querySelector<HTMLCanvasElement>('canvas.stage-canvas')?.height! > [...document.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame:not([style*=hidden])')].at(-1)?.contentDocument?.querySelector<HTMLCanvasElement>('canvas.stage-canvas')?.width!);
   const still = await fetch(new URL('/__mografy/still?t=0&kind=raw',server.url));
   const png = Buffer.from(await still.arrayBuffer());
   assert.deepEqual([png.readUInt32BE(16),png.readUInt32BE(20)],[1080,1920]);
@@ -235,12 +234,12 @@ test('portrait canvas persists, reopens, previews and exports both MP4 orientati
   assert.equal(horizontal.length,1280*720*4);
   assert.equal(await readFile(join(dir,'mografy.json'),'utf8'),manifest);
   await api('project','PATCH',{patch:{aspectRatio:'16:9'}});
-  await page.waitForFunction(() => { const c=document.querySelector<HTMLCanvasElement>('canvas.stage-canvas');return c && c.width/c.height===16/9; });
+  await page.waitForFunction(() => { const c=[...document.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame:not([style*=hidden])')].at(-1)?.contentDocument?.querySelector<HTMLCanvasElement>('canvas.stage-canvas');return c && c.width/c.height===16/9; });
   assert.equal((await api('snapshot')).data.scene.meta.width,1920);
   // Disk-edited aspect ratio is watched even if the compiled scene hash stays unchanged.
   const disk = JSON.parse(await readFile(join(dir,'mografy.json'),'utf8'));disk.aspectRatio='9:16';
   await writeFile(join(dir,'mografy.json'),JSON.stringify(disk));
-  await page.waitForFunction(() => {const c=document.querySelector<HTMLCanvasElement>('canvas.stage-canvas');return c && c.height/c.width===16/9;});
+  await page.waitForFunction(() => {const c=[...document.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame:not([style*=hidden])')].at(-1)?.contentDocument?.querySelector<HTMLCanvasElement>('canvas.stage-canvas');return c && c.height/c.width===16/9;});
 });
 
 test('export dialog continues through progress, background work, cancellation, failure, retry and download', { timeout: 120_000 }, async () => {

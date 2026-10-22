@@ -47,6 +47,8 @@ export interface SceneRuntime {
 export interface FontSource { family: string; path: string; weight?: number | undefined }
 export interface RuntimeOptions {
   seed?: number; renderScale?: number; assetBase?: string; params?: ParameterValues;
+  /** Project-relative path → URL, for assets that are not served under assetBase (a standalone presentation file). */
+  assetUrls?: Record<string, string> | undefined;
   fonts?: FontSource[]; audio?: BeatGrid | undefined;
   outputSize?: ExportSize | undefined;
   aspectRatio?: AspectRatio | undefined;
@@ -64,6 +66,8 @@ function checkAssetPath(path: string) {
 }
 
 export async function createSceneRuntime(element: HTMLCanvasElement, scene: SceneModule, options: RuntimeOptions = {}): Promise<SceneRuntime> {
+  // The canvas's own document and window: the player loads each version in its own iframe.
+  const doc = element.ownerDocument, win = (doc.defaultView ?? window) as typeof globalThis;
   const meta = sceneMetaForAspect(sceneMetaSchema.parse(scene.meta), options.aspectRatio), definitions = parameterDefinitionsSchema.parse(scene.params);
   if (options.outputSize) {
     const size = exportSizeSchema.parse(options.outputSize);
@@ -74,7 +78,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       return createSceneRuntime(element, { ...scene, meta: layout }, { ...options, aspectRatio: undefined, outputSize: { ...size, fit: 'contain' } });
     }
     const factor = size.fit === 'cover' ? Math.max(size.width / meta.width, size.height / meta.height) : Math.min(size.width / meta.width, size.height / meta.height);
-    const source = document.createElement('canvas');
+    const source = doc.createElement('canvas');
     const runtime = await createSceneRuntime(source, { ...scene, meta }, { ...options, aspectRatio: undefined, outputSize: undefined, renderScale: Math.min(4, factor) });
     element.width = size.width; element.height = size.height;
     const ctx = element.getContext('2d', { willReadFrequently: true });
@@ -95,14 +99,16 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   const scale = options.renderScale ?? 1, seed = (options.seed ?? 1) >>> 0;
   if (!Number.isFinite(scale) || scale <= 0 || scale > 4) throw new Error('Invalid renderScale');
   resolveParams(definitions, options.params ?? {});
-  const url = (path: string) => { checkAssetPath(path); return new URL(path, new URL(options.assetBase ?? './', document.baseURI)).href; };
+  const url = (path: string) => { checkAssetPath(path); return options.assetUrls?.[path] ?? new URL(path, new URL(options.assetBase ?? './', doc.baseURI)).href; };
 
   // Fonts must be ready before setup measures text and before any frame is drawn.
+  // dispose() removes them again, so reloading versions does not pile up faces in the document.
+  const faces: FontFace[] = [];
   for (const font of options.fonts ?? []) {
-    const face = new FontFace(font.family, `url(${JSON.stringify(url(font.path))})`, { weight: String(font.weight ?? 400) });
-    document.fonts.add(await face.load());
+    const face = new win.FontFace(font.family, `url(${JSON.stringify(url(font.path))})`, { weight: String(font.weight ?? 400) });
+    doc.fonts.add(await face.load()); faces.push(face);
   }
-  await document.fonts.ready;
+  await doc.fonts.ready;
 
   element.width = Math.max(1, Math.round(meta.width * scale)); element.height = Math.max(1, Math.round(meta.height * scale));
   const sx = element.width / meta.width, sy = element.height / meta.height, effect = Math.sqrt(sx * sy);
@@ -110,9 +116,9 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   await scene.setup({
     width: meta.width, height: meta.height, seed, random: seededRandom(seed), assets, asset: url,
     async loadImage(path) {
-      const response = await fetch(url(path));
+      const response = await win.fetch(url(path));
       if (!response.ok) throw new Error(`Image failed: ${path} (${response.status})`);
-      return createImageBitmap(await response.blob());
+      return win.createImageBitmap(await response.blob());
     },
   });
   Object.freeze(assets);
@@ -181,16 +187,20 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       // reset() also discards clip regions and unbalanced save stacks from the previous call.
       ctx.reset(); ctx.setTransform(base); ctx.fillStyle = meta.background; ctx.fillRect(0, 0, meta.width, meta.height);
       drawing.reset();
-      const saved = guard ? { random: Math.random, now: Date.now, perf: performance.now } : undefined;
-      if (saved) { Math.random = blocked('Math.random'); Date.now = blocked('Date.now'); performance.now = blocked('performance.now'); }
+      // The scene's own globals: in an iframe they differ from this module's.
+      const { Math: math, Date: date, performance: perf } = win;
+      const saved = guard ? { random: math.random, now: date.now, perf: perf.now } : undefined;
+      if (saved) { math.random = blocked('Math.random'); date.now = blocked('Date.now'); perf.now = blocked('performance.now'); }
       let result: unknown;
       try { result = scene.renderFrame(frame, time, resolved); }
-      finally { if (saved) { Math.random = saved.random; Date.now = saved.now; performance.now = saved.perf; } }
+      finally { if (saved) { math.random = saved.random; date.now = saved.now; perf.now = saved.perf; } }
       if (result instanceof Promise) throw new Error('renderFrame must be synchronous');
     },
     dispose() {
       disposed = true;
-      for (const value of Object.values(assets)) if (typeof ImageBitmap !== 'undefined' && value instanceof ImageBitmap) value.close();
+      const Bitmap = win.ImageBitmap ?? (typeof ImageBitmap === 'undefined' ? undefined : ImageBitmap);
+      for (const value of Object.values(assets)) if (Bitmap && value instanceof Bitmap) value.close();
+      for (const face of faces) doc.fonts.delete(face);
     },
   };
 }

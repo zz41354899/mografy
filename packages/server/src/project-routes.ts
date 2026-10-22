@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { projectFile } from '@mografy/render';
 import type { Cell } from '@mografy/render';
@@ -23,6 +23,8 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
   }
   if (route.startsWith('GET /files/') || route.startsWith('HEAD /files/')) {
     const file = await projectFile(project.dir, decodeURIComponent(path.slice('/__mografy/files/'.length))).catch(error => { throw new ApiError(404, 'NOT_FOUND', String(error.message)); });
+    // ?download saves the file under its own name (Unicode names included) instead of opening it.
+    if (url.searchParams.has('download')) response.setHeader('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(basename(file))}`);
     return sendFile(request, response, file);
   }
   switch (route) {
@@ -80,6 +82,7 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
       return json(response, 202, project.cancelRender(id));
     }
     case 'POST /review': return json(response, 200, await project.review());
+    case 'POST /deck': return json(response, 200, await project.exportDeck());
     case 'POST /check': return json(response, 200, await project.check());
   }
   throw new ApiError(404, 'NOT_FOUND', `Unknown endpoint: ${route}`);

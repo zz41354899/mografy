@@ -3,7 +3,7 @@ import { beatAt } from '@mografy/core';
 import type { SceneProject } from '@mografy/core';
 import type { ScenePlayer } from './player.js';
 
-export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProject['audio'], toggleGuides: () => void, toggleProjects: () => void) {
+export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProject['audio'], toggleGuides: () => void, toggleProjects: () => void, enabled = true) {
   const seekBy = useCallback((direction: number, coarse: boolean) => {
     if (!player) return;
     if (!coarse) { player.step(direction); return; }
@@ -16,7 +16,7 @@ export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProje
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (!player || event.defaultPrevented || target?.closest('dialog, input, textarea, select, [contenteditable="true"]') || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!enabled || !player || event.defaultPrevented || target?.closest('dialog, input, textarea, select, [contenteditable="true"]') || event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.code === 'Space') { if (target?.closest('button, summary')) return; event.preventDefault(); player.toggle(); }
       else if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') { event.preventDefault(); seekBy(event.code === 'ArrowLeft' ? -1 : 1, event.shiftKey); }
       else if (event.code === 'Home') { event.preventDefault(); player.pause(); player.seek(0); }
@@ -27,6 +27,6 @@ export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProje
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [player, seekBy, toggleGuides, toggleProjects]);
+  }, [enabled, player, seekBy, toggleGuides, toggleProjects]);
   return seekBy;
 }

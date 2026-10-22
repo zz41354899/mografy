@@ -2,7 +2,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { dirname, extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import type { ServerEvent } from '@mografy/core';
@@ -16,9 +16,23 @@ import { ensureComponentProjects } from './components.js';
 
 const webDist = () => join(dirname(fileURLToPath(import.meta.resolve('@mografy/web/package.json'))), 'dist');
 
-export interface StartOptions { port?: number; quiet?: boolean }
+export interface StartOptions {
+  port?: number; quiet?: boolean;
+  /** Serve the player from source with Vite hot reload when Vite is installed (default). false serves dist/. */
+  hmr?: boolean;
+}
+interface PlayerDevServer { handle(request: IncomingMessage, response: ServerResponse): Promise<boolean>; ownsUpgrade(request: IncomingMessage): boolean; close(): Promise<void> }
+/** Vite is a development dependency of the player: present in a checkout after pnpm install, absent otherwise. */
+async function playerDevServer(server: Server): Promise<PlayerDevServer | null> {
+  try {
+    const { createPlayerDevServer } = await import('@mografy/web/dev-server' as string) as { createPlayerDevServer(server: Server): Promise<PlayerDevServer> };
+    return await createPlayerDevServer(server);
+  } catch { return null; }
+}
 export interface RunningServer {
   url: string;
+  /** The player is served from source with Vite hot reload. */
+  hmr: boolean;
   /** The project currently shown (changes when the player switches projects). */
   readonly project: Project;
   switchProject(dir: string): Promise<unknown>;
@@ -36,7 +50,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     socket.on('message', () => socket.close(1008, 'Use the HTTP API'));
     send(socket, { type: 'snapshot', reason: 'initial', snapshot: session.project.snapshot() });
   });
-  let stopping = false;
+  let stopping = false, player: PlayerDevServer | null = null;
 
   const handle = async (request: IncomingMessage, response: ServerResponse) => {
     const url = new URL(request.url ?? '/', 'http://localhost');
@@ -45,10 +59,13 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     if (stopping) throw new ApiError(503, 'CLOSED', 'Server is closing');
     if (!path.startsWith('/__mografy/')) {
       if (method !== 'GET' && method !== 'HEAD') throw new ApiError(405, 'METHOD', 'Method not allowed');
+      if (player && await player.handle(request, response)) return;
       const root = webDist(), file = normalize(join(root, path === '/' ? 'index.html' : decodeURIComponent(path)));
-      if (!file.startsWith(root)) throw new ApiError(404, 'NOT_FOUND', 'Not found');
-      const data = await readFile(file).catch(() => readFile(join(root, 'index.html')));
-      response.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+      if (!file.startsWith(root + sep)) throw new ApiError(404, 'NOT_FOUND', 'Not found');
+      // Page routes without an extension get the player; a missing file is a 404, never HTML labelled as its type.
+      const page = !extname(file) || file === join(root, 'index.html');
+      const data = await readFile(page ? join(root, 'index.html') : file).catch(() => { throw new ApiError(404, 'NOT_FOUND', 'Not found'); });
+      response.writeHead(200, { 'content-type': page ? MIME['.html']! : MIME[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
       response.end(method === 'HEAD' ? undefined : data); return;
     }
     const route = `${method} ${path.replace(/^\/__mografy/, '')}`;
@@ -71,6 +88,8 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     });
   });
   server.on('upgrade', (request, socket, head) => {
+    // Vite answers its own HMR socket, but only for the same-origin localhost player.
+    if (player?.ownsUpgrade(request)) { if (!allowed(request)) socket.destroy(); return; }
     if (new URL(request.url ?? '/', 'http://localhost').pathname !== '/__mografy/events' || !allowed(request)) { socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return; }
     sockets.handleUpgrade(request, socket, head, ws => sockets.emit('connection', ws, request));
   });
@@ -80,9 +99,10 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     for (const socket of sockets.clients) socket.terminate();
     const stopped = new Promise<void>(done => server.close(() => done()));
     server.closeAllConnections();
-    try { await session.close(); } finally { await stopped; sockets.close(); }
+    try { await Promise.all([session.close(), player?.close()]); } finally { await stopped; sockets.close(); }
   })();
   try {
+    if (options.hmr !== false && process.env.MOGRAFY_HMR !== '0') player = await playerDevServer(server);
     const first = options.port ?? 4173;
     let port = first;
     for (;; port++) {
@@ -98,6 +118,6 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     const url = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : port}/`;
     await session.activate(url);
     heartbeat = setInterval(() => { for (const socket of sockets.clients) socket.ping(); }, 20000); heartbeat.unref();
-    return { url, get project() { return session.project; }, switchProject: dir => session.switchProject(dir), close };
+    return { url, hmr: player !== null, get project() { return session.project; }, switchProject: dir => session.switchProject(dir), close };
   } catch (error) { await close(); throw error; }
 }

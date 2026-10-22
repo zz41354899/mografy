@@ -7,7 +7,8 @@ export interface Flags {
   yes: boolean;
   output?: string | undefined;
   video?: string | undefined;
-  format?: ExportFormat | undefined;
+  /** `html` is the presentation file, written directly rather than as a render job. */
+  format?: ExportFormat | 'html' | undefined;
   orientation?: 'landscape' | 'portrait';
   resolution?: '720p' | '1080p';
   cancel: boolean;
@@ -26,7 +27,7 @@ export function parse(argv: string[]) {
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];
-    else if (value === '--format') flags.format = exportFormatSchema.parse(argv[++i]);
+    else if (value === '--format') { const v = argv[++i]; flags.format = v === 'html' ? 'html' : exportFormatSchema.parse(v); }
     else if (value === '--orientation') { const v = argv[++i]; if (v !== 'landscape' && v !== 'portrait') throw new Error('--orientation must be landscape or portrait'); flags.orientation = v; }
     else if (value === '--resolution') { const v = argv[++i]; if (v !== '720p' && v !== '1080p') throw new Error('--resolution must be 720p or 1080p'); flags.resolution = v; }
     else if (value.startsWith('-') && value !== '-h' && value !== '--help' && value !== '--version') throw new Error(`Unknown option: ${value}`);

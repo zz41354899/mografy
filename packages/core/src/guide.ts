@@ -137,12 +137,16 @@ New projects include \`scenes/components.ts\`, \`scenes/social-components.ts\`, 
 For a new animation, create the project first with \`mografy init projects/<name>\` (an internal command for agents; it starts as a blank stage with the component modules), then replace \`scenes/main.ts\` and open it with \`mografy dev projects/<name>\` so the running player switches to it. \`mografy dev\` only opens existing projects and fails on a folder without \`mografy.json\`. Do not tell the user to run \`init\` themselves.
 
 1. Read \`mografy.json\`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
-2. Edit scene source files directly. Keep animation data out of \`mografy.json\`; use it only for project, parameter, font, audio, render, and review settings.
+2. Edit scene source files directly. Keep animation data out of \`mografy.json\`; use it only for project, parameter, font, audio, render, review, and presentation (\`slides\`) settings.
 3. Run \`mografy check [project]\`. This compiles the scene and trial-renders it in real Chromium. Fix every reported error before judging the design.
 4. Run \`mografy review [project]\`. Inspect every generated PNG in \`renders/\`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
 5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity, and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
 6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use \`mografy dev [project]\` when the user should watch the live result.
 7. Export with \`mografy export [project] --format mp4|webm|lottie|svga\`. The command prints capture and encoding or packaging progress and writes the finished file under \`renders/\`. Press Ctrl+C to cancel a CLI export. When \`mografy dev\` is running, player exports also print progress in that terminal and can be stopped with \`mografy export [project] --cancel\`.
+
+## Presentations
+
+The same project can be presented live, one slide per shot, from the editor's Present mode. Slides come only from the scene: export \`meta.shots\` (\`[{ end, stop?, title? }, …]\`) in the scene's \`meta\`; presentation titles, notes and holds live in \`mografy.json\` \`slides\`. To mark shots, follow [presentations.md](presentations.md): read the scene files and \`mografy.json\`, find each shot, pick a settled stop frame, write \`meta.shots\`, then \`mografy check\` and inspect \`review-<version>-slides.png\` from \`mografy review\`. Video export ignores shots and \`slides\`.
 
 Only important subtitles belong in \`role: 'subtitle'\` params. Let the user edit those in Scene → Subtitles; make other copy changes in source when requested.
 
@@ -532,6 +536,64 @@ export function renderFrame(ctx: FrameContext, time: number) {
 - Review the camera's extreme poses and the first frames of a reveal, check that objects never clip the frame edge or the type, and seek out of order to confirm every animated property is set from time.
 `;
 
+const PRESENTATIONS_REFERENCE = `# Presentations: marking slides
+
+A Mografy project can be presented live: the editor's **Video / Present** switch turns the same scene into slides, and each slide plays into its frame and waits for the speaker. Slides are never added by hand. They come from the scene's **shots**, which you mark in the scene's \`meta\`. Do this whenever the user asks for slides, a presentation, 簡報, Present mode, or to "mark the shots", and offer it after building a multi-shot film.
+
+## The format
+
+\`\`\`ts
+export const meta = {
+  width: 1920, height: 1080, duration: 30, fps: 30, background: '#101114',
+  // Present mode: one slide per shot; each slide waits on its \`stop\` frame.
+  shots: [
+    { end: 4, stop: 3.3, title: 'Opening' },
+    { end: 9, stop: 8.2, title: 'Ask anything' },
+    { end: 30, stop: 29, title: 'Logo' },
+  ],
+};
+\`\`\`
+
+- \`end\`: when the shot ends and the next begins, in seconds. Strictly increasing; the last one is normally \`meta.duration\`. Shots past the duration are dropped.
+- \`stop\`: the frame the slide waits on, after the previous shot's \`end\` and no later than its own \`end\`. Without it, the slide waits one frame before \`end\` (the last slide waits at the very end).
+- \`title\`: the slide's name, up to 120 characters, in the user's language.
+- At most 200 shots. Leave single-shot scenes without them.
+- **A scene without \`shots\` still gets slides automatically.** \`pnpm install\` and \`mografy update\` write Mografy's guess into \`mografy.json\` as \`slides.shots\` (same format) with \`"guessedFrom": "storyboard"\` or \`"picture"\`, and the running player guesses the same way for scenes that have neither. The guess uses the shot table in \`storyboards/storyboard.md\` when its time ranges run from 0 to the scene's duration (titles from its title, purpose or copy column), otherwise where the picture changes, and stops each slide on the stillest frame shortly before the shot ends. The editor then says "Slides guessed from …". Order of precedence: the scene's \`meta.shots\`, then \`slides.shots\`, then the live guess. When asked to mark or fix slides, write \`meta.shots\` in the scene as below and delete the guessed \`slides.shots\` and \`slides.guessedFrom\` (keep \`slides.pages\`, \`hold\` and \`music\`); never edit \`.mografy/auto-shots.json\`.
+- Shots are presentation metadata only. Never change animation timing to fit slides, and video export ignores them.
+
+## Marking the shots of a project
+
+1. **Read the whole project.** Open \`mografy.json\` (its \`scene\` entry, \`audio\`, \`review.times\`, \`review.transitions\`, and any existing \`slides\`), the scene entry file, and every module it imports. Also read the storyboard (\`storyboards/\`) and \`music-src/music.json\` when present. Shot timing usually exists already: storyboard shot ranges, time constants or section tables in \`renderFrame\` (\`const SHOTS = [...]\`, \`seg(t, 4, 8)\`, \`if (t < 12)\`), named review transitions, and music cue times.
+2. **Find the boundaries.** A shot is one idea or composition; it ends where the next one starts taking over. A review transition that starts at 9.4 s usually means the previous shot ends there. Prefer the storyboard's shots; merge tiny fragments under about 1.5 s into a neighbour.
+3. **Pick each stop frame.** Choose the latest moment where the shot is complete and readable: copy fully typed and on screen, the hero element settled, nothing mid-fade, mid-wipe or blurred by a transition. This is often 0.3–1 s before \`end\`, because many scenes start fading or moving to the next shot early. For the last shot, stop on the settled end card or logo, before any fade to black.
+4. **Name each slide** from its on-screen headline or storyboard shot name.
+5. **Write \`meta.shots\`** into the scene entry's exported \`meta\` with the comment shown above. Keep the other \`meta\` fields as they are.
+6. **Validate.** \`mografy check [project]\` must print \`✓ N shots, N presentation slides\`; fix any shot error it reports. Then run \`mografy review [project]\` and open \`renders/review-<version>-slides.png\`: one cell per slide at its stop frame (for a scene without shots, the sheet shows the guessed slides and says so). Move any stop whose cell is blank, faded, half-typed or mid-transition, and review again.
+7. **Report** the slide count and titles to the user, plus any slide you were unsure about.
+
+## Presentation settings in mografy.json
+
+Write these when the user asks for them (never invent speaker notes); the editor's mute button also sets \`music\`:
+
+\`\`\`json
+"slides": {
+  "hold": "freeze",
+  "music": "duck",
+  "pages": [{}, { "title": "Override title", "notes": "What to say", "hold": { "loop": 1.2 } }]
+}
+\`\`\`
+
+\`pages[i]\` belongs to shot \`i\`; every field is optional. \`hold\` is \`"freeze"\` (stop on the frame) or \`{ "loop": seconds }\`, which keeps replaying the last seconds before the stop so idle motion continues; use it only where those seconds loop cleanly. \`music\` is \`"duck"\` (music fades out at each stop and back in on the next transition) or \`"off"\` (muted).
+
+## What the user sees
+
+- **Video mode:** the timeline's seconds ruler shows a triangle at every slide's stop; clicking one jumps there.
+- **Present mode:** slide thumbnails on the left (the panel button hides them) and the stage, with a playback menu in the middle when the mouse is over it: previous, play into the slide, mute, next. ← / → change slides, Space plays. Titles, notes and holds are not edited there: they come from \`meta.shots\` and \`mografy.json\` \`slides\`, which you write.
+- **Start** opens the presentation full page: a top bar (back to the editor, slide title, Live/Locked, speaker view, full screen) and a bottom menu with slide progress; both fade while the mouse rests. → / Space / click next, ← previous, a number then Enter jumps, M mute, F full screen, B black screen, P speaker view with notes and timer, K locks the current version while editing continues, Esc returns to the editor.
+- **Export HTML** writes and downloads \`renders/<name>-presentation.html\`: one offline file with the scene, fonts, images and music embedded. Terminal: \`mografy export [project] --format html\`.
+- The sixteen built-in component projects cannot be presented; the switch stays in Video.
+`;
+
 const MUSIC_REFERENCE = `# Contextual music
 
 [score.py](__REPOSITORY__/extras/music/score.py) generates a film's score from its context. Instead of finding a track and cutting the animation to it, the agent describes what each part of the film needs in a cue file, \`music.json\`, and the generator synthesises music that follows it: sections with a mood and an energy level, and hits on the exact seconds where something happens on screen. When the animation's timing changes, update the cues and generate again; the music stays in sync. [music-example.json](__REPOSITORY__/extras/music/music-example.json) scores the twelve-second intro.
@@ -748,6 +810,7 @@ For scene work, read the project's \`mografy.json\`, configured scene entry, imp
 - For Chinese or Japanese copy, vertical text (tategaki), or CJK line breaking, read [references/cjk-typography.md](references/cjk-typography.md) and add the optional \`cjk.ts\` extra and CJK fonts to the project.
 - For real 3D (objects that turn and catch light, product or device models, orbiting cameras, depth), read [references/three-d.md](references/three-d.md) and add the optional \`three.ts\` extra and Three.js bundle to the project.
 - When the film needs music and the user has no track, or asks for music that fits the film, read [references/music.md](references/music.md): write the film's context as \`music.json\` cues and generate a matching score with the optional \`score.py\` extra.
+- When the user asks for slides, a presentation (簡報), Present mode, or to mark shots, read [references/presentations.md](references/presentations.md): read the scene files and \`mografy.json\`, mark \`meta.shots\` with settled stop frames, then check and review the slides sheet.
 - For new motion or animation polish, read [references/animation-principles.md](references/animation-principles.md) and apply the relevant principles.
 - When an exported video is too large or the user asks to compress it, read [references/video-compression.md](references/video-compression.md) and run the bundled \`scripts/compress-video.py\` on the finished file. Preserve the original, check the reported size, and review the compressed result.
 - When developing Mografy itself, read [references/project.md](references/project.md) for the GitHub sources and required checks. Inspect the current checkout's local files before editing.
@@ -820,6 +883,7 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'cjk-typography.md': CJK_TYPOGRAPHY_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'three-d.md': THREE_D_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'presentations.md': PRESENTATIONS_REFERENCE,
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
   })
@@ -911,6 +975,7 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/cjk-typography.md'];
   delete files['references/three-d.md'];
   delete files['references/music.md'];
+  delete files['references/presentations.md'];
   delete files['references/codex-motion-design.md'];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",

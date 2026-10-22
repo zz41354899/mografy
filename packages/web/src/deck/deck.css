@@ -1,0 +1,81 @@
+/*
+  Presentation windows: the audience view and the speaker view. Shared by the editor's
+  presentation window and exported presentation files, so it carries its own tokens.
+*/
+.deck-root, .presenter {
+  --deck-ui: #1f2023; --deck-raised: #2a2b2f; --deck-hover: #323439; --deck-line: #36383d;
+  --deck-text: #ebe9e4; --deck-muted: #a09e97; --deck-signal: #12b5a5; --deck-signal-ink: #04201c; --deck-warn: #e9c46a;
+  color: var(--deck-text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+  -webkit-font-smoothing: antialiased; box-sizing: border-box;
+}
+.deck-root *, .presenter * { box-sizing: border-box; }
+html.deck-page, html.deck-page body { margin: 0; height: 100%; background: #000; }
+
+.deck-root { position: fixed; inset: 0; display: grid; place-items: center; background: #000; overflow: hidden; container-type: size; }
+.deck-root.idle { cursor: none; }
+.deck-stage { position: relative; width: min(100cqw, calc(100cqh * var(--aspect, 1.7778))); aspect-ratio: var(--ratio, 16 / 9); background: var(--scene-bg, #000); cursor: pointer; }
+.deck-stage canvas, .deck-stage .stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.deck-stage .stage-frame { border: 0; pointer-events: none; }
+.deck-black { position: absolute; inset: 0; background: #000; }
+.deck-wait { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--deck-muted); font-size: 13px; white-space: nowrap; }
+
+/* Chrome around the slide. It fades out while the mouse rests (.idle) and stays while the deck waits to start. */
+.deck-top, .deck-bottom { position: absolute; left: 0; right: 0; z-index: 2; transition: opacity .35s, transform .35s; }
+.deck-root.idle:not(.deck-ready) .deck-top { opacity: 0; transform: translateY(-8px); pointer-events: none; }
+.deck-root.idle:not(.deck-ready) .deck-bottom { opacity: 0; transform: translateY(8px); pointer-events: none; }
+.deck-top { top: 0; display: flex; align-items: center; gap: 14px; padding: 14px 18px 28px; background: linear-gradient(rgba(0, 0, 0, .62), transparent); }
+.deck-heading { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.deck-name { color: var(--deck-muted); font-size: 13px; }
+.deck-where { font-size: 15px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.deck-where b { margin-right: 6px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.deck-tools { display: flex; align-items: center; gap: 6px; }
+.deck-button { display: inline-grid; grid-auto-flow: column; place-items: center; gap: 6px; min-width: 38px; height: 38px; padding: 0 9px; border: 0; border-radius: 999px; background: transparent; color: var(--deck-text); font: inherit; font-size: 13.5px; cursor: pointer; }
+.deck-button:hover { background: rgba(255, 255, 255, .14); }
+.deck-button:focus-visible, .deck-lock:focus-visible, .deck-progress button:focus-visible { outline: 2px solid var(--deck-signal); outline-offset: 2px; }
+.deck-back { padding: 0 14px 0 8px; background: rgba(255, 255, 255, .1); }
+.deck-lock { height: 30px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 999px; background: transparent; color: var(--deck-muted); font: inherit; font-size: 12.5px; cursor: pointer; }
+.deck-lock.on { border-color: var(--deck-signal); color: var(--deck-signal); }
+
+.deck-bottom { bottom: 0; display: grid; justify-items: center; gap: 14px; padding: 40px 18px 14px; background: linear-gradient(transparent, rgba(0, 0, 0, .55)); }
+.deck-menu { display: flex; align-items: center; gap: 6px; padding: 6px; border-radius: 999px; background: rgba(24, 25, 28, .72); box-shadow: 0 12px 40px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(255, 255, 255, .08); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.deck-menu .deck-button { width: 42px; height: 42px; padding: 0; }
+.deck-play { width: 56px !important; height: 56px !important; background: var(--deck-signal); color: var(--deck-signal-ink); }
+.deck-play:hover { background: #3fcabb; }
+.deck-play.moving { box-shadow: 0 0 0 4px rgba(18, 181, 165, .3); }
+.deck-mute.on { color: var(--deck-warn); }
+.deck-progress { display: flex; gap: 4px; width: min(720px, 100%); margin: 0; padding: 0; list-style: none; }
+.deck-progress li { flex: 1; }
+.deck-progress button { display: block; width: 100%; height: 14px; padding: 5px 0; border: 0; background: none; cursor: pointer; }
+.deck-progress button::before { content: ""; display: block; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .22); transition: background .2s; }
+.deck-progress button:hover::before { background: rgba(255, 255, 255, .5); }
+.deck-progress .done button::before { background: rgba(18, 181, 165, .55); }
+.deck-progress .current button::before { background: var(--deck-signal); }
+.deck-progress .moving button::before { animation: deck-pulse 1s ease-in-out infinite; }
+@keyframes deck-pulse { 50% { opacity: .45; } }
+.deck-hint { color: var(--deck-muted); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .deck-top, .deck-bottom { transition: none; } .deck-progress .moving button::before { animation: none; } }
+@media (max-width: 640px) { .deck-name, .deck-hint { display: none; } .deck-top { padding: 10px 10px 24px; } }
+.deck-hidden { display: none !important; }
+
+.presenter { position: fixed; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--deck-ui); }
+.presenter-top { display: flex; gap: 16px; align-items: baseline; padding: 14px 20px; border-bottom: 1px solid var(--deck-line); }
+.presenter-count { font-weight: 600; font-size: 16px; }
+.presenter-phase { color: var(--deck-muted); flex: 1; }
+.presenter-timer { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 22px; color: var(--deck-signal); }
+.presenter-body { display: grid; grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr); gap: 24px; padding: 20px; min-height: 0; }
+.presenter-body section, .presenter-body aside { overflow: auto; min-height: 0; }
+.presenter-body h1 { margin: 0 0 12px; font-size: 26px; }
+.presenter-body h2 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--deck-muted); }
+.presenter-notes { margin: 0; font-size: 20px; line-height: 1.6; white-space: pre-wrap; }
+.presenter-notes.empty { color: var(--deck-muted); font-size: 15px; }
+.presenter-next { margin: 0; }
+.presenter-list { margin: 16px 0 0; padding-left: 22px; color: var(--deck-muted); }
+.presenter-list button { background: none; border: 0; padding: 3px 0; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.presenter-list li.on { color: var(--deck-signal); font-weight: 600; }
+.presenter-controls { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--deck-line); }
+.presenter-controls button { padding: 9px 16px; border-radius: 8px; border: 0; background: var(--deck-raised); color: var(--deck-text); font: inherit; cursor: pointer; }
+.presenter-controls button:hover { background: var(--deck-hover); }
+.presenter-controls .primary { background: var(--deck-signal); color: var(--deck-signal-ink); font-weight: 600; }
+.presenter-controls .primary:hover { background: #3fcabb; }
+@media (max-width: 640px) { .presenter-body { grid-template-columns: 1fr; } }

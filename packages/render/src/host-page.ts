@@ -67,6 +67,20 @@ const host = {
     out.getContext('2d')!.putImageData(image, 0, 0);
     await upload(token, await new Promise<Blob>((done, fail) => out.toBlob(b => b ? done(b) : fail(new Error('PNG encode failed')), 'image/png')));
   },
+  /** Tiny greyscale raw frames, one after another, for finding where shots change. */
+  async motion(times: number[], width: number, token: string) {
+    const { canvas, runtime } = need();
+    const out = document.createElement('canvas'); out.width = width; out.height = Math.max(1, Math.round(width * canvas.height / canvas.width));
+    const c = out.getContext('2d', { willReadFrequently: true })!, size = out.width * out.height, grey = new Uint8Array(size * times.length);
+    c.imageSmoothingQuality = 'low';
+    for (const [i, t] of times.entries()) {
+      runtime.render(t);
+      c.fillStyle = '#000'; c.fillRect(0, 0, out.width, out.height); c.drawImage(canvas, 0, 0, out.width, out.height);
+      const rgba = c.getImageData(0, 0, out.width, out.height).data;
+      for (let p = 0; p < size; p++) grey[i * size + p] = (rgba[p * 4]! * 77 + rgba[p * 4 + 1]! * 150 + rgba[p * 4 + 2]! * 29) >> 8;
+    }
+    await upload(token, grey);
+  },
   /** Small raw frame as PNG, for project thumbnails. */
   async thumb(t: number, width: number, token: string) {
     const { canvas, runtime } = need();

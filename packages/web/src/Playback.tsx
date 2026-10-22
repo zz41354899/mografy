@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import type { CSSProperties, RefObject } from 'react';
+import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { useMemo, useRef } from 'react';
 import { beatAt, beatTimes } from '@mografy/core';
-import type { Snapshot } from '@mografy/core';
+import type { DeckSlide, Snapshot } from '@mografy/core';
 import { ArrowsClockwiseIcon } from '@phosphor-icons/react/dist/csr/ArrowsClockwise';
 import { FrameCornersIcon } from '@phosphor-icons/react/dist/csr/FrameCorners';
 import type { AudioTrack } from './audio.js';
@@ -51,7 +51,10 @@ function Waveform({ audio, duration, ready }: { audio: AudioTrack; duration: num
   return <canvas className="waveform" ref={canvas} aria-hidden="true" />;
 }
 
-function Timeline({ view, snapshot, audio, onSeek }: { view: PlayerView; snapshot: Snapshot; audio: AudioTrack | undefined; onSeek(t: number): void }) {
+/** The presentation's slides (the scene's shots), marked where each one stops. */
+export interface TimelineStops { slides: DeckSlide[]; onSelect(index: number): void }
+
+function Timeline({ view, snapshot, audio, onSeek, slides }: { view: PlayerView; snapshot: Snapshot; audio: AudioTrack | undefined; onSeek(t: number): void; slides?: TimelineStops | undefined }) {
   const project = snapshot.project!, duration = view.duration || snapshot.scene?.meta.duration || 1;
   const area = useRef<HTMLDivElement>(null);
   const at = (clientX: number) => { const r = area.current!.getBoundingClientRect(); return Math.min(1, Math.max(0, (clientX - r.left) / r.width)) * duration; };
@@ -65,6 +68,8 @@ function Timeline({ view, snapshot, audio, onSeek }: { view: PlayerView; snapsho
       <div className="ruler">
         {frames <= 600 ? <div className="frame-ticks" style={{ backgroundSize: `${100 / frames}% 100%` }} /> : null}
         {ticks(duration).map(t => <span key={t} style={{ left: pct(t) }}>{t}s</span>)}
+        {slides && slides.slides.length > 1 ? slides.slides.map((slide, i) => <button key={`s${i}`} className="stop-mark" style={{ left: pct(slide.at) }} title={`Slide ${i + 1}: ${slide.title} · stops at ${Number(slide.at.toFixed(2))}s`}
+          aria-label={`Slide ${i + 1}, stops at ${Number(slide.at.toFixed(2))} seconds`} onPointerDown={e => { e.stopPropagation(); slides.onSelect(i); }} />) : null}
       </div>
       <div className="lane">
         {beats.map(b => <i key={b.t} className={b.bar ? 'beat bar' : 'beat'} style={{ left: pct(b.t) }} />)}
@@ -84,10 +89,14 @@ function Timeline({ view, snapshot, audio, onSeek }: { view: PlayerView; snapsho
   </div>;
 }
 
-export function Playback({ player, snapshot, stage, guides, onGuides, seekBy, toast, reportPlayhead }: {
+export function Playback({ player, snapshot, stage, guides, onGuides, seekBy, toast, reportPlayhead, slides, presenting, overlay }: {
   player: ScenePlayer | null; snapshot: Snapshot | null; stage: RefObject<HTMLDivElement | null>;
   guides: boolean; onGuides(): void; seekBy(dir: number, coarse: boolean): void; toast: string;
-  reportPlayhead(t: number): void;
+  reportPlayhead(t: number): void; slides?: TimelineStops | undefined;
+  /** Present mode: the stage alone, without the transport and timeline. */
+  presenting?: boolean;
+  /** Present mode: controls floating in the middle of the stage. */
+  overlay?: ReactNode;
 }) {
   const view = usePlayerView(player, 'frames');
   const meta = snapshot?.scene?.meta, fps = view.fps, duration = view.duration;
@@ -99,15 +108,17 @@ export function Playback({ player, snapshot, stage, guides, onGuides, seekBy, to
     });
   }, [player]);
   return (
-      <section className="viewer">
+      <section className={`viewer ${presenting ? 'presenting' : ''}`}>
         <div className="surround">
-          <div className={`stage ${meta && meta.height > meta.width ? 'portrait' : ''}`} ref={stage} style={{ aspectRatio: meta ? `${meta.width} / ${meta.height}` : '16 / 9', '--scene-bg': meta?.background ?? '#000', '--aspect': meta ? meta.width / meta.height : 16 / 9 } as CSSProperties} onClick={() => player?.toggle()} data-testid="stage" data-version={view.version ?? ''} data-time={view.t.toFixed(4)}>
+          <div className={`stage ${meta && meta.height > meta.width ? 'portrait' : ''}`} ref={stage} style={{ aspectRatio: meta ? `${meta.width} / ${meta.height}` : '16 / 9', '--scene-bg': meta?.background ?? '#000', '--aspect': meta ? meta.width / meta.height : 16 / 9 } as CSSProperties} onClick={() => { if (!presenting) player?.toggle(); }} data-testid="stage" data-version={view.version ?? ''} data-time={view.t.toFixed(4)}>
             {guides ? <div className="guides" aria-hidden="true"><i className="action" /><i className="title" /><i className="cross" /></div> : null}
           </div>
+          {overlay}
           {toast ? <div className="toast" role="status">{toast}</div> : null}
           {!snapshot?.scene && !snapshot?.error ? <div className="placeholder">Compiling and test-rendering the scene…</div> : null}
         </div>
 
+        {presenting ? null : <>
         <div className="transport">
           <div className="buttons">
             <button aria-label="Go to start" title="Start (Home)" onClick={() => { player?.pause(); player?.seek(0); }}><Icon name="start" /></button>
@@ -130,7 +141,8 @@ export function Playback({ player, snapshot, stage, guides, onGuides, seekBy, to
             <button className={`transport-toggle ${guides ? 'on' : ''}`} aria-label="Guides" aria-pressed={guides} title="Show safe areas (G)" onClick={() => onGuides()}><FrameCornersIcon size={20} /></button>
           </div>
         </div>
-        {snapshot?.project ? <Timeline view={view} snapshot={snapshot} audio={player?.audio} onSeek={t => { player?.pause(); player?.seek(t); }} /> : null}
+        {snapshot?.project ? <Timeline view={view} snapshot={snapshot} audio={player?.audio} onSeek={t => { player?.pause(); player?.seek(t); }} slides={slides} /> : null}
+        </>}
       </section>
   );
 }

@@ -1,20 +1,35 @@
-// Playback engine, independent of React: owns the canvas, the scene runtime and the clock.
+// Playback engine, independent of React: owns the scene frame, the scene runtime and the clock.
 // The scene only ever receives t. While music plays, the audio clock advances t;
 // otherwise the browser clock does.
 import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
 import { sceneRuntimeKey } from '@mografy/core';
-import type { SceneModule, SceneRuntime } from '@mografy/runtime';
+import type { SceneRuntime } from '@mografy/runtime';
 import type { ParameterValues, SceneProject } from '@mografy/core';
 import { AudioTrack } from './audio.js';
+import { openSceneFrame } from './scene-frame.js';
+import type { SceneFrame } from './scene-frame.js';
 import type { SoundState } from './audio.js';
 
 export interface PlayerView { t: number; playing: boolean; loop: boolean; version: string | null; duration: number; fps: number; finished: boolean; sound: SoundState; error?: string }
 type Listener = (view: PlayerView) => void;
 const SETUP_TIMEOUT = 30_000;
+/** Music fade at presentation stops, in seconds. */
+const STOP_FADE = 0.6;
+const RESUME_FADE = 0.25;
+/** Where scene builds and project files come from. The editor uses the live server; a presentation file embeds them. */
+export interface PlayerSources {
+  sceneUrl(version: string): string;
+  assetBase: string;
+  assetUrls?: Record<string, string> | undefined;
+}
+const SERVER: PlayerSources = { sceneUrl: version => '/__mografy/scene/' + version + '.js', assetBase: '/__mografy/files/' };
+interface Segment { end: number; loopFrom: number | null; arrived: boolean; onArrive?: (() => void) | undefined }
 
 export class ScenePlayer {
   private runtime: SceneRuntime | null = null;
   private canvas: HTMLCanvasElement | null = null;
+  /** The iframe holding the current version; removing it frees that version's module. */
+  private stage: SceneFrame | null = null;
   private params: ParameterValues = {};
   private project: SceneProject | null = null;
   private effects = { glow: 0, grain: 0 };
@@ -35,11 +50,15 @@ export class ScenePlayer {
   /** Playback stopped because renderFrame threw; resume once a working version loads. */
   private resumeAfterError = false;
   error = '';
+  /** Presentation only: where playback stops (or starts replaying) instead of running to the end. */
+  private segment: Segment | null = null;
+  /** Presentation only: play pictures without starting music (holds, silent decks). */
+  private silent = false;
 
-  constructor(private container: HTMLElement) {
+  constructor(private container: HTMLElement, private sources: PlayerSources = SERVER) {
     this.audio.onChange = () => {
       // Sound became available mid-play (unlocked or decoded): join in at the current time.
-      if (this.playing && this.audio.now() === undefined && this.audio.start(this.t)) this.restartClock();
+      if (this.playing && !this.silent && this.audio.now() === undefined && this.audio.start(this.t)) this.restartClock();
       this.notify();
     };
   }
@@ -62,14 +81,13 @@ export class ScenePlayer {
       // Version, seed, fonts and the beat grid feed the runtime; anything else (volume, render settings) is applied in place.
       const key = sceneRuntimeKey(version, project);
       if (key === this.loadedKey) { this.project = project; this.syncAudio(project); return; }
-      const url = '/__mografy/scene/' + version + '.js';
-      const scene = await import(url) as SceneModule;
+      const stage = await openSceneFrame(this.container, this.sources.sceneUrl(version), 'stage-frame');
+      if (this.disposed || request !== this.loadRequest) { stage.remove(); return; }
+      const { scene, canvas } = stage;
       const width = project.aspectRatio === '9:16' ? Math.min(scene.meta.width, scene.meta.height) : scene.meta.width;
       const scale = Math.min(1, Math.max(0.25, Math.round(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
-      const canvas = document.createElement('canvas');
-      canvas.className = 'stage-canvas';
       const creating = createSceneRuntime(canvas, scene, {
-        seed: project.seed, renderScale: scale, params, assetBase: '/__mografy/files/', fonts: project.fonts, audio: project.audio,
+        seed: project.seed, renderScale: scale, params, assetBase: this.sources.assetBase, assetUrls: this.sources.assetUrls, fonts: project.fonts, audio: project.audio,
         aspectRatio: project.aspectRatio,
       });
       // A setup that never settles must not hold the load chain: later versions would never appear.
@@ -79,11 +97,13 @@ export class ScenePlayer {
           void creating.then(late => late.dispose(), () => {});
           reject(new Error(`Scene setup did not finish within ${SETUP_TIMEOUT / 1000}s in the player. Check setup() for an await that never resolves.`));
         }, SETUP_TIMEOUT);
-      })]).finally(() => clearTimeout(timer));
-      if (this.disposed || request !== this.loadRequest) { runtime.dispose(); return; }
-      this.runtime?.dispose(); this.canvas?.remove();
-      this.runtime = runtime; this.canvas = canvas; this.version = version; this.project = project; this.loadedKey = key;
-      this.container.append(canvas);
+      })]).finally(() => clearTimeout(timer)).catch(error => { stage.remove(); throw error; });
+      if (this.disposed || request !== this.loadRequest) { runtime.dispose(); stage.remove(); return; }
+      // The previous version stops drawing now; its last frame stays under the new one until the fade ends.
+      const previous = this.stage;
+      this.runtime?.dispose();
+      this.runtime = runtime; this.canvas = canvas; this.stage = stage; this.version = version; this.project = project; this.loadedKey = key;
+      void stage.show().then(() => previous?.remove());
       this.t = Math.min(this.t, runtime.meta.duration);
       this.syncAudio(project);
       if (this.playing) this.restartClock();
@@ -92,8 +112,10 @@ export class ScenePlayer {
       if (this.resumeAfterError && !this.error) { this.resumeAfterError = false; this.play(); }
       this.notify();
     };
-    this.loading = this.loading.then(task, task);
-    return this.loading;
+    const run = this.loading.then(task, task);
+    this.loading = run.catch(() => {});
+    // A failure of a load that a newer one replaced (a project switched mid-load) is not reported.
+    return run.catch(error => { if (request === this.loadRequest) throw error; });
   }
 
   setParams(params: ParameterValues) {
@@ -109,7 +131,8 @@ export class ScenePlayer {
   }
 
   private syncAudio(project: SceneProject) {
-    const src = project.audio ? `/__mografy/files/${project.audio.path.split('/').map(encodeURIComponent).join('/')}` : '';
+    const path = project.audio?.path;
+    const src = !path ? '' : this.sources.assetUrls?.[path] ?? `${this.sources.assetBase}${path.split('/').map(encodeURIComponent).join('/')}`;
     void this.audio.load(src, project.audio?.gain ?? 1);
   }
   /** Browsers allow sound only after a click or key press; call this from one. */
@@ -124,11 +147,11 @@ export class ScenePlayer {
       if (this.previewEffects && !this.playing && this.project) {
         const settings = { ...this.project.render, ...this.effects };
         const k = Math.min(Math.ceil(runtime.meta.duration * settings.fps) - 1, Math.round(t * settings.fps));
-        const output = renderOutputFrame(runtime, canvas, k, settings, this.project.seed, this.params);
+        const output = renderOutputFrame(runtime, canvas, k, settings, this.project.seed, this.valuesFor(runtime));
         const context = canvas.getContext('2d')!;
         const image = context.createImageData(canvas.width, canvas.height); image.data.set(output);
         context.putImageData(image, 0, 0);
-      } else runtime.render(t, this.params);
+      } else runtime.render(t, this.valuesFor(runtime));
       this.error = '';
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
@@ -138,12 +161,34 @@ export class ScenePlayer {
     }
   }
 
+  /**
+   * Values arrive for the version being loaded while the previous one is still on screen (switching
+   * projects, or a scene that renamed a parameter). Draw it with only the values it declares.
+   */
+  private valuesFor(runtime: SceneRuntime) {
+    return Object.fromEntries(Object.entries(this.params).filter(([id]) => id in runtime.definitions));
+  }
+
   private restartClock() { this.startedAt = performance.now(); this.startT = this.t; }
   private tick = (now: number) => {
     if (!this.playing) return;
     const d = this.duration;
     let t = this.audio.now() ?? this.startT + (now - this.startedAt) / 1000;
-    if (t >= d) {
+    const segment = this.segment;
+    if (segment && t >= segment.end) {
+      const arriving = !segment.arrived;
+      segment.arrived = true;
+      this.audio.fadeOut(STOP_FADE);
+      if (segment.loopFrom === null) {
+        this.t = segment.end; this.playing = false; this.draw(); this.notify();
+        if (arriving) segment.onArrive?.();
+        return;
+      }
+      this.silent = true;
+      t = segment.loopFrom + (t - segment.end) % (segment.end - segment.loopFrom);
+      this.startT = t; this.startedAt = now;
+      if (arriving) segment.onArrive?.();
+    } else if (t >= d) {
       if (this.loop && d > 0) { t = t % d; this.t = t; this.restartClock(); this.audio.start(t); }
       else { this.t = d; this.playing = false; this.audio.stop(); this.draw(); this.notify(); return; }
     }
@@ -155,6 +200,8 @@ export class ScenePlayer {
   play() {
     this.resumeAfterError = false;
     if (this.playing || !this.runtime) return;
+    // Plain playback ends a presentation segment (the editor previews slides with playTo).
+    this.segment = null; this.silent = false;
     if (!this.loop && this.t >= this.duration) this.t = 0;
     this.playing = true; this.restartClock();
     this.audio.start(this.t);
@@ -166,6 +213,30 @@ export class ScenePlayer {
     this.playing = false; cancelAnimationFrame(this.frame);
     this.audio.stop();
     this.draw(); this.notify();
+  }
+  /** Presentation: play from `from` to the stop at `end`, then hold there (freeze, or replay from loopFrom). */
+  playTo(from: number, end: number, loopFrom: number | null, sound: boolean, onArrive?: () => void) {
+    if (!this.runtime) return;
+    cancelAnimationFrame(this.frame); this.audio.fadeOut(RESUME_FADE);
+    this.resumeAfterError = false;
+    this.segment = { end, loopFrom, arrived: false, onArrive };
+    this.silent = !sound;
+    this.t = Math.min(Math.max(0, from), end);
+    this.playing = true; this.restartClock();
+    if (sound) this.audio.start(this.t, RESUME_FADE);
+    this.frame = requestAnimationFrame(this.tick);
+    this.notify();
+  }
+  /** Presentation: show the stop at `at` straight away, held the same way playTo would hold it. */
+  holdAt(at: number, loopFrom: number | null) {
+    if (!this.runtime) return;
+    cancelAnimationFrame(this.frame); this.audio.fadeOut(STOP_FADE);
+    this.segment = { end: at, loopFrom, arrived: true };
+    this.silent = true;
+    if (loopFrom === null) { this.playing = false; this.t = at; this.draw(); this.notify(); return; }
+    this.t = loopFrom; this.playing = true; this.restartClock();
+    this.frame = requestAnimationFrame(this.tick);
+    this.notify();
   }
   toggle() { if (this.playing) this.pause(); else this.play(); }
   seek(t: number) {
@@ -179,5 +250,5 @@ export class ScenePlayer {
     this.seek(Math.min(Math.max(0, index), Math.ceil(this.duration * fps) - 1) / fps);
   }
   setLoop(loop: boolean) { this.loop = loop; this.notify(); }
-  dispose() { this.disposed = true; this.loadRequest++; this.pause(); this.runtime?.dispose(); this.canvas?.remove(); this.audio.dispose(); this.listeners.clear(); }
+  dispose() { this.disposed = true; this.loadRequest++; this.pause(); this.runtime?.dispose(); for (const frame of this.container.querySelectorAll('iframe.stage-frame')) frame.remove(); this.audio.dispose(); this.listeners.clear(); }
 }

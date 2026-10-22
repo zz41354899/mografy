@@ -20,11 +20,19 @@ beforeEach(async () => {
 });
 afterEach(async () => { await fixture?.close(); });
 
-test('component project plays as soon as the player opens', async () => {
+test('component project opens paused at 0s and plays on Play', async () => {
+  await api('seek', 'POST', { t: 3.25 });
+  await page.waitForFunction(() => Number(document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.time) === 3.25);
+  await page.reload(); await page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').waitFor();
   const a = await stage(); await page.waitForTimeout(500); const b = await stage();
   assert.match(a.version, /^[\da-f]{16}$/);
-  assert.ok(b.t > a.t, `time advances while playing (${a.t} → ${b.t})`);
-  assert.equal(await page.locator('canvas.stage-canvas').count(), 1);
+  assert.equal(a.t, 0, 'opening a project starts at 0s, not at the last playhead');
+  assert.equal(b.t, a.t, 'opening a project does not start playback');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await page.waitForTimeout(500);
+  const c = await stage();
+  assert.ok(c.t > b.t, `time advances while playing (${b.t} → ${c.t})`);
+  assert.equal(await page.locator('iframe.stage-frame').count(), 1, 'replaced versions leave no frames behind');
   const files = await readFile(join(dir, 'AGENTS.md'), 'utf8');
   assert.match(files, /renderFrame/);
   assert.equal(await readFile(join(dir, 'CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
@@ -153,7 +161,7 @@ test('only subtitles are editable; multiple edits save, survive reload and reset
   assert.equal(await page.locator('[data-param=name]').count(), 0, 'names are changed through AI');
   assert.equal(await page.locator('.inspector textarea').count(), 2, 'only declared subtitles are listed');
   const original = (await api('snapshot')).data.scene.params.subtitle.default;
-  const picture = () => page.locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+  const picture = () => page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
   const before = await picture();
   const subtitle = page.locator('[data-param=subtitle] textarea');
   const caption = page.locator('[data-param=caption] textarea');
@@ -170,7 +178,7 @@ test('only subtitles are editable; multiple edits save, survive reload and reset
   assert.equal((await api('snapshot')).data.project.params.subtitle, undefined);
   assert.equal(await subtitle.inputValue(), original);
   await page.reload();
-  await page.waitForSelector('canvas.stage-canvas');
+  await page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').waitFor();
   assert.equal(await caption.inputValue(), 'Second copy\n第二行文字');
   assert.equal(await subtitle.inputValue(), original);
   await api('seek', 'POST', { t: 3.25 });
@@ -220,7 +228,7 @@ test('advanced effects preview through the export pipeline, persist, and clear w
   assert.ok(await page.getByRole('button', { name: 'Play', exact: true }).isVisible(), 'changing effects pauses for preview');
   assert.equal(await panel.getByRole('radio', { name: 'With effects', exact: true }).getAttribute('aria-checked'), 'true');
   // Compare player pixels with the real headless capture used by video exports.
-  const dimensions = await page.locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => ({ width: canvas.width, height: canvas.height }));
+  const dimensions = await page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => ({ width: canvas.width, height: canvas.height }));
   const sceneBuild = await buildScene(dir, saved);
   const host = await SceneHost.start(dir);
   try {
@@ -228,11 +236,11 @@ test('advanced effects preview through the export pipeline, persist, and clear w
     const duration = (await api('snapshot')).data.scene.meta.duration;
     const k = Math.min(Math.ceil(duration * saved.render.fps) - 1, Math.round((await stage()).t * saved.render.fps));
     const expected = await capture.output(k, saved.render);
-    const actual = await page.locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => Array.from(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data));
+    const actual = await page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => Array.from(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data));
     const mismatches = actual.reduce((count, value, index) => count + (value !== expected[index] ? 1 : 0), 0);
     assert.equal(mismatches, 0, `paused preview differs in ${mismatches} of ${actual.length} channels; actual size ${dimensions.width}x${dimensions.height}, capture ${capture.scene.width}x${capture.scene.height}, frame ${k}`);
   } finally { await host.close(); }
-  const picture = () => page.locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+  const picture = () => page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
   const processed = await picture();
   await panel.getByRole('radio', { name: 'Original', exact: true }).click();
   assert.notEqual(await picture(), processed, 'preview comparison shows the original scene');
@@ -245,7 +253,7 @@ test('advanced effects preview through the export pipeline, persist, and clear w
     assert.equal(await modal.getByRole('slider', { name: 'Grain', exact: true }).inputValue(), '0.06');
     await modal.getByRole('button', { name: 'Cancel', exact: true }).click();
   }
-  await page.reload(); await page.waitForSelector('canvas.stage-canvas');
+  await page.reload(); await page.frameLocator('iframe.stage-frame:visible >> nth=-1').locator('canvas.stage-canvas').waitFor();
   await page.getByRole('tab', { name: 'Effects', exact: true }).click();
   assert.equal(await panel.getByRole('slider', { name: 'Glow', exact: true }).inputValue(), '0.5');
   assert.equal(await panel.getByRole('slider', { name: 'Grain', exact: true }).inputValue(), '0.06');
