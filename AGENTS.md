@@ -8,4 +8,5 @@
 - Scene code executes only in the browser. The Server must never import or evaluate a scene in Node.
 - All application writes to projects go through the queue in `packages/server/src/project.ts` and use `atomicWrite`.
 - The player and exports share `@mografy/runtime`, including post-processing in `post.ts`. Changes to output effects must apply to both.
+- `package.json` scripts must work under Windows `cmd` (pnpm runs scripts through it there): quote globs and paths with escaped double quotes (`--filter \"./packages/**\"`), never single quotes, which `cmd` passes through literally (`No projects matched the filters`).
 - After changes, run `pnpm check` (including real Chromium and FFmpeg tests) and `pnpm test:browser`.
