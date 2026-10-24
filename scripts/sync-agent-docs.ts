@@ -43,18 +43,30 @@ await queueProjectWrite(obsolete, async () => {
 const claudeSkills = join(root, '.claude', 'skills');
 const claudeEntry = join(claudeSkills, 'mografy');
 const shared = join(root, '.agents', 'skills', 'mografy');
+let placeholder = false;
 await queueProjectWrite(claudeSkills, async () => {
   await mkdir(claudeSkills, { recursive: true });
   const entry = await lstat(claudeEntry).catch(error => {
     if (error.code !== 'ENOENT') throw error;
     return undefined;
   });
-  if (!entry) await symlink(relative(claudeSkills, shared), claudeEntry, 'dir');
+  // Windows creates junctions without admin rights or Developer Mode; directory symlinks need one of them.
+  if (!entry) await symlink(relative(claudeSkills, shared), claudeEntry, process.platform === 'win32' ? 'junction' : 'dir');
+  else if (entry.isFile() && await isGitSymlinkPlaceholder(claudeEntry)) placeholder = true;
   else if (!entry.isSymbolicLink() || await realpath(claudeEntry) !== await realpath(shared)) {
     throw new Error(`Preserving an existing custom Claude entry: ${claudeEntry}`);
   }
 });
-console.log(`Claude entry ${claudeEntry} -> ${shared}`);
+// Without symlink support (the Git default on Windows) the tracked link is checked out as a small text file
+// holding its target. Leave it as Git wrote it, so the checkout stays clean for `mografy update`;
+// Claude still reads the Skill through the root CLAUDE.md import.
+async function isGitSymlinkPlaceholder(path: string): Promise<boolean> {
+  const target = (await readFile(path, 'utf8').catch(() => '')).trim();
+  return target !== '' && resolve(claudeSkills, target) === shared;
+}
+console.log(placeholder
+  ? `Claude entry ${claudeEntry} is a Git symlink placeholder (symlinks are off in this checkout); Claude reads the Skill through CLAUDE.md.`
+  : `Claude entry ${claudeEntry} -> ${shared}`);
 
 let projects = 0;
 async function install(dir: string): Promise<void> {

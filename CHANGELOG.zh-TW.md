@@ -18,6 +18,7 @@ mografy update
 ### 修正
 
 - **Windows 安裝** — 在 Windows 上 `pnpm install` 會出現 `No projects matched the filters`，套件完全沒被 build，接著 `sync:skills` 因為找不到 `@mografy/core/dist/index.js` 而中斷。原因是 pnpm 在 Windows 上一律用 `cmd` 執行 scripts，而 `cmd` 不認得單引號。根目錄 `package.json` 的 scripts（`build`、`typecheck`、`test`、`test:browser`、`test:compression`、`install:tool`）改用跳脫的雙引號，macOS、Linux 與 Windows 都能用。遇過這個問題的 Windows 使用者：執行 `mografy update`（或 `git pull --ff-only`），再執行 `pnpm install`。
+- **Windows 安裝（第二部分）** — 接著 `sync:skills` 會出現 `Preserving an existing custom Claude entry: .claude\skills\mografy` 而中斷。Windows 上的 Git 在沒有開啟 symlink 支援時，會把 repo 裡的 `.claude/skills/mografy` symlink 取出成一個小文字檔。`sync:skills` 現在會辨認這種佔位檔並保持原樣，讓 checkout 維持乾淨、`mografy update` 照常可用；Claude 仍然透過根目錄的 `CLAUDE.md` 讀到 Skill。如果 Windows 上這個項目不見了，會改建成不需要系統管理員權限的 junction。
 
 ## 2026-10-23
 

@@ -18,6 +18,7 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 ### Fixed
 
 - **Windows install** — `pnpm install` failed on Windows with `No projects matched the filters`, so no package was built and `sync:skills` then stopped on a missing `@mografy/core/dist/index.js`. pnpm runs scripts through `cmd` on Windows, which does not treat single quotes as quotes. The root `package.json` scripts (`build`, `typecheck`, `test`, `test:browser`, `test:compression`, `install:tool`) now use escaped double quotes, which work on macOS, Linux and Windows. Windows users who hit this: run `mografy update` (or `git pull --ff-only`), then `pnpm install`.
+- **Windows install, part 2** — `sync:skills` then stopped with `Preserving an existing custom Claude entry: .claude\skills\mografy`. Git on Windows checks the repository's `.claude/skills/mografy` symlink out as a small text file unless symlinks are enabled. `sync:skills` now recognises that placeholder and leaves it as Git wrote it, so the checkout stays clean for `mografy update`; Claude still reads the Skill through the root `CLAUDE.md`. When the entry is missing on Windows it is recreated as a junction, which needs no administrator rights.
 
 ## 2026-10-23
 
