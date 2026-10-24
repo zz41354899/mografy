@@ -16,7 +16,9 @@ interface UpdateServices {
 
 export function runUpdateCommand(command: string, args: string[], cwd: string, inherit = false): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'], env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
+    // Node refuses to spawn .cmd files (pnpm.cmd on Windows) without a shell; the arguments here are fixed words.
+    const shell = process.platform === 'win32' && command.endsWith('.cmd');
+    const child = spawn(command, args, { cwd, shell, stdio: inherit ? 'inherit' : ['ignore', 'pipe', 'pipe'], env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } });
     let stdout = '', stderr = '';
     child.stdout?.on('data', chunk => { stdout = (stdout + chunk).slice(-65536); });
     child.stderr?.on('data', chunk => { stderr = (stderr + chunk).slice(-4000); });

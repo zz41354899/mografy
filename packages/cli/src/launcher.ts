@@ -77,3 +77,34 @@ fi
 exec "$node" "$bin" "$@"
 `;
 }
+
+/**
+ * Windows launcher (`mografy.cmd`, which cmd and PowerShell both run). It uses the checkout it was
+ * installed from; `node` on PATH, falling back to the Node that ran the installation.
+ * Paths are quoted for cmd; a path containing % or " cannot be expressed and is rejected.
+ */
+export function windowsLauncherScript(installedBin: string, installedNode: string) {
+  for (const path of [installedBin, installedNode]) {
+    if (/[%"]/.test(path)) throw new Error(`Cannot write a Windows launcher for a path containing % or ": ${path}`);
+  }
+  return [
+    '@echo off',
+    'rem Mografy launcher (created by `mografy install-command`).',
+    'rem Reinstall from any checkout: node packages\\cli\\bin\\mografy.js install-command',
+    'setlocal',
+    `set "MOGRAFY_BIN=${installedBin}"`,
+    `set "MOGRAFY_NODE=${installedNode}"`,
+    // goto instead of a ( ) block: a path such as "Program Files (x86)" would end the block early.
+    'if exist "%MOGRAFY_BIN%" goto run',
+    'echo mografy: the Mografy folder this command was installed from no longer exists: 1>&2',
+    'echo   "%MOGRAFY_BIN%" 1>&2',
+    'echo Repair this command once from inside your Mografy folder: 1>&2',
+    'echo   node packages\\cli\\bin\\mografy.js install-command 1>&2',
+    'exit /b 1',
+    ':run',
+    'where node >nul 2>nul && set "MOGRAFY_NODE=node"',
+    '"%MOGRAFY_NODE%" "%MOGRAFY_BIN%" %*',
+    'exit /b %ERRORLEVEL%',
+    '',
+  ].join('\r\n');
+}

@@ -5,7 +5,7 @@ import { access, chmod, mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { launcherScript } from '../src/launcher.js';
+import { launcherScript, windowsLauncherScript } from '../src/launcher.js';
 
 const BIN = resolve(dirname(fileURLToPath(import.meta.url)), '../bin/mografy.js');
 function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -129,4 +129,14 @@ test('the PATH launcher survives a moved or deleted checkout and a missing Node 
     assert.match(gone.stderr, /node packages\/cli\/bin\/mografy\.js install-command/);
     assert.doesNotMatch(gone.stderr, /MODULE_NOT_FOUND|at Module/);
   } finally { await rm(sandbox, { recursive: true, force: true }); }
+});
+
+test('Windows launcher is a cmd script with CRLF lines that forwards arguments', () => {
+  const script = windowsLauncherScript('C:\\Program Files (x86)\\mografy\\packages\\cli\\bin\\mografy.js', 'C:\\Program Files\\nodejs\\node.exe');
+  assert.ok(script.startsWith('@echo off\r\n'));
+  assert.doesNotMatch(script.replaceAll('\r\n', ''), /\n/);
+  assert.match(script, /set "MOGRAFY_BIN=C:\\Program Files \(x86\)\\mografy\\packages\\cli\\bin\\mografy\.js"/);
+  assert.match(script, /"%MOGRAFY_NODE%" "%MOGRAFY_BIN%" %\*/);
+  assert.doesNotMatch(script, /\($/m, 'no ( ) blocks that a path with parentheses could close early');
+  assert.throws(() => windowsLauncherScript('C:\\100%\\mografy.js', 'node.exe'), /% or "/);
 });

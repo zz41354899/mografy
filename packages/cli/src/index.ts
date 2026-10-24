@@ -13,7 +13,7 @@ import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
 import { exportProject } from './export.js';
-import { launcherScript, trustCheckout } from './launcher.js';
+import { launcherScript, trustCheckout, windowsLauncherScript } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { refreshSkill } from './skills.js';
 import { addExtra, extrasList, printAdd } from './extras.js';
@@ -117,15 +117,12 @@ async function resolveProjectArg(arg: string) {
 /** Put a `mografy` launcher into a writable folder on PATH (no pnpm global setup needed). */
 async function installCommand() {
   await trustCheckout(workspaceRoot);
+  if (platform() === 'win32') return installWindowsCommand();
   const candidates = ['/opt/homebrew/bin', '/usr/local/bin', join(homedir(), '.local', 'bin'), join(homedir(), 'bin')];
   const onPath = (process.env.PATH ?? '').split(delimiter);
   let target: string | undefined;
   for (const dir of [...candidates.filter(d => onPath.includes(d)), ...onPath.filter(d => d.startsWith(homedir()))]) {
     if (await access(dir, constants.W_OK).then(() => true, () => false)) { target = dir; break; }
-  }
-  if (platform() === 'win32') {
-    console.log(`Windows: add this PowerShell function:\n  function mografy { & "${process.execPath}" "${BIN}" @args }`);
-    return;
   }
   if (!target) {
     target = join(homedir(), '.local', 'bin');
@@ -136,6 +133,33 @@ async function installCommand() {
   await writeFile(file, launcherScript(BIN, process.execPath));
   await chmod(file, 0o755);
   console.log(`Installed: ${file}\nIt finds your Mografy folder each time it runs, so moving or deleting this checkout will not break it.\nRun \`mografy dev\` from a Mografy project.`);
+}
+
+/**
+ * Windows: write mografy.cmd into a folder the user can write that is already on PATH, so the
+ * command works in new cmd and PowerShell windows. Node's installer puts %APPDATA%\\npm on PATH and
+ * Windows puts %LOCALAPPDATA%\\Microsoft\\WindowsApps there for every user.
+ */
+async function installWindowsCommand() {
+  const key = (dir: string) => resolve(dir).toLowerCase();
+  const onPath = (process.env.Path ?? process.env.PATH ?? '').split(delimiter).filter(Boolean);
+  const listed = new Set(onPath.map(key));
+  const { APPDATA, LOCALAPPDATA, PNPM_HOME } = process.env;
+  const preferred = [
+    APPDATA && join(APPDATA, 'npm'), PNPM_HOME, LOCALAPPDATA && join(LOCALAPPDATA, 'Microsoft', 'WindowsApps'),
+  ].filter((dir): dir is string => !!dir && listed.has(key(dir)));
+  const home = key(homedir()) + sep;
+  let target: string | undefined;
+  for (const dir of [...preferred, ...onPath.filter(dir => key(dir).startsWith(home))]) {
+    if (await access(dir, constants.W_OK).then(() => true, () => false)) { target = dir; break; }
+  }
+  if (!target) {
+    console.log(`No writable folder on PATH was found. In PowerShell, add this function to your profile:\n  function mografy { & "${process.execPath}" "${BIN}" @args }`);
+    return;
+  }
+  const file = join(target, 'mografy.cmd');
+  await writeFile(file, windowsLauncherScript(BIN, process.execPath));
+  console.log(`Installed: ${file}\nOpen a new terminal window, then run \`mografy dev\` from a Mografy project.`);
 }
 
 export function openBrowser(url: string) {
