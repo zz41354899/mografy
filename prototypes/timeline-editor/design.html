@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mografy 設計系統</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500&family=Instrument+Serif&family=Inter:wght@500&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="design.css?v=16">
+
+<div class="shell">
+  <header class="bar">
+    <button class="back" id="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span data-t="back"></span></button>
+    <div class="crumb"><span class="mark" aria-hidden="true"><i></i></span><strong>Mografy</strong><span class="sep">/</span><span id="projName"></span><span class="sep">/</span><code>design.json</code></div>
+    <div class="bar-end">
+      <span class="saved" id="saved" aria-live="polite"></span>
+      <div class="seg lang-switch" id="langSwitch" role="radiogroup" aria-label="Language" data-pos="0">
+        <button role="radio" data-lang="zh">中</button><button role="radio" data-lang="en">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="side" aria-label="Sections">
+    <ol class="toc" id="toc"></ol>
+    <div class="side-foot">
+      <button class="reset" id="reset" data-t="reset"></button>
+    </div>
+  </nav>
+
+  <main class="main" id="main">
+    <section class="hero" id="overview">
+      <div class="hero-copy">
+        <p class="eyebrow" data-t="eyebrow"></p>
+        <h1 id="heroTitle">Lunar Pop Club</h1>
+        <p class="lede" data-t="lede"></p>
+        <dl class="facts" id="facts"></dl>
+      </div>
+      <figure class="hero-stage">
+        <canvas id="heroCanvas" width="960" height="540" role="img" data-t-aria="heroAria"></canvas>
+        <figcaption><span data-t="heroCap"></span> <code id="heroScheme"></code></figcaption>
+      </figure>
+    </section>
+
+    <section class="sec" id="physics">
+      <header class="sec-head">
+        <p class="kicker">motion.springs</p>
+        <h2 data-t="physicsH"></h2>
+        <p class="sec-lede" data-t="physicsLede"></p>
+      </header>
+      <div class="physics-controls">
+        <div class="scheme" role="radiogroup" data-t-aria="schemeH" id="scheme"></div>
+        <label class="scale" for="timeScale"><span data-t="timeScale"></span>
+          <input type="range" id="timeScale" min="0.5" max="3" step="0.1"><output id="timeScaleOut" for="timeScale"></output></label>
+      </div>
+      <p class="note" data-t="timeScaleNote"></p>
+      <div class="matrix" id="matrix"></div>
+    </section>
+
+    <section class="sec" id="components">
+      <header class="sec-head">
+        <p class="kicker">motion.components</p>
+        <h2 data-t="compH"></h2>
+        <p class="sec-lede" data-t="compLede"></p>
+      </header>
+      <div class="comps" id="comps"></div>
+    </section>
+
+    <section class="sec" id="color">
+      <header class="sec-head">
+        <p class="kicker">color</p>
+        <h2 data-t="colorH"></h2>
+        <p class="sec-lede" data-t="colorLede"></p>
+      </header>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <section class="sec" id="type">
+      <header class="sec-head">
+        <p class="kicker">type</p>
+        <h2 data-t="typeH"></h2>
+        <p class="sec-lede" data-t="typeLede"></p>
+      </header>
+      <div class="types" id="types"></div>
+    </section>
+
+    <section class="sec" id="space">
+      <header class="sec-head">
+        <p class="kicker">space · radius · distance</p>
+        <h2 data-t="spaceH"></h2>
+        <p class="sec-lede" data-t="spaceLede"></p>
+      </header>
+      <div class="space-grid">
+        <div class="panel"><h3 data-t="spaceScale"></h3><div class="space-list" id="spaceList"></div></div>
+        <div class="panel"><h3 data-t="safeArea"></h3><div class="safe" id="safe"><div class="safe-in"><span>160 px</span></div></div><p class="note" data-t="safeNote"></p></div>
+        <div class="panel"><h3 data-t="radiusH"></h3><div class="radii" id="radii"></div></div>
+        <div class="panel"><h3 data-t="distanceH"></h3><div class="space-list" id="distList"></div></div>
+      </div>
+    </section>
+
+    <section class="sec" id="json">
+      <header class="sec-head">
+        <p class="kicker">design.json</p>
+        <h2 data-t="jsonH"></h2>
+        <p class="sec-lede" data-t="jsonLede"></p>
+      </header>
+      <div class="code">
+        <div class="code-bar"><code>design.json</code><button id="copy" data-t="copy"></button></div>
+        <pre id="jsonOut"></pre>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="physics.js?v=16"></script>
+<script src="design.js?v=16"></script>
+</body></html>

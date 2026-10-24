@@ -4,11 +4,11 @@ import { EventEmitter } from 'node:events';
 import { mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, validateSceneProject } from '@mografy/core';
-import type { AutoShots, ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
-import { buildScene, detectShots, readStoryboard, renderReview, SceneHost } from '@mografy/render';
+import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
+import { buildScene, renderReview, SceneHost } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
 import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
-
+import { ShotGuesser } from './project-shots.js';
 import { ProjectWatcher } from './project-watcher.js';
 import { ProjectFrames } from './project-frames.js';
 import { RenderJobs } from './render-jobs.js';
@@ -48,13 +48,10 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private thumbnail: string | null = null;
   private closed = false;
   private reviews = new Set<Promise<unknown>>();
-  /** Guessed shots for a scene that lists none, for the inputs in `key` (scene, settings, storyboard). */
-  private guess: (AutoShots & { key: string; duration: number }) | undefined;
-  private guessTimer: ReturnType<typeof setTimeout> | undefined;
-  private guessing: Promise<unknown> | undefined;
   private readonly watcher: ProjectWatcher;
   private readonly frames: ProjectFrames;
   private readonly jobs: RenderJobs;
+  private readonly shots: ShotGuesser;
   url = '';
 
   private constructor(readonly dir: string, readonly host: SceneHost) {
@@ -66,6 +63,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       signal.throwIfAborted();
       await atomicWrite(file, data);
     }), () => { if (!this.closed) this.publish('render'); });
+    // Built-in components are references, never presentations: they get no guessed shots.
+    this.shots = new ShotGuesser(dir, host,
+      () => isBuiltIn(this.dir) ? { scene: null, project: null, build: undefined } : { scene: this.scene, project: this.project, build: this.scene ? this.builds.get(this.scene.version) : undefined },
+      (file, data) => this.run(() => atomicWrite(file, data)),
+      () => this.publish('shots'));
   }
 
   static async open(projectDir: string) {
@@ -94,21 +96,12 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       state: this.state, render: this.jobs.status, thumbnail: this.thumbnail, builtIn: isBuiltIn(this.dir),
     });
   }
-  /**
-   * The scene as clients see it. One that lists no shots carries the guessed ones, so Present mode,
-   * the presentation page and the HTML export all get one slide per shot. A guess for the previous
-   * version stands in while the new one is measured, as long as the length is unchanged.
-   */
+  /** The scene as clients see it, with guessed shots when it lists none (see ShotGuesser). */
   private presented(): SceneInfo | null {
-    const scene = this.scene, guess = this.guess, slides = this.project?.slides;
-    if (!scene || scene.meta.shots?.length || isBuiltIn(this.dir)) return scene;
-    // Shots written to mografy.json (by hand, by an agent, or by `mografy update`) come next.
-    if (slides?.shots) return { ...scene, meta: { ...scene.meta, shots: slides.shots }, ...(slides.guessedFrom ? { autoShots: slides.guessedFrom } : {}) };
-    if (!guess || guess.duration !== scene.meta.duration) return scene;
-    return { ...scene, meta: { ...scene.meta, shots: guess.shots }, autoShots: guess.source };
+    return isBuiltIn(this.dir) ? this.scene : this.shots.present(this.scene, this.project);
   }
   private publish(reason: string, clientId?: string) {
-    if (this.scene && (reason === 'scene' || reason === 'project')) { this.scheduleThumb(); this.scheduleGuess(); }
+    if (this.scene && (reason === 'scene' || reason === 'project')) { this.scheduleThumb(); this.shots.schedule(); }
     this.sequence++;
     this.emit('event', { type: 'snapshot', reason, clientId, snapshot: this.snapshot() });
   }
@@ -186,7 +179,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         const hadError = !!this.error;
         const { changed } = await this.commit(project, prepared, reason);
         if (changed || manifestChanged || hadError || reason === 'startup') this.publish(changed ? 'scene' : 'project');
-        else this.scheduleGuess(); // the storyboard may have changed
+        else this.shots.schedule(); // the storyboard may have changed
       } catch (error) {
         const message = describe(error);
         if (this.error?.message !== message || reason === 'startup') { this.error = { message, reason, at: now() }; this.publish('error'); }
@@ -300,38 +293,6 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     });
   }
 
-  /** Guess shots in the background (outside the write queue), shortly after the scene settles. */
-  private scheduleGuess() {
-    clearTimeout(this.guessTimer);
-    if (this.closed || isBuiltIn(this.dir) || !this.scene || this.scene.meta.shots?.length || this.project?.slides?.shots) return;
-    this.guessTimer = setTimeout(() => { void this.refreshGuess(); }, 400);
-  }
-  /** Guesses run one after another; each skips work when its inputs match the last guess. */
-  private refreshGuess() {
-    const next = (this.guessing ?? Promise.resolve()).then(() => this.guessNow()).catch(() => {});
-    this.guessing = next;
-    return next;
-  }
-  private async guessNow() {
-    const scene = this.scene, project = this.project, build = scene && this.builds.get(scene.version);
-    if (this.closed || !scene || !project || !build || scene.meta.shots?.length || project.slides?.shots) return;
-    const storyboard = await readStoryboard(this.dir);
-    const key = sha256(JSON.stringify(['guess-1', sceneRuntimeKey(scene.version, project), project.params, storyboard ?? null]));
-    if (this.guess?.key === key) return;
-    const file = join(this.dir, '.mografy', 'auto-shots.json');
-    const saved = await readJson<AutoShots & { key?: string }>(file);
-    let result: AutoShots;
-    if (saved?.key === key && Array.isArray(saved.shots)) result = { source: saved.source, shots: saved.shots };
-    else {
-      const page = await this.host.open(build, project, { renderScale: 0.25 });
-      try { result = await detectShots(page, storyboard); } finally { await page.close(); }
-      await this.run(() => atomicWrite(file, JSON.stringify({ key, ...result }) + '\n')).catch(() => {});
-    }
-    if (this.closed || this.scene?.version !== scene.version) return;
-    this.guess = { ...result, key, duration: scene.meta.duration };
-    this.publish('shots');
-  }
-
   private scheduleThumb() { this.frames.scheduleThumbnail(() => this.refreshThumbnail()); }
 
   /** Capture then queue the write; discard a capture superseded by a source/parameter update. */
@@ -379,8 +340,8 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.closed = true;
     this.watcher.close();
     this.frames.cancelThumbnail();
-    clearTimeout(this.stateTimer); clearTimeout(this.guessTimer);
-    await this.guessing;
+    clearTimeout(this.stateTimer);
+    await this.shots.close();
     await this.jobs.close();
     await Promise.allSettled([...this.reviews]);
     await this.queue;

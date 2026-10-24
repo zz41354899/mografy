@@ -12,6 +12,10 @@
     "./math": {
       "types": "./dist/math.d.ts",
       "import": "./dist/math.js"
+    },
+    "./scene": {
+      "types": "./dist/scene.d.ts",
+      "import": "./dist/scene.js"
     }
   },
   "files": [

@@ -85,10 +85,13 @@ export class ScenePlayer {
       if (this.disposed || request !== this.loadRequest) { stage.remove(); return; }
       const { scene, canvas } = stage;
       const width = project.aspectRatio === '9:16' ? Math.min(scene.meta.width, scene.meta.height) : scene.meta.width;
-      const scale = Math.min(1, Math.max(0.25, Math.round(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
+      const scale = Math.min(1, Math.max(0.25, Math.ceil(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
       const creating = createSceneRuntime(canvas, scene, {
         seed: project.seed, renderScale: scale, params, assetBase: this.sources.assetBase, assetUrls: this.sources.assetUrls, fonts: project.fonts, audio: project.audio,
         aspectRatio: project.aspectRatio,
+        // The player never reads pixels back, so draw on the GPU: blurs, shadows and 3D layers stay smooth while playing.
+        // Exports keep the default CPU canvas for identical output on every machine.
+        canvas: 'gpu',
       });
       // A setup that never settles must not hold the load chain: later versions would never appear.
       let timer: ReturnType<typeof setTimeout> | undefined;

@@ -18,6 +18,13 @@ const shotSchema = z.strictObject({
   title: z.string().max(120).optional(),
 });
 const shotsSchema = z.array(shotSchema).min(1).max(200).refine(shots => shots.every((shot, i) => i === 0 || shot.end > shots[i - 1]!.end), 'Shot ends must be in increasing time order');
+/** The scene's musical grid. Build timing constants from it with tempoGrid() from @mografy/runtime. */
+export const tempoSchema = z.strictObject({
+  bpm: z.number().finite().positive().max(1000),
+  beatsPerBar: z.number().int().min(1).max(32).default(4),
+  /** Time in seconds of a beat (the grid origin). */
+  offset: z.number().finite().default(0),
+});
 export const sceneMetaSchema = z.strictObject({
   width: z.number().int().min(2).max(7680),
   height: z.number().int().min(2).max(7680),
@@ -27,6 +34,8 @@ export const sceneMetaSchema = z.strictObject({
   background: color,
   /** The scene's shots, in order. Present mode makes one slide per shot; video ignores them. */
   shots: shotsSchema.optional(),
+  /** The tempo the scene is timed to. `ctx.beat` uses it when the project has no audio; `mografy check` compares it with `audio`. */
+  tempo: tempoSchema.optional(),
 });
 export type SceneMeta = z.infer<typeof sceneMetaSchema>;
 export const aspectRatioSchema = z.enum(['16:9', '9:16']);
@@ -180,6 +189,17 @@ export function shotIssues(meta: Pick<SceneMeta, 'duration' | 'shots'>): string[
     ...(shot.end > meta.duration + 1e-6 ? [`Shot ${i + 1} ends at ${shot.end}s, after the scene ends (${meta.duration}s).`] : []),
     ...(shot.stop !== undefined && (shot.stop > shot.end + 1e-6 || shot.stop <= (meta.shots![i - 1]?.end ?? 0) - 1e-6) ? [`Shot ${i + 1} stops at ${shot.stop}s, outside the shot.`] : []),
   ]);
+}
+
+/** Differences between the tempo a scene is timed to and the project's audio grid. */
+export function tempoIssues(meta: Pick<SceneMeta, 'tempo'>, audio?: Pick<z.infer<typeof audioSchema>, 'bpm' | 'offset' | 'beatsPerBar'>): string[] {
+  const tempo = meta.tempo;
+  if (!tempo || !audio) return [];
+  const issues: string[] = [];
+  if (Math.abs(tempo.bpm - audio.bpm) > 1e-6) issues.push(`The scene is timed to ${tempo.bpm} BPM (meta.tempo) but the audio is set to ${audio.bpm} BPM.`);
+  if (Math.abs((tempo.offset ?? 0) - (audio.offset ?? 0)) > 1e-3) issues.push(`meta.tempo.offset is ${tempo.offset ?? 0}s but audio.offset is ${audio.offset ?? 0}s.`);
+  if ((tempo.beatsPerBar ?? 4) !== (audio.beatsPerBar ?? 4)) issues.push(`meta.tempo has ${tempo.beatsPerBar ?? 4} beats per bar but audio has ${audio.beatsPerBar ?? 4}.`);
+  return issues;
 }
 
 export interface DeckSlide {

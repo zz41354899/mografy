@@ -11,9 +11,10 @@ Use it when the user wants music and has none, or asks for music that fits the f
 The generator is an optional extra, not part of the installed template. It needs Python 3 with numpy; MP3 output uses ffmpeg, and the timeline image uses Pillow. If the project already has `music-src/score.py`, reuse it. Otherwise copy it from the current Mografy checkout (`extras/music/`) or download it:
 
 ```sh
-mkdir -p music-src
-curl -fsSL -o music-src/score.py https://raw.githubusercontent.com/zz41354899/mografy/main/extras/music/score.py
+mografy add music projects/<name>
 ```
+
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `music-src/score.py` and, when the project has none, an example `music-src/music.json` to rewrite for this film. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/music/`.
 
 `music-src/` is outside `scenes/` and `assets/`: the scene never imports it, and only the generated audio file goes in `assets/`.
 

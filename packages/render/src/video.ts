@@ -37,7 +37,7 @@ async function captureSegment(host: SceneHost, job: VideoJob, start: number, end
   try {
     for (let k = start; k < end; k++) {
       if (job.signal?.aborted) throw new Error('Render cancelled');
-      const rgba = await page.output(k, settings);
+      const rgba = await page.output(k, settings, k + 1 < end ? k + 1 : undefined);
       if (rgba.length !== width * height * 4) throw new Error(`Frame ${k}: expected ${width * height * 4} bytes, got ${rgba.length}`);
       await ffmpeg.write(rgba);
       onFrame();

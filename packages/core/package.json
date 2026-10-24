@@ -15,8 +15,8 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "node scripts/skill-text.mjs && tsc -p tsconfig.json",
+    "typecheck": "node scripts/skill-text.mjs --check && tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {

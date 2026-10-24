@@ -11,10 +11,10 @@ Use a 3D layer when the brief needs real depth: objects that turn and catch ligh
 The helper and library are an optional extra, not part of the installed template. If the project already has `scenes/three.ts` and `assets/three.module.js`, read and reuse those local copies. Otherwise copy from the current Mografy checkout (`extras/three/`) or download from GitHub:
 
 ```sh
-curl -fsSL -o scenes/three.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/three.ts
-curl -fsSL -o assets/three.module.js https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/three.module.js
-curl -fsSL -o assets/LICENSE-three.txt https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/LICENSE-three.txt
+mografy add three projects/<name>
 ```
+
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `scenes/three.ts`, `assets/three.module.js` and its licence. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/`.
 
 `three.module.js` is a single minified Three.js r186 bundle (about 0.8 MB, MIT) that also exports `GLTFLoader`, `RoomEnvironment` and `RoundedBoxGeometry`. It lives in `assets/` because scene modules may import only project sources and `@mografy/runtime`; `prepareStage` loads it at runtime from the project. Import the helper locally (`import { prepareStage, stage, orbit } from './three.js'`). Copy `three-demo.ts` too only when the user wants the tour.
 

@@ -30,3 +30,10 @@ test('legacy storyboard cleanup excludes the new Codex supplement', () => {
   assert.ok(file in sharedSkillFiles().mografy);
   assert.equal(file in obsoleteStoryboardFiles('/old/installation'), false);
 });
+
+test('generated skill text matches the Markdown sources', async () => {
+  const { skillText } = await import('../scripts/skill-text.mjs');
+  const { readFile } = await import('node:fs/promises');
+  const current = await readFile(new URL('../src/skill-text.ts', import.meta.url), 'utf8');
+  assert.equal(current, skillText(), 'run `pnpm --filter @mografy/core build` to regenerate src/skill-text.ts');
+});

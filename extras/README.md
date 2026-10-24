@@ -1,6 +1,6 @@
 # Mografy extras
 
-Optional helpers that are **not installed** with Mografy. Installation contains only the sixteen built-in components; these files stay on GitHub and are copied into an animation project when its brief needs them. The shared `mografy` Skill tells the agent when and how to fetch each one.
+Optional helpers that are **not installed** with Mografy. Common motion and drawing helpers (springs, easing, eased time windows, tempo grids, rounded surfaces, word reveals, gradients) are part of `@mografy/runtime`; extras build on them. Installation contains only the sixteen built-in components; these files stay on GitHub and are copied into an animation project when its brief needs them. The shared `mografy` Skill tells the agent when and how to fetch each one.
 
 | Extra | Files | Copy into a project | Reference |
 | --- | --- | --- | --- |
@@ -10,8 +10,16 @@ Optional helpers that are **not installed** with Mografy. Installation contains 
 | 3D layers (Three.js) | `three/three.ts`, `three/three-demo.ts` | `scenes/` | [three-d.md](../.agents/skills/mografy/references/three-d.md) |
 | Three.js r186 bundle (MIT) | `three/three.module.js`, `three/LICENSE-three.txt` | `assets/` | [three-d.md](../.agents/skills/mografy/references/three-d.md) |
 | Contextual music generator (Python, numpy) | `music/score.py`, `music/music-example.json` | `music-src/` (the generated audio goes in `assets/`) | [music.md](../.agents/skills/mografy/references/music.md) |
+| Product walkthroughs (redrawn app screens, detail shots) | `walkthrough/walkthrough.ts`, `walkthrough/walkthrough-demo.ts` | `scenes/` | [product-walkthrough.md](../.agents/skills/mografy/references/product-walkthrough.md) |
 
-From another folder, download a file directly, for example:
+Add one to a project with the CLI; it copies from this checkout (or GitHub), registers CJK fonts in `mografy.json`, and keeps files you changed unless you pass `--force`:
+
+```sh
+mografy add             # list the extras
+mografy add cinema projects/my-film
+```
+
+Without the `mografy` command, download a file directly, for example:
 
 ```sh
 curl -fsSL -o scenes/cinema.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cinema/cinema.ts

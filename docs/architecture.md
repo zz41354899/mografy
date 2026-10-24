@@ -12,7 +12,7 @@ Design plan: [Mografy rebuild plan](https://claude.ai/code/artifact/41f66790-af5
 
 ## Agent guidance and storyboards
 
-`packages/core/src/guide.ts` owns the English scene contract, storyboard workflow, twelve animation principles, and short Skill/project entrypoints. One shared Skill, `mografy`, lives in the outer repository folder `.agents/skills/mografy/`, with local scene-authoring, built-in-component, intro, storyboard, animation-principle, and project references. Product development, scenes, and shot planning all use this entrypoint.
+`packages/core/skill/` holds the English scene contract, storyboard workflow, twelve animation principles, and short Skill/project entrypoints as Markdown; the core build turns them into `src/skill-text.ts` and `packages/core/src/guide.ts` assembles the generated files. One shared Skill, `mografy`, lives in the outer repository folder `.agents/skills/mografy/`, with local scene-authoring, built-in-component, intro, storyboard, animation-principle, and project references. Product development, scenes, and shot planning all use this entrypoint.
 
 Project style is per-project data, not a Skill. `style.md` at the project root holds the project's design and motion rules in English; the values stay in scene code, defined once in a scene module, so they are compiled, versioned and trial-rendered like any other source. The Skill and storyboard reference tell agents to read `style.md` first; precedence is the current request, then the project style, then the Skill's default design guidance, with the scene contract always in force. It is not stored in `mografy.json`, and installation does not create it.
 
@@ -32,7 +32,7 @@ The recommended local name is `const mografy = ctx.draw`, with calls such as `mo
 
 The API tracks fill/stroke switches. `push`/`pop` preserve both switches and native Canvas state. Each frame resets the switches and API stack after resetting the Canvas so out-of-order seeking or unbalanced pushes cannot contaminate the next frame. Methods can be destructured; the API object is not recreated per frame.
 
-`ctx.canvas` retains native drawing and resolution scaling and can be mixed with the API. Do not cross-pair native save/restore with API push/pop. Use native operations for batched paths and complex clipping. This is a Mografy drawing wrapper, not full p5.js compatibility. The scene contract remains in `packages/core/src/guide.ts`.
+`ctx.canvas` retains native drawing and resolution scaling and can be mixed with the API. Do not cross-pair native save/restore with API push/pop. Use native operations for batched paths and complex clipping. This is a Mografy drawing wrapper, not full p5.js compatibility. The scene contract remains in `packages/core/skill/references/scene-authoring.md`.
 
 ## Data flow
 
@@ -125,7 +125,7 @@ Canvas scenes have no vector timeline. Lottie uses visible per-frame image layer
 
 Core owns format-specific export frame-rate limits and validation: MP4/WebM up to 60 fps, Lottie up to 30 fps, and SVGA's supported rates up to 30 fps. The export request schema checks explicit overrides; the Server checks resolved project settings; direct render functions validate before capture. The player filters options and caps inherited video frame rates without writing them back to the project. Scene preview stepping and project render settings retain their existing ranges.
 
-The player keeps a lightweight raw live preview. All four export formats share `renderOutputFrame`, multisample blending, and post-processing. The Final frame UI was removed; inspect finished frames using output review sheets from `mografy review`.
+The player keeps a lightweight raw live preview. All four export formats share `renderOutputFrame`, multisample blending, and post-processing. Video export runs the same `FrameAccumulator` and `finishFrame` in two Web Workers inside the headless page (`render/src/post-worker.ts`): the main thread draws frame k+1's samples while a worker mixes and finishes frame k, and the bytes match `renderOutputFrame` exactly. The Final frame UI was removed; inspect finished frames using output review sheets from `mografy review`.
 
 ## Built-in animation components
 

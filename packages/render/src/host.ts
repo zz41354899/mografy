@@ -15,16 +15,18 @@ import type { SceneBuild } from './build.js';
 
 const MIME: Record<string, string> = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.ttf': 'font/ttf', '.otf': 'font/otf', '.woff': 'font/woff', '.woff2': 'font/woff2', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
 
-let hostScript: Promise<string> | undefined;
-/** Bundle the in-page host (runtime + core) once per process. */
-function hostBundle() {
-  hostScript ??= (async () => {
+const bundles = new Map<string, Promise<string>>();
+/** Bundle an in-page script (the host page or its output worker, with runtime + core) once per process. */
+function pageBundle(name: 'host-page' | 'post-worker') {
+  let bundle = bundles.get(name);
+  if (!bundle) {
     const self = fileURLToPath(import.meta.url);
-    const entry = resolve(self, '..', `host-page${extname(self)}`);
-    const result = await esbuild({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', write: false, logLevel: 'silent' });
-    return result.outputFiles[0]!.text;
-  })();
-  return hostScript;
+    const entry = resolve(self, '..', `${name}${extname(self)}`);
+    bundle = esbuild({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', write: false, logLevel: 'silent' })
+      .then(result => result.outputFiles[0]!.text);
+    bundles.set(name, bundle);
+  }
+  return bundle;
 }
 
 /** Resolve a request path to a file inside the project, refusing dot-directories and escapes. */
@@ -40,7 +42,19 @@ export async function projectFile(projectDir: string, relativePath: string) {
 }
 
 export interface LoadedScene { meta: SceneMeta; params: ParameterDefinitions; width: number; height: number }
-export interface OpenOptions { renderScale?: number; params?: ParameterValues; seed?: number; outputSize?: ExportSize | undefined }
+export interface OpenOptions {
+  renderScale?: number; params?: ParameterValues; seed?: number; outputSize?: ExportSize | undefined;
+  /** Canvas backing (see RuntimeOptions.canvas). Defaults to MOGRAFY_CANVAS, else 'cpu'. */
+  canvas?: CanvasBacking | undefined;
+}
+export type CanvasBacking = 'cpu' | 'gpu';
+/** `MOGRAFY_CANVAS=gpu` draws with GPU acceleration, for comparing speed on a machine with a GPU. */
+export function canvasBacking(): CanvasBacking {
+  const value = process.env.MOGRAFY_CANVAS?.trim().toLowerCase();
+  if (!value || value === 'cpu') return 'cpu';
+  if (value === 'gpu') return 'gpu';
+  throw new Error(`MOGRAFY_CANVAS must be cpu or gpu, not ${process.env.MOGRAFY_CANVAS}`);
+}
 type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>;
 
 /**
@@ -86,8 +100,11 @@ export class HostPage {
   /** Raw RGBA of the scene at time t (device pixels). */
   raw(t: number) { return this.receive(token => this.page.evaluate(([t, token]) => window.mografyHost.raw(t, token), [t, token] as const)); }
   rawHash(t: number) { return this.bounded(this.page.evaluate(t => window.mografyHost.rawHash(t), t)).catch(e => { throw cleanError(e); }); }
-  /** Post-processed RGBA of output frame k. */
-  output(k: number, settings: OutputSettings) { return this.receive(token => this.page.evaluate(([k, s, token]) => window.mografyHost.output(k, s, token), [k, settings, token] as const)); }
+  /**
+   * Post-processed RGBA of output frame k. Pass `next` (the frame you will ask for after this one) to let
+   * the page draw it while frame k is still being mixed; the next call then only waits for its finish.
+   */
+  output(k: number, settings: OutputSettings, next?: number) { return this.receive(token => this.page.evaluate(([k, s, token, next]) => window.mografyHost.output(k, s, token, next), [k, settings, token, next] as const)); }
   png(cell: Cell, settings: OutputSettings) { return this.receive(token => this.page.evaluate(([c, s, token]) => window.mografyHost.png(c, s, token), [cell, settings, token] as const)); }
   /** Greyscale frames `width` wide at each time, concatenated (see host-page motion). */
   motion(times: number[], width: number) { return this.receive(token => this.page.evaluate(([t, w, token]) => window.mografyHost.motion(t, w, token), [times, width, token] as const)); }
@@ -144,7 +161,8 @@ export class SceneHost {
       }
       if (request.method !== 'GET') return fail(405, 'method');
       if (url.pathname === '/') { response.writeHead(200, { 'content-type': 'text/html' }); response.end('<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><script type="module" src="/host.js"></script>'); return; }
-      if (url.pathname === '/host.js') { response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await hostBundle()); return; }
+      if (url.pathname === '/host.js') { response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await pageBundle('host-page')); return; }
+      if (url.pathname === '/post-worker.js') { response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await pageBundle('post-worker')); return; }
       const scene = /^\/scene\/([\da-f]+)\.js$/.exec(url.pathname);
       if (scene) {
         const code = this.builds.get(scene[1]!);
@@ -229,6 +247,7 @@ export class SceneHost {
         fonts: project.fonts, audio: project.audio,
         outputSize: options.outputSize,
         aspectRatio: project.aspectRatio,
+        canvas: options.canvas ?? canvasBacking(),
       };
       const scene = await bounded(page.evaluate(s => window.mografyHost.load(s), spec), hostTimeouts.load,
         `Scene setup did not finish within ${seconds(hostTimeouts.load)}. Check setup() for an await that never resolves (image, font or fetch) or a loop that never ends.`,

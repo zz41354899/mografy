@@ -7,7 +7,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
-import { deckSlides, shotIssues } from '@mografy/core';
+import { deckSlides, shotIssues, tempoIssues } from '@mografy/core';
 import type { Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
@@ -16,6 +16,7 @@ import { exportProject } from './export.js';
 import { launcherScript, trustCheckout } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { refreshSkill } from './skills.js';
+import { addExtra, extrasList, printAdd } from './extras.js';
 import { parse } from './options.js';
 import type { Flags } from './options.js';
 export { displayPath } from './paths.js';
@@ -42,6 +43,10 @@ function helpText(color: boolean) {
       row('mografy check <project>', 'Compile and trial-render in Chromium'),
       row('mografy review <project>', 'Create visual-review sheets in renders/'),
       row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
+    ]),
+    section('Extras', [
+      row('mografy add', 'List optional helpers: cinema, cjk, three, music, walkthrough'),
+      row('mografy add <extra> [project]', 'Copy one into a project (--force replaces changed files)'),
     ]),
     section('Manage', [
       row('mografy stop [project]', "Stop a project's player"),
@@ -194,6 +199,11 @@ async function checkProject(dir: string) {
       const count = deckSlides(meta, snapshot.project?.slides).length;
       console.log(`✓ ${meta.shots.length} shot${meta.shots.length === 1 ? '' : 's'}, ${count} presentation slide${count === 1 ? '' : 's'}`);
     }
+    if (meta.tempo) {
+      const issues = tempoIssues(meta, snapshot.project?.audio);
+      if (issues.length) console.log(issues.map(issue => `! ${issue}`).join('\n') + '\n  Change meta.tempo or the audio settings so the picture and the music share one grid.');
+      else console.log(`✓ Timed to ${meta.tempo.bpm} BPM${snapshot.project?.audio ? ', matching the audio' : ' (no audio yet)'}`);
+    }
   };
   // A running player already owns this project: ask it, so the check uses its queue and Chromium
   // and the player shows the same result, instead of starting a second Chromium beside it.
@@ -249,19 +259,27 @@ async function reviewProject(dir: string, video?: string) {
 
 export async function main(argv = process.argv.slice(2)) {
   const { flags, rest } = parse(argv);
-  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'help']);
+  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(helpText(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR)); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
   if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
   if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
+  if (flags.force && command !== 'add') throw new Error('--force is only supported by mografy add.');
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
     return updateInstallation(workspaceRoot, flags.updateCheck);
   }
   // Installation must not initialize components or consult a previous project's state.
   if (command === 'install-command') return installCommand();
+  if (command === 'add') {
+    const [name, target] = rest;
+    if (!name) { console.log(`Optional helpers. Add one with \`mografy add <extra> [project]\`:\n${extrasList()}`); return; }
+    const dir = target ? await resolveProjectArg(target) : process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : await implicitProject('add');
+    await requireProject(dir);
+    return printAdd(name, dir, await addExtra(workspaceRoot, dir, name, flags.force));
+  }
   const configured = process.env.MOGRAFY_PROJECT;
   const dir = explicit
     ? command === 'init' ? resolve(rest[0]!) : await resolveProjectArg(rest[0]!)

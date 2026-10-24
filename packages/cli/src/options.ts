@@ -13,10 +13,12 @@ export interface Flags {
   resolution?: '720p' | '1080p';
   cancel: boolean;
   updateCheck: boolean;
+  /** `mografy add`: replace files that differ from the extra. */
+  force: boolean;
 }
 
 export function parse(argv: string[]) {
-  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false };
+  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false, force: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i]!;
@@ -24,6 +26,7 @@ export function parse(argv: string[]) {
     else if (value === '--yes' || value === '-y') flags.yes = true;
     else if (value === '--cancel') flags.cancel = true;
     else if (value === '--check') flags.updateCheck = true;
+    else if (value === '--force') flags.force = true;
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];

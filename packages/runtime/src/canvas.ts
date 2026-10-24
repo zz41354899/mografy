@@ -24,7 +24,7 @@ export interface FrameContext {
   assets: Readonly<Record<string, unknown>>;
   /** Order-independent noise in 0..1 from (seed, ...coordinates). */
   noise(...coordinates: number[]): number;
-  /** Beat position from the project audio grid; undefined without audio. */
+  /** Beat position from the project audio grid, or the scene's `meta.tempo` without audio; undefined when neither is set. */
   beat(time: number): BeatPosition | undefined;
   /** Synchronous scope; restores native styles and drawing flags, even on failure. */
   withCanvas(draw: (canvas: CanvasRenderingContext2D) => void): void;
@@ -54,6 +54,12 @@ export interface RuntimeOptions {
   aspectRatio?: AspectRatio | undefined;
   /** Throw when renderFrame touches Math.random / Date.now / performance.now. Default true. */
   guard?: boolean;
+  /**
+   * Canvas backing. 'cpu' (default) keeps pixels in memory, so reading every frame back is cheap and the
+   * output is identical on every machine. 'gpu' draws with acceleration where the browser has it: faster
+   * blurs and shadows, slower readback, and edges may differ slightly from 'cpu'.
+   */
+  canvas?: 'cpu' | 'gpu' | undefined;
 }
 
 const EFFECT_PROPS = new Set(['shadowBlur', 'shadowOffsetX', 'shadowOffsetY']);
@@ -81,7 +87,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
     const source = doc.createElement('canvas');
     const runtime = await createSceneRuntime(source, { ...scene, meta }, { ...options, aspectRatio: undefined, outputSize: undefined, renderScale: Math.min(4, factor) });
     element.width = size.width; element.height = size.height;
-    const ctx = element.getContext('2d', { willReadFrequently: true });
+    const ctx = element.getContext('2d', { willReadFrequently: options.canvas !== 'gpu' });
     if (!ctx) { runtime.dispose(); throw new Error('Canvas 2D unavailable'); }
     const width = meta.width * factor, height = meta.height * factor;
     return {
@@ -122,7 +128,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
     },
   });
   Object.freeze(assets);
-  const ctx = element.getContext('2d', { willReadFrequently: true });
+  const ctx = element.getContext('2d', { willReadFrequently: options.canvas !== 'gpu' });
   if (!ctx) throw new Error('Canvas 2D unavailable');
 
   // Public context speaks logical units; the native context receives device pixels.
@@ -155,7 +161,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   const frame: FrameContext = {
     canvas: logical, draw: drawing.draw, width: meta.width, height: meta.height, renderScale: scale, seed, assets,
     noise: (...coordinates) => hashNoise(seed, ...coordinates),
-    beat: time => options.audio ? beatAt(time, options.audio) : undefined,
+    beat: time => { const grid = options.audio ?? meta.tempo; return grid ? beatAt(time, grid) : undefined; },
     withCanvas(draw) {
       drawing.draw.push();
       try { draw(logical); } finally { drawing.draw.pop(); }

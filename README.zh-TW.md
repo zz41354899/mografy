@@ -101,7 +101,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 | [中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | 日文／中文直排、CJK 換行與隨附的 OFL 字型 |
 | [影片壓縮](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | 縮小已匯出 MP4 的 Python 工具、品質控制與上傳大小限制 |
 
-[packages/core/src/guide.ts](https://github.com/zz41354899/mografy/blob/main/packages/core/src/guide.ts) 是產生 Skill 入口與參考文件的單一來源。修改後請執行 `pnpm build`：它最後會執行 `pnpm sync:skills` 重新產生 Skill。`pnpm install` 與 `mografy update` 也會 build；`mografy dev` 啟動時若發現來源在上次同步後有變動（例如 `git pull` 之後），也會自動重新產生 Skill。動畫專案會取得 `AGENTS.md` 與 `CLAUDE.md`，指向共用 Skill。
+[packages/core/skill/](https://github.com/zz41354899/mografy/tree/main/packages/core/skill) 以 Markdown 保存 Skill 入口與參考文件，由 `packages/core/src/guide.ts` 組合產生。修改後請執行 `pnpm build`：它最後會執行 `pnpm sync:skills` 重新產生 Skill。`pnpm install` 與 `mografy update` 也會 build；`mografy dev` 啟動時若發現來源在上次同步後有變動（例如 `git pull` 之後），也會自動重新產生 Skill。動畫專案會取得 `AGENTS.md` 與 `CLAUDE.md`，指向共用 Skill。
 
 ## 可運作的範例
 
@@ -116,7 +116,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 
 全部 16 個內建元件專案預設使用置中的 **9:16 直式**預覽。隨附縮圖也會顯示完整直式畫布，因此全新安裝後，不必逐一開啟專案，就能看到全部 16 張預覽。修改場景後，已開啟專案的縮圖會自動更新。維護者修改內建場景原始碼或素材後，需執行 `pnpm thumbnails:generate` 重新產生隨附預覽。
 
-選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。
+選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。也可以自己用 `mografy add <extra> [project]` 加入（`mografy add` 會列出 cinema、cjk、three、music、walkthrough）。常用的動態工具（緩動曲線、彈簧、時間窗、拍點網格、圓角卡片陰影、逐字浮現與漸層）已內建在 `@mografy/runtime`。
 
 [元件參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md)連結到各個場景入口，並說明版面、時間安排、本機匯入與審閱方式。請代理依專案自己的素材與風格改寫適合的元件。
 

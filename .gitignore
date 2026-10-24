@@ -12,6 +12,8 @@ dist/
 # installation creates in projects/.components/ are tracked defaults: keep them.
 /projects/*
 !/projects/.components/
+# Editor type support shared by every project without its own tsconfig.json.
+!/projects/tsconfig.json
 
 # Local examples not ready to publish.
 /examples/analytics-product/
@@ -21,4 +23,5 @@ dist/
 # Local reference films (docs) and their Skill.
 /docs/ref/
 /.agents/skills/mografy-ref/
+/.agents/skills/mografy-codex-skill/
 /.claude/skills/mografy-ref

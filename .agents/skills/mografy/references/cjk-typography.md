@@ -7,11 +7,10 @@
 The module and fonts are an optional extra, not part of the installed template. If the project already has `scenes/cjk.ts`, read and reuse that local copy. Otherwise copy from the current Mografy checkout (`extras/cjk/`) or download from GitHub:
 
 ```sh
-curl -fsSL -o scenes/cjk.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/cjk.ts
-curl -fsSL -o assets/NotoSansCJKtc-Medium-subset.otf https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/NotoSansCJKtc-Medium-subset.otf
-curl -fsSL -o assets/NotoSerifCJKtc-Bold-subset.otf https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/NotoSerifCJKtc-Bold-subset.otf
-curl -fsSL -o assets/OFL-NotoCJK.txt https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/fonts/OFL.txt
+mografy add cjk projects/<name>
 ```
+
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It also copies both font subsets with their licence and registers them under `fonts` in `mografy.json`; remove the one the design does not use. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/`.
 
 Copy only the font the design uses when one is enough. Keep the licence file with the fonts.
 

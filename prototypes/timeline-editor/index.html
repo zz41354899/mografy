@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mografy 時間軸原型</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Instrument+Serif&display=swap">
+<link rel="stylesheet" href="style.css?v=16">
+
+<div class="app" id="app">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-projects" aria-pressed="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+    <span class="logo" aria-hidden="true"><i></i></span>
+    <span class="wordmark">Mografy</span>
+    <span class="crumb">/</span>
+    <span class="project">lunar-pop-club</span>
+    <span class="badge" data-i18n="prototype"></span>
+    <div class="seg round mode-switch" id="modeSwitch" role="radiogroup" data-i18n-aria="editorMode" data-mode="video">
+      <button role="radio" data-mode="video"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 10h17v9.5h-17z"/><path d="M3.5 10l-.6-3.6 16.2-2.9.7 3.7z"/><path d="M8 6.6l2.5 2.7M13 5.7l2.5 2.7"/></svg><span class="mode-label" data-i18n="modeVideo"></span></button>
+      <button role="radio" data-mode="present"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18M4.5 4v11h15V4M12 15v3M8.5 21l3.5-3 3.5 3"/></svg><span class="mode-label" data-i18n="modePresent"></span></button>
+    </div>
+    <div class="topbar-end">
+      <span class="meta">1920 × 1080 · 30 fps · 120 BPM</span>
+      <button class="topbar-secondary present-only" id="btn-show"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15l12.5-7.5z"/></svg><span data-i18n="startShow"></span></button>
+      <button class="export-primary present-only" id="btn-export-html"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span data-i18n="exportHtml"></span></button>
+      <button class="export-primary video-only" id="btn-export"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span data-i18n="exportBtn"></span></button>
+      <div class="seg round mode-switch lang-switch" id="langSwitch" role="radiogroup" data-i18n-aria="language" data-pos="0">
+        <button role="radio" id="lang-zh" data-lang="zh">中</button>
+        <button role="radio" id="lang-en" data-lang="en">EN</button>
+      </div>
+      <button class="icon-btn panel-toggle" id="btn-panel" aria-expanded="false" data-i18n-aria="inspector" data-i18n-title="inspector"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg></button>
+    </div>
+  </header>
+
+  <main class="work">
+    <nav class="projects pane" id="projects" data-i18n-aria="projects"></nav>
+    <aside class="slide-rail pane" id="rail" data-i18n-aria="slides"></aside>
+    <section class="viewer">
+      <div class="pane stage-pane" id="surround">
+        <canvas id="stage" width="1920" height="1080" role="img" data-i18n-aria="stage"></canvas>
+        <span class="stage-tag" id="stageTag"></span>
+        <div class="seg round view-seg" id="viewSeg" role="radiogroup" hidden><button role="radio" data-view="real"></button><button role="radio" data-view="mock"></button></div>
+        <div class="slide-controls" id="slideCtl">
+          <button class="desk-nav" id="sl-prev" data-i18n-aria="prevSlide" data-i18n-title="prevSlide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <button class="desk-play" id="sl-play" data-i18n-aria="playSlide" data-i18n-title="playSlide"><svg id="slPlayIcon" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15l12.5-7.5z"/></svg></button>
+          <button class="desk-mute" id="sl-mute" aria-pressed="false" data-i18n-aria="mute" data-i18n-title="mute"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11"/><path class="cross" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+          <button class="desk-nav" id="sl-next" data-i18n-aria="nextSlide" data-i18n-title="nextSlide"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+        <div class="show-hud" id="showHud"><span id="showCount"></span><span data-i18n="showHint"></span></div>
+      </div>
+
+      <div class="pane timeline">
+        <div class="toolbar">
+          <div class="buttons">
+            <button id="btn-start" data-i18n-aria="start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5.5L10 12l8 6.5M6 5v14"/></svg></button>
+            <button id="btn-prev" data-i18n-aria="prevFrame"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 5.5L9 12l8 6.5M7 5v14"/></svg></button>
+            <button id="btn-play" class="play" data-i18n-aria="play"><svg id="playIcon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5v15l12.5-7.5z"/></svg></button>
+            <button id="btn-next" data-i18n-aria="nextFrame"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5.5L15 12l-8 6.5M17 5v14"/></svg></button>
+            <button id="btn-end" data-i18n-aria="end"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5.5L14 12l-8 6.5M18 5v14"/></svg></button>
+          </div>
+          <div class="clock">
+            <output class="tc" id="tc">00:00:00</output>
+            <span class="tc-total">/ 00:25:00</span>
+            <span class="seconds" id="secs">0.00 s</span>
+          </div>
+          <div class="tools">
+            <button class="icon-btn" id="btn-loop" aria-pressed="true" data-i18n-aria="loop" data-i18n-title="loop"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 014-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 01-4 4H4"/></svg></button>
+            <button class="icon-btn" id="btn-undo" data-i18n-aria="undo" data-i18n-title="undo"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 010 11H11"/></svg></button>
+            <span class="divider" aria-hidden="true"></span>
+            <div class="seg" role="radiogroup" data-i18n-aria="density">
+              <button role="radio" id="den-compact" data-den="compact" data-i18n-title="compact" data-i18n-aria="compact"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
+              <button role="radio" id="den-std" data-den="std" data-i18n-title="standard" data-i18n-aria="standard"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+            </div>
+            <div class="zoom">
+              <button class="icon-btn" id="btn-fit" data-i18n-aria="fit" data-i18n-title="fit"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg></button>
+              <label for="zoom" class="sr" data-i18n="zoom"></label>
+              <input type="range" id="zoom" min="1" max="8" step="0.05" value="1">
+              <output id="zoomOut" for="zoom">100%</output>
+            </div>
+            <span class="divider" aria-hidden="true"></span>
+            <button class="icon-btn" id="btn-keys" data-i18n-aria="shortcuts" data-i18n-title="shortcuts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg></button>
+          </div>
+        </div>
+        <div class="tl-scroll" id="tlScroll"><div class="tl-inner" id="tlInner"></div></div>
+      </div>
+
+      <div class="pane present-strip" id="strip">
+        <output class="tc" id="stripTc">00:00:00</output>
+        <div class="strip-track" id="stripTrack"></div>
+        <span class="strip-count" id="stripCount"></span>
+      </div>
+    </section>
+
+    <aside class="inspector pane" id="inspector">
+      <div class="tabs" role="tablist" data-i18n-aria="inspector">
+        <button role="tab" id="tab-scene" data-tab="scene" data-i18n="tabScene"></button>
+        <button role="tab" id="tab-effects" data-tab="effects" data-i18n="tabEffects"></button>
+        <button role="tab" id="tab-audio" data-tab="audio" data-i18n="tabAudio"></button>
+      </div>
+      <div class="panel" id="panel" role="tabpanel"></div>
+      <div class="ins-footer" id="insFooter"></div>
+    </aside>
+    <div class="scrim" id="scrim"></div>
+  </main>
+</div>
+
+<dialog class="keys" id="keysDlg" aria-labelledby="keysTitle">
+  <div class="keys-head"><h2 id="keysTitle" data-i18n="shortcuts"></h2><button class="icon-btn" id="keysClose" data-i18n-aria="close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="keys-grid" id="keysGrid"></div>
+  <p class="keys-foot" data-i18n="keysFoot"></p>
+</dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+// If anything fails while the prototype starts, say so on the page instead of leaving it blank.
+// Opening index.html#reset clears what this prototype saved in the browser.
+(function () {
+  try { if (location.hash === '#reset') { localStorage.removeItem('mografy-timeline-prototype-v5'); localStorage.removeItem('mografy-design-v1'); history.replaceState(null, '', location.pathname); } } catch (e) {}
+  // Only errors from the prototype's own files count; browser extensions and the page host report their own.
+  var last = '';
+  window.addEventListener('error', function (e) {
+    var f = e.filename || '';
+    if (/(app|physics)\.js/.test(f)) last = (e.message || 'Error') + ' · ' + f.split('/').pop().split('?')[0] + ':' + e.lineno;
+    else if (!f && e.message === 'Script error.') last = last || e.message;
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (window.__mografyBooted || document.getElementById('bootError')) return;
+      var box = document.createElement('div');
+      box.id = 'bootError'; box.className = 'boot-error'; box.setAttribute('role', 'alert');
+      box.innerHTML = '<strong>原型沒有載入完成</strong><code></code><button type="button">清除原型的儲存資料並重新載入</button>';
+      box.querySelector('code').textContent = last || 'app.js did not finish loading';
+      box.querySelector('button').onclick = function () { try { localStorage.removeItem('mografy-timeline-prototype-v5'); localStorage.removeItem('mografy-design-v1'); } catch (x) {} location.reload(); };
+      document.body.appendChild(box);
+    }, 300);
+  });
+})();
+</script>
+<script src="physics.js?v=16"></script>
+<script src="real.js?v=16"></script>
+<script src="app.js?v=16"></script>

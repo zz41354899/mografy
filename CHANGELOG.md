@@ -13,7 +13,38 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-24
+
+### Fixed
+
+- **Windows install** — `pnpm install` failed on Windows with `No projects matched the filters`, so no package was built and `sync:skills` then stopped on a missing `@mografy/core/dist/index.js`. pnpm runs scripts through `cmd` on Windows, which does not treat single quotes as quotes. The root `package.json` scripts (`build`, `typecheck`, `test`, `test:browser`, `test:compression`, `install:tool`) now use escaped double quotes, which work on macOS, Linux and Windows. Windows users who hit this: run `mografy update` (or `git pull --ff-only`), then `pnpm install`.
+
+## 2026-10-23
+
+### Added
+
+- **Motion helpers in `@mografy/runtime`** — scenes no longer need a copied kit for the basics. New easing curves `ease.outQuart`, `outQuint`, `inOutQuart` and `inOutSine`; eased time windows `at()` and `win()`; one spring that settles exactly on 1 at a set time, `spring(time, start, duration, bounce)`, and spring easing curves `springEase()` with the presets `springs.out / pop / camera / cursor`; follow-through `settle()`, `pulse()` for presses and flashes, and `stagger()`. The walkthrough extra now uses these, with identical frames.
+- **One tempo for picture and music** — a scene can declare `meta.tempo = { bpm, beatsPerBar, offset }` and build its timing constants with `tempoGrid(tempo).onBar(n, k)`. `ctx.beat(time)` falls back to `meta.tempo` before the project has audio, and `mografy check` reports a tempo that differs from the `audio` settings in `mografy.json`.
+- **Layer helpers** — `roundRect()`, `surface()` (soft two-layer elevation), `text()` / `measure()` with tracking and alpha, `riseWords()` (words rise into a mask) and `blurWords()` (words come into focus), with `separator: ''` for CJK copy. `ctx.draw` gains `linearGradient()`, `radialGradient()` and `conicGradient()`.
+- **`mografy add <extra> [project]`** — copies an optional extra (cinema, cjk, three, music, walkthrough) into a project from this checkout, or from GitHub when `extras/` is missing; registers the CJK fonts in `mografy.json`, keeps files you changed unless `--force`, and prints the import line. `mografy add` lists them. Installation still contains only the sixteen built-in components.
+
+### Documentation
+
+- The scene-authoring reference has new **Randomness** (decide in `setup` with `ctx.random()`, use `ctx.noise()` only for per-frame variation), **Tempo and music**, **Time and motion helpers** and **Layer helpers** sections; the extra references use `mografy add`.
+
+- **Product walkthrough films (optional extra)** — `extras/walkthrough/walkthrough.ts` turns a real app's screens into a film: the agent looks at a screenshot of each step, redraws the real UI as a large, simplified card (the control being used and just enough context; everything else dropped or turned into skeleton bars, type about 1.5× larger), and films one action per shot. Each card grows out of the control that was just used, each card has its own camera that pushes in on that control, and a big cursor or a finger tap does the clicking. The kit covers cards, buttons, inputs with typing, per-character blur-in text, count-up numbers, check marks, toasts, a phone frame, spring curves, zoom-about-a-point cameras, a cursor that follows moving cameras, and a brand-colour fluid backdrop. The shared Skill's new `product-walkthrough.md` reference describes the workflow (capture the flow without changing the user's data, inventory each screen, approve a screenshot-versus-redraw sheet, then animate) and how to adapt it to launch ads, feature tutorials, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. `walkthrough-demo.ts` is a twelve-second tour. Nothing is installed: the file is copied into a project's `scenes/` only when it needs one.
+
+### Changed
+
+- **Faster exports that no longer run out of memory** — frames travel from the headless browser as a Blob, which removes a per-frame copy that Playwright kept until the export ended (long 1080p exports could run out of memory) and makes each upload about ten times faster. Sample mixing, glow and grain now run in two workers inside the page while the next frame is drawn, and reuse their buffers. A 1080p frame with 4 samples, linear mixing, glow and grain went from about 1.4 s to about 0.35 s in our test, with memory flat over long exports. The pixels are identical to before.
+- **`MOGRAFY_CANVAS=gpu`** — optional switch that draws with GPU acceleration, to compare speed on your machine. The default `cpu` canvas reads frames back cheaply and gives the same pixels on every computer; `gpu` can be faster for blur- and shadow-heavy scenes but its edges may differ slightly.
+- **Skill guidance is Markdown** — the Skill entrypoint and references now live in `packages/core/skill/` as Markdown files; the core build bundles them, and `guide.ts` only assembles them. Edit the Markdown, then run `pnpm build`.
+
 ## 2026-10-22
+
+### Changed
+
+- **`mografy update` gets you unstuck** — when `main` has lost its GitHub upstream, the updater links it to `origin/main` by itself and carries on. Every other stop now prints the exact commands to run: the changed files plus `git stash -u` for local changes, `git checkout main` and `git branch --set-upstream-to=origin/main main` for another branch or a detached HEAD, and `git remote add origin …` for a folder that is not connected to GitHub.
 
 ### Fixed
 

@@ -1,18 +1,22 @@
 // Keep a source checkout's shared Skill in step with the files it is generated from. `pnpm sync:skills` records a
 // hash of those sources; `mografy dev` compares it and regenerates the Skill when they differ (after a `git pull`
-// without `pnpm install`, or an edited guide.ts without a build).
+// without `pnpm install`, or an edited Skill Markdown file without a build).
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const SOURCES = ['packages/core/src/guide.ts', 'packages/server/src/workspace.ts', 'scripts/sync-agent-docs.ts', 'scripts/compress-video.py'];
+/** The Skill's Markdown: every file under this folder is a source too. */
+const SKILL_DIR = 'packages/core/skill';
 const stampPath = (root: string) => join(root, 'node_modules', '.cache', 'mografy', 'skill-sources.sha256');
 const exists = (path: string) => access(path).then(() => true, () => false);
 
 export async function skillSourceHash(root: string) {
   const hash = createHash('sha256');
-  for (const file of SOURCES) hash.update(`${file}\0`).update(await readFile(join(root, file)).catch(() => Buffer.alloc(0))).update('\0');
+  const markdown = await readdir(join(root, SKILL_DIR), { recursive: true }).catch(() => [] as string[]);
+  const files = [...SOURCES, ...markdown.filter(file => file.endsWith('.md')).sort().map(file => `${SKILL_DIR}/${file.split('\\').join('/')}`)];
+  for (const file of files) hash.update(`${file}\0`).update(await readFile(join(root, file)).catch(() => Buffer.alloc(0))).update('\0');
   return hash.digest('hex');
 }
 

@@ -56,6 +56,30 @@ export const params = {}; export function setup() {} export function renderFrame
   await assert.rejects(async () => host.inspect(await buildScene(dir, p, { 'scenes/main.ts': throws }), p), /boom at frame/);
 });
 
+test('host: scenes use the runtime motion, layer and gradient helpers, and ctx.beat follows meta.tempo', async () => {
+  const p = await project();
+  const helpers = `import { at, win, spring, springs, settle, pulse, tempoGrid, roundRect, surface, text, measure, riseWords, blurWords, ease } from '@mografy/runtime';
+const tempo = { bpm: 120 }, grid = tempoGrid(tempo);
+export const meta = { width: 320, height: 180, duration: 4, fps: 30, background: '#f4f4f0', tempo };
+export const params = {}; export function setup() {}
+export function renderFrame(ctx, time) {
+  const beat = ctx.beat(grid.onBar(1, 1) + .25);
+  if (!beat || beat.bar !== 1 || beat.beatInBar !== 1 || Math.abs(beat.phase - .5) > 1e-9) throw new Error('beat grid ' + JSON.stringify(beat));
+  const k = spring(time, grid.onBeat(1)) * win(time, 0, .5, 3, 3.5, ease.outQuart) + settle(time, 1, .5, .1) + pulse(time, 2) * 0;
+  ctx.draw.fill(ctx.draw.linearGradient(0, 0, 320, 0, ['#12b5a5', '#1f2023']));
+  ctx.draw.rect(0, 0, 320, 20);
+  ctx.draw.fill(ctx.draw.radialGradient(160, 90, 60, [[0, '#ffffff'], [1, '#12b5a5']]));
+  ctx.draw.circle(160, 90, 30);
+  surface(ctx, roundRect(40, 40, 120 * springs.pop(at(time, 0, 1)), 60, 14), '#ffffff', { elevation: k });
+  const style = { size: 24, color: '#151515', align: 'center' };
+  riseWords(ctx, 'Hello Mografy', 160, 120, style, time, .2);
+  blurWords(ctx, '你好', 160, 160, { ...style, size: 18 }, time, .4, { separator: '' });
+  text(ctx, String(measure(ctx, 'x', style) > 0), 10, 170, { size: 10, color: '#000000' });
+}`;
+  const scene = await host.inspect(await buildScene(dir, p, { 'scenes/main.ts': helpers }), p);
+  assert.deepEqual(scene.meta.tempo, { bpm: 120, beatsPerBar: 4, offset: 0 });
+});
+
 test('host: recovers when Chromium crashes or is closed', async () => {
   const p = await project(), build = await buildScene(dir, p);
   await host.inspect(build, p);
@@ -103,6 +127,25 @@ test('host: output frames are identical across separate browser contexts', async
     await page.close();
   }
   assert.equal(hashes[0], hashes[1]);
+});
+
+test('host: pipelined export frames match the single-frame output path byte for byte', async () => {
+  const p = await project(), build = await buildScene(dir, p);
+  const page = await host.open(build, p, { renderScale: 0.25 });
+  try {
+    for (const settings of [{ ...p.render, samples: 3, mixing: 'linear' as const, glow: 0.3, grain: 0.03 }, { ...p.render, samples: 1, mixing: 'srgb' as const, glow: 0, grain: 0 }]) {
+      const frames = [10, 11, 12, 30];
+      for (const [i, k] of frames.entries()) {
+        // Workers mix frame k while the page already draws the next one.
+        const piped = await page.output(k, settings, frames[i + 1]);
+        const png = join(dir, `.reference-${k}.png`);
+        await writeFile(png, await page.png({ kind: 'output', k, label: '' }, settings));
+        const reference = await ffmpegOutput(['-v', 'error', '-i', png, '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
+        await rm(png);
+        assert.ok(piped.equals(reference), `frame ${k}, ${settings.mixing} × ${settings.samples}`);
+      }
+    }
+  } finally { await page.close(); }
 });
 
 test('thumbnail capture matches downsized raw artwork and remains stable after random seeks', async () => {

@@ -19,7 +19,10 @@ export class SceneBuildError extends Error {
   constructor(message: string, readonly details: string[] = []) { super(details.length ? `${message}\n${details.join('\n')}` : message); this.name = 'SceneBuildError'; }
 }
 
-const runtimeHelpers = fileURLToPath(import.meta.resolve('@mografy/runtime/math'));
+const runtimeHelpers = fileURLToPath(import.meta.resolve('@mografy/runtime/scene'));
+/** The helper entry imports its siblings (math, motion, layers); they are Mografy's code, not the project's. */
+const runtimeDir = dirname(runtimeHelpers);
+const isRuntime = (file: string) => dirname(file) === runtimeDir;
 const SOURCE = /\.[cm]?[jt]sx?$/;
 const EXCLUDED = new Set(['.mografy', 'renders', 'node_modules', '.git']);
 
@@ -74,7 +77,7 @@ export async function buildScene(projectDir: string, project: SceneProject, over
         if (args.kind === 'entry-point') return undefined;
         if (args.path === '@mografy/runtime' || args.path === '@mografy/runtime/math') return { path: runtimeHelpers };
         if (args.path.startsWith('.') || isAbsolute(args.path)) {
-          if (args.importer === runtimeHelpers) return undefined;
+          if (isRuntime(args.importer)) return undefined;
           let file = resolve(dirname(args.importer), args.path);
           // TS-style imports name the .js output; map back to an existing source.
           for (const candidate of [file, file.replace(/\.js$/, '.ts'), file.replace(/\.mjs$/, '.mts'), `${file}.ts`, `${file}.js`]) {
@@ -86,7 +89,7 @@ export async function buildScene(projectDir: string, project: SceneProject, over
         return { errors: [{ text: `Scenes can only import project files and @mografy/runtime: ${args.path}` }] };
       });
       b.onLoad({ filter: SOURCE }, async args => {
-        if (args.path === runtimeHelpers) return undefined;
+        if (isRuntime(args.path)) return undefined;
         if (!inside(args.path)) return { errors: [{ text: `Outside project: ${args.path}` }] };
         const text = overrideFiles.get(args.path) ?? await readFile(args.path, 'utf8');
         const local = relative(root, args.path).split('\\').join('/');

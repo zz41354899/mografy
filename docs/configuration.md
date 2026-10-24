@@ -29,3 +29,4 @@ Each installation keeps its own recent-project and active-player state under `~/
 | `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
 | `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
 | `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH |
+| `MOGRAFY_CANVAS` | `cpu` (default) or `gpu`: canvas backing for headless rendering and export. `cpu` reads frames back cheaply and gives identical pixels on every machine; `gpu` uses acceleration where available, for comparing speed, and its edges may differ slightly |

@@ -85,6 +85,46 @@ for (const file of ['version.txt', 'untracked.txt']) {
   });
 }
 
+test('local changes are listed with the commands that set them aside', async t => {
+  const f = await fixture(t); await f.advance();
+  await writeFile(join(f.root, 'version.txt'), 'my changes');
+  await assert.rejects(updateInstallation(f.root, false, f.services), (error: Error) => {
+    assert.match(error.message, /Local changes found/);
+    assert.match(error.message, /^  version\.txt$/m);
+    assert.match(error.message, /^  git stash -u\n  mografy update$/m);
+    return true;
+  });
+});
+
+test('main without an upstream is linked to origin/main and updated', async t => {
+  const f = await fixture(t), target = await f.advance();
+  await f.git(f.root, 'branch', '--unset-upstream');
+  await updateInstallation(f.root, true, f.services);
+  assert.equal(await f.git(f.root, 'config', '--get', 'branch.main.merge').catch(() => ''), '', '--check changes no settings');
+  assert.match(f.messages.join('\n'), /Update available/);
+  await updateInstallation(f.root, false, f.services);
+  assert.equal(await f.git(f.root, 'rev-parse', 'HEAD'), target);
+  assert.equal(await f.git(f.root, 'rev-parse', '--abbrev-ref', 'main@{upstream}'), 'origin/main');
+  assert.match(f.messages.join('\n'), /Linked main to origin\/main/);
+});
+
+test('another branch without an upstream gets the commands to switch back to main', async t => {
+  const f = await fixture(t); await f.advance();
+  await f.git(f.root, 'checkout', '-b', 'my-work');
+  await assert.rejects(updateInstallation(f.root, false, f.services), (error: Error) => {
+    assert.match(error.message, /This branch \(my-work\) has no remote upstream/);
+    assert.match(error.message, /^  git checkout main\n  git branch --set-upstream-to=origin\/main main\n  mografy update$/m);
+    return true;
+  });
+  assert.deepEqual(f.steps, []);
+});
+
+test('a folder with no remote explains how to connect it to GitHub', async t => {
+  const f = await fixture(t);
+  await f.git(f.root, 'remote', 'remove', 'origin');
+  await assert.rejects(updateInstallation(f.root, true, f.services), /not connected to GitHub[\s\S]*git remote add origin https:\/\/github\.com\/zz41354899\/mografy\.git/);
+});
+
 test('update rejects diverged history before stopping the player', async t => {
   const f = await fixture(t); await f.advance();
   await f.git(f.root, 'config', 'user.name', 'Local'); await f.git(f.root, 'config', 'user.email', 'local@example.test');
@@ -170,12 +210,9 @@ test('concurrent updates preserve the other updater lock', async t => {
   assert.equal(await readFile(lock, 'utf8'), 'another updater');
 });
 
-for (const detached of [false, true]) {
-  test(`update rejects ${detached ? 'a detached HEAD' : 'a missing upstream'} before stopping the player`, async t => {
-    const f = await fixture(t);
-    if (detached) await f.git(f.root, 'checkout', '--detach');
-    else await f.git(f.root, 'branch', '--unset-upstream');
-    await assert.rejects(updateInstallation(f.root, false, f.services), detached ? /Detached HEAD/ : /no remote upstream/);
-    assert.deepEqual(f.steps, []);
-  });
-}
+test('update rejects a detached HEAD before stopping the player, with the way back to main', async t => {
+  const f = await fixture(t);
+  await f.git(f.root, 'checkout', '--detach');
+  await assert.rejects(updateInstallation(f.root, false, f.services), /Detached HEAD[\s\S]*^  git checkout main$/m);
+  assert.deepEqual(f.steps, []);
+});

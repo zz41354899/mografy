@@ -83,6 +83,30 @@ async function restartPlayer(root: string, player: Player) {
   throw new Error(`The updated player did not become ready (${lastHealth}). Run mografy dev with your project path.`);
 }
 
+const REPOSITORY = 'https://github.com/zz41354899/mografy.git';
+/** Commands a user can copy as they are, one per line. */
+const commands = (lines: string[]) => lines.map(line => `  ${line}`).join('\n');
+type Git = (...args: string[]) => Promise<string>;
+
+/**
+ * A branch without a tracked upstream (a clone whose main was recreated, or a remote added by hand):
+ * when it is the remote's default branch, track that and carry on; otherwise say exactly what to run.
+ */
+async function linkUpstream(git: Git, branch: string, checkOnly: boolean, log: (message: string) => void) {
+  const remotes = (await git('remote')).split('\n').filter(Boolean);
+  const remote = remotes.includes('origin') ? 'origin' : remotes.length === 1 ? remotes[0]! : '';
+  if (!remote) throw new Error(`This Mografy folder is not connected to GitHub, so there is nothing to update from. Connect it, then update:\n${commands([`git remote add origin ${REPOSITORY}`, 'git fetch origin', `git branch --set-upstream-to=origin/main ${branch}`, 'mografy update'])}`);
+  const head = await git('ls-remote', '--symref', '--', remote, 'HEAD').catch(() => '');
+  const main = /^ref: refs\/heads\/(\S+)\s+HEAD/m.exec(head)?.[1] ?? 'main';
+  if (branch !== main) throw new Error(`This branch (${branch}) has no remote upstream. Mografy updates from ${remote}/${main}; switch to it, then update:\n${commands([`git checkout ${main}`, `git branch --set-upstream-to=${remote}/${main} ${main}`, 'mografy update'])}`);
+  if (!checkOnly) {
+    await git('fetch', '--no-tags', '--', remote, `refs/heads/${main}:refs/remotes/${remote}/${main}`);
+    await git('branch', `--set-upstream-to=${remote}/${main}`, branch);
+    log(`Linked ${branch} to ${remote}/${main}; future updates use it.`);
+  }
+  return { remote, ref: `refs/heads/${main}` };
+}
+
 /** The root comes from the executing installation, never the animation project's cwd. */
 export async function updateInstallation(root: string, checkOnly = false, overrides: Partial<UpdateServices> = {}) {
   const services: UpdateServices = { run: runUpdateCommand, pause: pauseActivePlayer, restart: restartPlayer, log: console.log, ...overrides };
@@ -99,13 +123,16 @@ export async function updateInstallation(root: string, checkOnly = false, overri
   try {
     await lock.writeFile(String(process.pid));
     const clean = async () => {
-      if (await git('status', '--porcelain', '--untracked-files=normal')) throw new Error('Local changes found. Commit or move your changes before updating; no files were overwritten.');
+      const changed = (await git('status', '--porcelain', '--untracked-files=normal')).split('\n').filter(Boolean);
+      if (!changed.length) return;
+      const files = changed.slice(0, 8).map(line => `  ${line.trimStart().replace(/^\S+\s+/, '')}`).concat(changed.length > 8 ? [`  …and ${changed.length - 8} more`] : []);
+      throw new Error(`Local changes found. Commit or move your changes before updating; no files were overwritten.\nChanged in this Mografy folder:\n${files.join('\n')}\nTo set them aside (git stash pop brings them back later) and update:\n${commands(['git stash -u', 'mografy update'])}`);
     };
     if (!checkOnly) await clean();
-    const branch = await git('symbolic-ref', '--quiet', '--short', 'HEAD').catch(() => { throw new Error('Detached HEAD: switch to a branch with a tracked upstream before updating.'); });
-    const remote = await git('config', '--get', `branch.${branch}.remote`).catch(() => '');
-    const ref = await git('config', '--get', `branch.${branch}.merge`).catch(() => '');
-    if (!remote || remote === '.' || !ref.startsWith('refs/heads/')) throw new Error('This branch has no remote upstream. Set its tracking branch before updating.');
+    const branch = await git('symbolic-ref', '--quiet', '--short', 'HEAD').catch(() => { throw new Error(`Detached HEAD: this Mografy folder is not on a branch. Switch back to main, then update:\n${commands(['git checkout main', 'mografy update'])}`); });
+    let remote = await git('config', '--get', `branch.${branch}.remote`).catch(() => '');
+    let ref = await git('config', '--get', `branch.${branch}.merge`).catch(() => '');
+    if (!remote || remote === '.' || !ref.startsWith('refs/heads/')) ({ remote, ref } = await linkUpstream(git, branch, checkOnly, services.log));
     services.log(`Checking ${root}\nSource: ${remote}/${ref.slice('refs/heads/'.length)}`);
     await git('fetch', '--no-tags', '--', remote, ref);
     const before = await git('rev-parse', 'HEAD'), target = await git('rev-parse', 'FETCH_HEAD');

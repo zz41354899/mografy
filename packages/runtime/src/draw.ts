@@ -1,5 +1,7 @@
 /** Canvas drawing helpers. Geometry uses logical pixels; angles use radians. */
 export type Paint = string | CanvasGradient | CanvasPattern;
+/** Gradient colour stops: [offset 0..1, colour] pairs, or evenly spaced colours. */
+export type ColorStops = [offset: number, color: string][] | string[];
 
 export interface DrawingApi {
   fill(color: Paint): void;
@@ -32,6 +34,20 @@ export interface DrawingApi {
   text(value: string, x: number, y: number, maxWidth?: number): void;
   textWidth(value: string): number;
   image(source: CanvasImageSource, x: number, y: number, width?: number, height?: number): void;
+  /** A linear gradient from (x1, y1) to (x2, y2), for `fill` or `stroke`. */
+  linearGradient(x1: number, y1: number, x2: number, y2: number, stops: ColorStops): CanvasGradient;
+  /** A radial gradient from a centre outwards to `radius` (optionally from an inner radius). */
+  radialGradient(x: number, y: number, radius: number, stops: ColorStops, innerRadius?: number): CanvasGradient;
+  /** A conic gradient around (x, y) starting at `angle` radians. */
+  conicGradient(x: number, y: number, angle: number, stops: ColorStops): CanvasGradient;
+}
+
+function addStops(gradient: CanvasGradient, stops: ColorStops) {
+  stops.forEach((stop, i) => {
+    if (typeof stop === 'string') gradient.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), stop);
+    else gradient.addColorStop(Math.min(1, Math.max(0, stop[0])), stop[1]);
+  });
+  return gradient;
 }
 
 /** Internal factory: one API per runtime, with drawing flags reset before every frame. */
@@ -99,6 +115,9 @@ export function createDrawing(c: CanvasRenderingContext2D, width: number, height
       else if (w !== undefined && h !== undefined) c.drawImage(source, x, y, w, h);
       else throw new Error('draw.image() requires both width and height, or neither');
     },
+    linearGradient(x1: number, y1: number, x2: number, y2: number, stops: ColorStops) { return addStops(c.createLinearGradient(x1, y1, x2, y2), stops); },
+    radialGradient(x: number, y: number, radius: number, stops: ColorStops, innerRadius = 0) { return addStops(c.createRadialGradient(x, y, innerRadius, x, y, radius), stops); },
+    conicGradient(x: number, y: number, angle: number, stops: ColorStops) { return addStops(c.createConicGradient(angle, x, y), stops); },
   });
   return { draw, reset() { fill = true; stroke = false; stack.length = 0; } };
 }

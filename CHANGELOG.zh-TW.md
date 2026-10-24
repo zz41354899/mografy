@@ -13,7 +13,38 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-10-24
+
+### 修正
+
+- **Windows 安裝** — 在 Windows 上 `pnpm install` 會出現 `No projects matched the filters`，套件完全沒被 build，接著 `sync:skills` 因為找不到 `@mografy/core/dist/index.js` 而中斷。原因是 pnpm 在 Windows 上一律用 `cmd` 執行 scripts，而 `cmd` 不認得單引號。根目錄 `package.json` 的 scripts（`build`、`typecheck`、`test`、`test:browser`、`test:compression`、`install:tool`）改用跳脫的雙引號，macOS、Linux 與 Windows 都能用。遇過這個問題的 Windows 使用者：執行 `mografy update`（或 `git pull --ff-only`），再執行 `pnpm install`。
+
+## 2026-10-23
+
+### 新增
+
+- **`@mografy/runtime` 內建動態工具** — 基本動作不再需要複製 kit。新增緩動曲線 `ease.outQuart`、`outQuint`、`inOutQuart`、`inOutSine`；時間窗 `at()` 與 `win()`；在指定時間剛好停在 1 的彈簧 `spring(time, start, duration, bounce)`，以及彈簧緩動曲線 `springEase()` 與預設 `springs.out / pop / camera / cursor`；餘震回彈 `settle()`、按壓與閃光用的 `pulse()`、`stagger()`。walkthrough extra 改用這些函式，畫面逐格相同。
+- **畫面與音樂共用一個速度** — 場景可以宣告 `meta.tempo = { bpm, beatsPerBar, offset }`，並用 `tempoGrid(tempo).onBar(n, k)` 算出時間點。專案還沒有音訊時，`ctx.beat(time)` 會改用 `meta.tempo`；`mografy check` 會指出與 `mografy.json` `audio` 不一致的速度。
+- **圖層工具** — `roundRect()`、`surface()`（兩層柔和陰影）、可設字距與透明度的 `text()` / `measure()`、`riseWords()`（逐字從遮罩升起）與 `blurWords()`（逐字由模糊對焦），中文可用 `separator: ''` 逐字動畫。`ctx.draw` 新增 `linearGradient()`、`radialGradient()`、`conicGradient()`。
+- **`mografy add <extra> [project]`** — 把選用 extra（cinema、cjk、three、music、walkthrough）從這個 checkout 複製到專案，`extras/` 不在時改從 GitHub 下載；會自動在 `mografy.json` 註冊 CJK 字型，你改過的檔案除非加 `--force` 否則保留，並印出 import 寫法。`mografy add` 會列出所有 extras。安裝內容仍然只有十六個內建元件。
+
+### 文件
+
+- 場景撰寫參考新增 **Randomness**（在 `setup` 用 `ctx.random()` 決定，`ctx.noise()` 只用於每格變化）、**Tempo and music**、**Time and motion helpers**、**Layer helpers** 段落；各 extra 參考改用 `mografy add`。
+
+- **產品操作影片（選用 extra）** — `extras/walkthrough/walkthrough.ts` 把真實 App 的畫面做成影片：代理看每一步的截圖，把原介面重繪成放大、簡化的卡片（只留被操作的元件和看懂它所需的一點上下文，其餘刪掉或改成骨架條，字放大約 1.5 倍），每鏡只拍一個操作。每張卡片從上一鏡剛按下的元件長出來，每張卡片有自己的鏡頭、只推近要操作的那個元件，由大游標或手指點按完成操作。工具包含卡片、按鈕、會打字的輸入框、逐字模糊浮現的文字、跳數、自己畫出來的勾、提示條、手機框、彈簧曲線、以固定點縮放的鏡頭、會跟著鏡頭移動的游標，以及品牌色流體背景。共用 Skill 新增 `product-walkthrough.md` 參考，說明流程（錄製操作但不更動使用者資料、逐頁列出元件、先確認「原截圖｜重繪」對照表再做動畫），以及如何套用到發表廣告、功能教學、新功能短片、手機 App 預覽、社群短版與網站循環動圖。`walkthrough-demo.ts` 是 12 秒的示範。不會隨安裝加入：只有專案需要時才把檔案複製到 `scenes/`。
+
+### 變更
+
+- **輸出更快，也不再耗盡記憶體** — 畫面改以 Blob 從無頭瀏覽器傳回，去掉 Playwright 每格都保留到輸出結束的一份複本（長的 1080p 輸出會因此記憶體不足），每次上傳也快了約十倍。樣本混合、光暈與顆粒改在頁面內的兩個 worker 執行，同時主執行緒已在繪製下一格，緩衝區也會重複使用。測試中 1080p、4 個樣本、線性混合加光暈與顆粒的每格時間從約 1.4 秒降到約 0.35 秒，長時間輸出記憶體維持平穩。輸出像素與之前完全相同。
+- **`MOGRAFY_CANVAS=gpu`** — 選用開關，用 GPU 加速繪製，方便在自己的電腦上比較速度。預設的 `cpu` canvas 讀回畫面成本低，而且每台電腦像素都相同；`gpu` 在大量模糊與陰影的場景可能較快，但邊緣可能有些微差異。
+- **Skill 說明改用 Markdown** — Skill 入口與參考文件改放在 `packages/core/skill/` 的 Markdown 檔，core 建置時打包進去，`guide.ts` 只負責組合。修改 Markdown 後執行 `pnpm build`。
+
 ## 2026-10-22
+
+### 變更
+
+- **`mografy update` 卡住時會告訴你怎麼辦** — `main` 失去 GitHub upstream 時，更新程式會自動接上 `origin/main` 並繼續更新。其他會停下來的情況，現在都直接印出要執行的指令：有本地修改時列出改過的檔案並附上 `git stash -u`；在其他分支或 detached HEAD 時附上 `git checkout main` 和 `git branch --set-upstream-to=origin/main main`；資料夾沒連到 GitHub 時附上 `git remote add origin …`。
 
 ### 修正
 

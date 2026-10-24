@@ -12,6 +12,9 @@ const LUT_SIZE = 4096;
 const LINEAR_TO_SRGB = new Float32Array(LUT_SIZE + 1);
 for (let i = 0; i <= LUT_SIZE; i++) { const p = i / LUT_SIZE; LINEAR_TO_SRGB[i] = p <= 0.0031308 ? 12.92 * p : 1.055 * p ** (1 / 2.4) - 0.055; }
 const encode = (v: number) => LINEAR_TO_SRGB[Math.round(Math.min(1, Math.max(0, v)) * LUT_SIZE)]!;
+/** byte / 255 in double precision, exactly what dividing each sample would give. */
+const BYTE_TO_UNIT = new Float64Array(256);
+for (let i = 0; i < 256; i++) BYTE_TO_UNIT[i] = i / 255;
 
 /** Sums RGB samples in the chosen mixing space. Alpha is ignored: frames are opaque. */
 export class FrameAccumulator {
@@ -22,12 +25,17 @@ export class FrameAccumulator {
   }
   add(rgba: ArrayLike<number>) {
     if (rgba.length !== this.width * this.height * 4) throw new Error('Sample size mismatch');
-    const sum = this.sum, linear = this.space === 'linear';
-    for (let p = 0, s = 0; s < sum.length; p += 4, s += 3) {
-      for (let c = 0; c < 3; c++) sum[s + c] = sum[s + c]! + (linear ? SRGB_TO_LINEAR[rgba[p + c]!]! : rgba[p + c]! / 255);
+    // One table lookup per channel, no branch in the loop: this runs S times per output frame over every pixel.
+    const sum = this.sum, n = sum.length, unit = this.space === 'linear' ? SRGB_TO_LINEAR : BYTE_TO_UNIT;
+    for (let p = 0, s = 0; s < n; p += 4, s += 3) {
+      sum[s] = sum[s]! + unit[rgba[p]!]!;
+      sum[s + 1] = sum[s + 1]! + unit[rgba[p + 1]!]!;
+      sum[s + 2] = sum[s + 2]! + unit[rgba[p + 2]!]!;
     }
     this.count++;
   }
+  /** Scratch image reused by finishFrame, so a long export does not allocate a full float frame per frame. */
+  image?: Float32Array;
   reset() { this.sum.fill(0); this.count = 0; }
 }
 
@@ -102,21 +110,34 @@ export function grainNoise(x: number, y: number, frame: number, seed: number) {
 export function finishFrame(acc: FrameAccumulator, settings: PostSettings): Uint8ClampedArray {
   if (!acc.count) throw new Error('No samples accumulated');
   const { width: w, height: h } = acc;
-  const image = new Float32Array(acc.sum.length);
-  for (let i = 0; i < image.length; i++) image[i] = acc.sum[i]! / acc.count;
+  const image = acc.image ??= new Float32Array(acc.sum.length);
+  const sum = acc.sum, count = acc.count;
+  for (let i = 0; i < image.length; i++) image[i] = sum[i]! / count;
   const linear = acc.space === 'linear';
   if (settings.glow > 0) addGlow(image, w, h, settings.glow, linear);
   const out = new Uint8ClampedArray(w * h * 4);
   const amount = settings.grain * 2, seed = settings.seed >>> 0, frame = settings.frame;
+  const level = (v: number, n: number) => Math.round(Math.min(1, Math.max(0, v + n)) * 255);
   for (let y = 0, p = 0; y < h; y++) for (let x = 0; x < w; x++, p++) {
-    const n = amount ? (grainNoise(x, y, frame, seed) - 0.5) * amount : 0;
-    for (let c = 0; c < 3; c++) {
-      const v = image[p * 3 + c]!;
-      out[p * 4 + c] = Math.round(Math.min(1, Math.max(0, (linear ? encode(v) : v) + n)) * 255);
+    const n = amount ? (grainNoise(x, y, frame, seed) - 0.5) * amount : 0, i = p * 3, o = p * 4;
+    if (linear) {
+      out[o] = level(encode(image[i]!), n); out[o + 1] = level(encode(image[i + 1]!), n); out[o + 2] = level(encode(image[i + 2]!), n);
+    } else {
+      out[o] = level(image[i]!, n); out[o + 1] = level(image[i + 1]!, n); out[o + 2] = level(image[i + 2]!, n);
     }
-    out[p * 4 + 3] = 255;
+    out[o + 3] = 255;
   }
   return out;
+}
+
+/** One accumulator per canvas, reused (and reset) for every output frame of a long export. */
+const accumulators = new WeakMap<HTMLCanvasElement, FrameAccumulator>();
+function accumulatorFor(canvas: HTMLCanvasElement, space: MixingSpace) {
+  let acc = accumulators.get(canvas);
+  if (!acc || acc.width !== canvas.width || acc.height !== canvas.height || acc.space !== space) {
+    acc = new FrameAccumulator(canvas.width, canvas.height, space); accumulators.set(canvas, acc);
+  } else acc.reset();
+  return acc;
 }
 
 export type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>;
@@ -128,7 +149,7 @@ export function renderOutputFrame(runtime: SceneRuntime, canvas: HTMLCanvasEleme
   const frames = outputFrameCount(runtime.meta.duration, settings.fps);
   if (!Number.isInteger(k) || k < 0 || k >= frames) throw new Error(`Output frame outside scene: ${k}`);
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  const acc = new FrameAccumulator(canvas.width, canvas.height, settings.mixing);
+  const acc = accumulatorFor(canvas, settings.mixing);
   for (const t of sampleTimes(k, settings.fps, settings.samples)) {
     runtime.render(Math.min(t, runtime.meta.duration), params);
     acc.add(ctx.getImageData(0, 0, canvas.width, canvas.height).data);

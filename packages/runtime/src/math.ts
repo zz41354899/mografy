@@ -1,7 +1,20 @@
 export const clamp = (n: number, min = 0, max = 1) => Math.min(max, Math.max(min, n));
 export const pr = (t: number, start: number, end: number) => end === start ? (t >= end ? 1 : 0) : clamp((t - start) / (end - start));
 export const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
-export const ease = Object.freeze({ linear: (p: number) => p, inQuad: (p: number) => p * p, outCubic: (p: number) => 1 - (1 - p) ** 3, inOutCubic: (p: number) => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2, outExpo: (p: number) => p === 1 ? 1 : 1 - 2 ** (-10 * p) });
+export const ease = Object.freeze({
+  linear: (p: number) => p,
+  inQuad: (p: number) => p * p,
+  outCubic: (p: number) => 1 - (1 - p) ** 3,
+  inOutCubic: (p: number) => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2,
+  outExpo: (p: number) => p === 1 ? 1 : 1 - 2 ** (-10 * p),
+  /** Softer landings than outCubic: the house default for entrances and moves. */
+  outQuart: (p: number) => 1 - (1 - p) ** 4,
+  /** Word and letter rises. */
+  outQuint: (p: number) => 1 - (1 - p) ** 5,
+  inOutQuart: (p: number) => p < 0.5 ? 8 * p ** 4 : 1 - (-2 * p + 2) ** 4 / 2,
+  /** Gentle, symmetric: loops, breathing, slow drifts. */
+  inOutSine: (p: number) => 0.5 - 0.5 * Math.cos(Math.PI * p),
+});
 export const srgbToLinear = (p: number) => p <= 0.04045 ? p / 12.92 : ((p + 0.055) / 1.055) ** 2.4;
 export const linearToSrgb = (p: number) => p <= 0.0031308 ? 12.92 * p : 1.055 * p ** (1 / 2.4) - 0.055;
 export function colorLerp(a: string, b: string, p: number, space: 'srgb' | 'linear' = 'srgb') {

@@ -108,3 +108,13 @@ test('portrait canvas settings and AI guidance retain the requested composition'
  assert.match(SKILL_REFERENCES['scene-authoring.md'], /SetupContext.*FrameContext/);
  assert.match(SKILL_REFERENCES['storyboard.md'], /9:16 portrait/);
 });
+
+test('meta.tempo is optional, takes defaults and is compared with the audio grid', async () => {
+  const { sceneMetaSchema, tempoIssues } = await import('../src/index.js');
+  const meta = sceneMetaSchema.parse({ width: 64, height: 64, duration: 4, fps: 30, background: '#000000', tempo: { bpm: 120 } });
+  assert.deepEqual(meta.tempo, { bpm: 120, beatsPerBar: 4, offset: 0 });
+  assert.throws(() => sceneMetaSchema.parse({ ...meta, tempo: { bpm: -1 } }));
+  assert.deepEqual(tempoIssues(meta, { bpm: 120, offset: 0, beatsPerBar: 4 }), []);
+  assert.deepEqual(tempoIssues(meta, undefined), []);
+  assert.equal(tempoIssues(meta, { bpm: 96, offset: .5, beatsPerBar: 3 }).length, 3);
+});
