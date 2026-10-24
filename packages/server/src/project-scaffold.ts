@@ -47,8 +47,10 @@ export function ensureAgentFiles(dir: string) {
 
 /** Turn a display name into a folder name. */
 export function folderName(name: string) {
-  const cleaned = name.trim().replace(/[\\/:*?"<>|\s]+/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
-  return cleaned && cleaned !== '.' && cleaned !== '..' ? cleaned : 'untitled';
+  const cleaned = name.trim().replace(/[\\/:*?"<>|\s]+/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').slice(0, 80).replace(/[.-]+$/, '');
+  if (!cleaned || cleaned === '.' || cleaned === '..') return 'untitled';
+  // Windows cannot create folders with device names (CON, NUL, COM1…), with or without an extension.
+  return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(cleaned) ? `${cleaned}-project` : cleaned;
 }
 
 /**

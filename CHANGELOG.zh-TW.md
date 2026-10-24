@@ -21,6 +21,9 @@ mografy update
 - **Windows 安裝（第二部分）** — 接著 `sync:skills` 會出現 `Preserving an existing custom Claude entry: .claude\skills\mografy` 而中斷。Windows 上的 Git 在沒有開啟 symlink 支援時，會把 repo 裡的 `.claude/skills/mografy` symlink 取出成一個小文字檔。`sync:skills` 現在會辨認這種佔位檔並保持原樣，讓 checkout 維持乾淨、`mografy update` 照常可用；Claude 仍然透過根目錄的 `CLAUDE.md` 讀到 Skill。如果 Windows 上這個項目不見了，會改建成不需要系統管理員權限的 junction。
 - **Windows 的 `mografy` 指令** — 以前 `install-command` 在 Windows 上只會印出一段 PowerShell 函式，裝完後開新視窗會找不到 `mografy`。現在會把 `mografy.cmd` 寫進一個已經在 `PATH` 上、而且可寫入的資料夾（`%APPDATA%\npm`、`PNPM_HOME` 或 `%LOCALAPPDATA%\Microsoft\WindowsApps`），cmd 和 PowerShell 都能用；找不到合適資料夾時，才退回顯示 PowerShell 函式。
 - **Windows 上的 `mografy update`** — 新版 Node 不允許不透過 shell 直接執行 `.cmd` 檔，所以執行 `pnpm.cmd` 時會出現 `spawn EINVAL`。現在在 Windows 上改成透過 shell 執行。
+- **Windows 上 build 後 checkout 保持乾淨** — Windows 的 Git 取出文字檔時會用 CRLF 換行，所以 `pnpm build` 重新產生的 `packages/core/src/skill-text.ts` 換行不同，檔案顯示為已修改，之後 `mografy update` 會拒絕執行（「Local changes found」）。產生器現在會把 Skill 的 Markdown 統一成 LF。
+- **Windows 存檔** — 防毒軟體或搜尋索引有時會短暫鎖住剛寫好的檔案；專案存檔現在會短暫重試，不會直接以 `EPERM` 失敗。
+- **Windows 專案名稱** — 專案名稱如果是 Windows 的裝置名稱（`CON`、`NUL`、`COM1`…）或以句點結尾，現在會改用 Windows 能建立的資料夾名稱。
 
 ## 2026-10-23
 

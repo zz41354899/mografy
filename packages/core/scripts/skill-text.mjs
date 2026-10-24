@@ -13,8 +13,10 @@ function files(dir) {
     .flatMap(entry => entry.isDirectory() ? files(join(dir, entry.name)) : entry.name.endsWith('.md') ? [join(dir, entry.name)] : []);
 }
 
+// Git on Windows checks the Markdown out with CRLF line endings by default; the generated module is tracked,
+// so normalise to LF or every Windows build would leave it modified (and `mografy update` would refuse to run).
 export function skillText() {
-  const entries = files(source).map(file => `  ${JSON.stringify(relative(source, file).split(sep).join('/'))}: ${JSON.stringify(readFileSync(file, 'utf8'))},`);
+  const entries = files(source).map(file => `  ${JSON.stringify(relative(source, file).split(sep).join('/'))}: ${JSON.stringify(readFileSync(file, 'utf8').replaceAll('\r\n', '\n'))},`);
   return `// Generated from packages/core/skill/**/*.md by scripts/skill-text.mjs. Edit the Markdown, then run \`pnpm build\`.\n`
     + `export const SKILL_TEXT = {\n${entries.join('\n')}\n} as const;\n`;
 }

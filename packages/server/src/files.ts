@@ -15,9 +15,24 @@ export async function atomicWrite(path: string, data: string | Buffer | AsyncIte
   try {
     if (typeof data === 'string' || Buffer.isBuffer(data)) await file.writeFile(data);
     else for await (const chunk of data) await file.writeFile(chunk);
-    await file.sync(); await file.close(); await rename(temp, path);
+    await file.sync(); await file.close(); await replace(temp, path);
   }
   finally { await file.close().catch(() => {}); await unlink(temp).catch(() => {}); }
+}
+
+/**
+ * On Windows a virus scanner, the search indexer or an editor can hold a just-written file for a moment,
+ * and the rename then fails with EPERM, EACCES or EBUSY. Retry briefly instead of failing the save.
+ */
+async function replace(from: string, to: string) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await rename(from, to); }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (process.platform !== 'win32' || attempt >= 9 || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '')) throw error;
+      await new Promise(done => setTimeout(done, 50 * (attempt + 1)));
+    }
+  }
 }
 
 const SOURCE = /\.(ts|mts|cts|js|mjs|cjs)$/;

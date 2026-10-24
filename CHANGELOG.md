@@ -21,6 +21,9 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 - **Windows install, part 2** — `sync:skills` then stopped with `Preserving an existing custom Claude entry: .claude\skills\mografy`. Git on Windows checks the repository's `.claude/skills/mografy` symlink out as a small text file unless symlinks are enabled. `sync:skills` now recognises that placeholder and leaves it as Git wrote it, so the checkout stays clean for `mografy update`; Claude still reads the Skill through the root `CLAUDE.md`. When the entry is missing on Windows it is recreated as a junction, which needs no administrator rights.
 - **Windows `mografy` command** — `install-command` only printed a PowerShell function on Windows, so `mografy` was not found in a new window after installing. It now writes `mografy.cmd` into a writable folder already on `PATH` (`%APPDATA%\npm`, `PNPM_HOME` or `%LOCALAPPDATA%\Microsoft\WindowsApps`), which works in both cmd and PowerShell; the PowerShell function remains the fallback.
 - **`mografy update` on Windows** — running `pnpm.cmd` failed with `spawn EINVAL` on current Node versions, which no longer start `.cmd` files without a shell. It now runs through the shell on Windows.
+- **Windows checkouts stay clean after a build** — Git on Windows checks text files out with CRLF line endings, so `pnpm build` regenerated `packages/core/src/skill-text.ts` with different line endings and left it modified, after which `mografy update` refused to run ("Local changes found"). The generator now normalises the Skill Markdown to LF.
+- **Windows file saves** — a virus scanner or the search indexer can hold a just-written file for a moment; saves into a project now retry briefly instead of failing with `EPERM`.
+- **Windows project names** — a project named after a Windows device name (`CON`, `NUL`, `COM1`…) or ending in a dot now gets a folder name Windows can create.
 
 ## 2026-10-23
 

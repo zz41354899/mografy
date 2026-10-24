@@ -228,6 +228,9 @@ test('concurrent library creation and recent writes retain every project', async
   try {
     assert.equal(folderName('.'), 'untitled');
     assert.equal(folderName('..'), 'untitled');
+    assert.equal(folderName('CON'), 'CON-project');
+    assert.equal(folderName('nul.txt'), 'nul.txt-project');
+    assert.equal(folderName('Intro v2.'), 'Intro-v2');
     const projects = await Promise.all(Array.from({ length: 4 }, () => createInLibrary('Same name')));
     assert.equal(new Set(projects).size, 4);
     await Promise.all(projects.map(rememberProject));
