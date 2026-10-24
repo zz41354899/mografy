@@ -1,0 +1,20 @@
+{
+  "//": "Editor support only, for every project in this folder without its own tsconfig.json. Mografy's build resolves @mografy/runtime itself.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "paths": {
+      "@mografy/runtime": ["../packages/runtime/dist/index.d.ts"],
+      "@mografy/runtime/math": ["../packages/runtime/dist/math.d.ts"]
+    }
+  },
+  "include": ["*/scenes/**/*.ts"],
+  "exclude": ["_*/**"]
+}
