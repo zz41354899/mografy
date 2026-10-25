@@ -1,5 +1,6 @@
 // Generate one shared outer .agents folder and migrate animation subproject guidance.
 // Guidance is written in packages/core/skill/*.md (assembled by packages/core/src/guide.ts); executable helpers are copied from scripts/.
+import { createHash } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, realpath, rmdir, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,6 +24,11 @@ for (const [name, files] of Object.entries(sharedSkillFiles())) {
   });
   console.log(`Generated ${skill}`);
 }
+
+// The Codex-only supplement became the shared references/motion-design.md; remove only the unedited generated copy.
+const retired = join(root, '.agents', 'skills', 'mografy', 'references', 'codex-motion-design.md');
+const retiredContents = await readFile(retired).catch(() => undefined);
+if (retiredContents && createHash('sha256').update(retiredContents).digest('hex') === '9b4a1bf969d0effc8116d5a8f5fc6f5c30731c498230cd30b2603d6c7b1dc641') await unlink(retired);
 
 // Remove only exact generated files from the former standalone storyboard Skill.
 const obsolete = join(root, '.agents', 'skills', 'mografy-storyboard');

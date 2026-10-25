@@ -35,7 +35,7 @@ pnpm install
 mografy dev
 ```
 
-`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
+`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
 
 To check for updates, run `mografy update --check`. To install the latest commit from your branch's tracked upstream, run `mografy update` from the Mografy folder. The command checks for local changes, waits for an active export to finish, stops the active player, fast-forwards the source, runs `pnpm install` (including build, Chromium setup and launcher refresh), synchronizes the shared Skill, then restarts the same project on the same port. Refresh the browser after it restarts. Without an active player, it updates the installation without opening a project.
 
@@ -97,12 +97,20 @@ Its English references cover:
 | [Intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
 | [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
 | [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
-| [Codex motion design](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/codex-motion-design.md) | Codex-specific guidance for visual concepts, choreography, continuity, rhythm, and design review; Claude retains its existing workflow |
+| [Film architecture](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) | One world, one camera and one shot table: continuity rules, shared-geometry handoffs, storyboard as code |
+| [Performance](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | What each Canvas operation costs, coordinates and units, and how `mografy check` measures frames |
+| [Motion design](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/motion-design.md) | Visual concepts, choreography, continuity, rhythm, default taste, and design review |
+| [Output](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | Aspect ratios, 9:16 portrait work, export sizes and formats |
+| [Reference films](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) | The finished films in `examples/`, what each one teaches, and how to copy one |
 | [Camera and transitions](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) | `cinema.ts` camera moves, transitions including sakura particle wipes, and atmosphere |
 | [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | Vertical Japanese / Chinese text, CJK line breaking, and the bundled OFL fonts |
 | [Video compression](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | Python helper for smaller exported MP4s, quality controls, and upload-size budgets |
 
 [packages/core/skill/](https://github.com/zz41354899/mografy/tree/main/packages/core/skill) holds the entrypoint and references as Markdown, and `packages/core/src/guide.ts` assembles them. After editing them, run `pnpm build`: it ends with `pnpm sync:skills`, which regenerates the Skill. `pnpm install` and `mografy update` build too, and `mografy dev` regenerates the Skill on start when its sources changed since the last sync (for example after a `git pull`). Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
+
+## Reference films
+
+Mografy ships finished films as references for quality: [mografy-montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage) (60 s promo in one continuous camera), [mografy-triangulum](https://github.com/zz41354899/mografy/tree/main/examples/mografy-triangulum) (42 s launch teaser with a Three.js galaxy) and [mografy-story](https://github.com/zz41354899/mografy/tree/main/examples/mografy-story) (71 s story film in Traditional Chinese), next to the twelve-second [intro](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro). The player lists them under Examples, and the agent reads them before planning a new film. `mografy add` lists them with the helpers; `mografy add <name> [folder]` copies one into your library to build on. To start a new film, copy [film-starter](https://github.com/zz41354899/mografy/tree/main/examples/film-starter) (`mografy add film-starter <folder>`): twenty seconds, five shots, one camera and one shot table, written as the model for every multi-shot film.
 
 ## Working examples
 
@@ -117,7 +125,7 @@ Reusable functions live in [components.ts](https://github.com/zz41354899/mografy
 
 All sixteen built-in component projects default to centered **9:16 portrait** previews. Their bundled thumbnails also show the full portrait canvas, so a new installation can show all sixteen previews before opening their projects. Scene edits refresh the opened project's thumbnail automatically. After changing built-in source scenes or assets, maintainers regenerate the bundled previews with `pnpm thumbnails:generate`.
 
-Optional [extras](https://github.com/zz41354899/mografy/tree/main/extras) are not installed; installation contains only the sixteen built-in components. The agent copies an extra into a project when the brief needs it: [cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) for camera moves on image plates, transitions (crossfade, dip, flash, iris, slash, whip, sakura-style particle wipes) and atmosphere, and [cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) with OFL Noto Sans / Serif CJK TC subsets for vertical Japanese / Chinese text and CJK line breaking. See the [camera and transition](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) and [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) references. Add one yourself with `mografy add <extra> [project]` (`mografy add` lists them: cinema, cjk, three, music, walkthrough). Everyday motion helpers (easing curves, springs, eased time windows, a tempo grid, rounded surfaces, word reveals and gradients) are built into `@mografy/runtime`.
+Optional [extras](https://github.com/zz41354899/mografy/tree/main/extras) are not installed; installation contains only the sixteen built-in components. The agent copies an extra into a project when the brief needs it: [cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) for camera moves on image plates, transitions (crossfade, dip, flash, iris, slash, whip, sakura-style particle wipes) and atmosphere, and [cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) with OFL Noto Sans / Serif CJK TC subsets for vertical Japanese / Chinese text and CJK line breaking. See the [camera and transition](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) and [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) references. Add one yourself with `mografy add <extra...> [project]` (one or several at once; `mografy add` lists them with the reference films: cinema, cjk, three, music, walkthrough). Everyday motion helpers are built into `@mografy/runtime`: easing curves, springs, eased time windows, monotone `keys`, one film camera (`cameraPath`, `withCamera`), a shot table (`beats`), pooled layers (`layer`, `blurLayer`, `bloom`, `buffer`), shadow-based text blur (`blurText`, `blurWords`), a tempo grid, rounded surfaces and gradients.
 
 The [component reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) links every entry and explains layout, timing, local imports, and review. Ask the agent to adapt the relevant component to your project's own assets and style.
 
@@ -269,6 +277,7 @@ mografy/
   .agents/skills/mografy/       Shared Skill, references, and video-compression helper
   .claude/skills/mografy       Link to the same Skill
   packages/server/template/   Source component library and project template
+  examples/film-starter/       Twenty-second model film to start a new film from
   examples/mografy-intro/      Twelve-second reference animation
   examples/analytics-product/  Eight-second analytics interaction demo
   examples/mografy-brand/      Eight-second brand introduction

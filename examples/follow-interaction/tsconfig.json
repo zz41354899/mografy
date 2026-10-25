@@ -1,0 +1,15 @@
+{
+  "//": "Editor support only. Mografy's build resolves @mografy/runtime itself.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "paths": { "@mografy/runtime": ["../../packages/runtime/dist/index.d.ts"] }
+  },
+  "include": ["scenes/**/*.ts"]
+}

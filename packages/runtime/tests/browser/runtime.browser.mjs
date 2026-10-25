@@ -38,7 +38,8 @@ const bundle = await build({
       import * as extra8 from './packages/server/template/scenes/toggle-switch.ts';
       import * as extra9 from './packages/server/template/scenes/audio-wave.ts';
       import * as brandReference from './packages/runtime/tests/browser/brand-reference.ts';
-      const scenes = { component: lowerThird, probe, drawing, scopes, components, staggerText, typewriter, popCard, progressBar, pulseDots, logoReveal, brandReference, extra0, extra1, extra2, extra3, extra4, extra5, extra6: lowerThird, extra7, extra8, extra9 };
+      import * as film from './packages/runtime/tests/browser/film-scene.ts';
+      const scenes = { film, component: lowerThird, probe, drawing, scopes, components, staggerText, typewriter, popCard, progressBar, pulseDots, logoReveal, brandReference, extra0, extra1, extra2, extra3, extra4, extra5, extra6: lowerThird, extra7, extra8, extra9 };
       let canvas, runtime;
       window.mografy = {
         async load(name, options) {
@@ -58,6 +59,16 @@ const bundle = await build({
           return Array.from(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data);
         },
         render(t, params) { runtime.render(t, params); },
+        stats() { return runtime.stats(); },
+        /** Mean absolute RGB difference between two pixel arrays, the second downsampled by factor. */
+        diff(a, b, width, factor) {
+          let sum = 0, n = 0; const h = a.length / 4 / width;
+          for (let y = 0; y < h; y++) for (let x = 0; x < width; x++) for (let k = 0; k < 3; k++) {
+            let v = 0; for (let dy = 0; dy < factor; dy++) for (let dx = 0; dx < factor; dx++) v += b[((y * factor + dy) * width * factor + x * factor + dx) * 4 + k];
+            sum += Math.abs(a[(y * width + x) * 4 + k] - v / factor / factor); n++;
+          }
+          return sum / n;
+        },
         native() { const c = canvas.getContext('2d'); return window.__probe?.(c); },
         drawingErrors() {
           const errors = [];
@@ -272,6 +283,65 @@ try {
       await page.evaluate(o => window.mografy.load('logoReveal', o), { renderScale });
       assert.equal(await page.evaluate(() => window.mografy.sample(2)), reference, `brand mark scale ${renderScale}`);
     }
+  });
+
+  await check('film helpers are deterministic under seeking', async () => {
+    await page.evaluate(() => window.mografy.load('film', { renderScale: 1 }));
+    const ref = await page.evaluate(() => window.mografy.sample(1.3));
+    for (const t of [3.9, 0, 2.2, .4]) await page.evaluate(t => window.mografy.render(t), t);
+    assert.equal(await page.evaluate(() => window.mografy.sample(1.3)), ref);
+    assert.deepEqual(await page.evaluate(() => window.mografy.stats()), { filters: 0 });
+  });
+  await check('film helpers draw the same logical picture at renderScale 1 and 2', async () => {
+    for (const t of [.6, 1.3, 3]) {
+      await page.evaluate(() => window.mografy.load('film', { renderScale: 1 }));
+      const one = await page.evaluate(t => window.mografy.pixels(t), t);
+      await page.evaluate(() => window.mografy.load('film', { renderScale: 2 }));
+      const two = await page.evaluate(t => window.mografy.pixels(t), t);
+      const d = await page.evaluate(([a, b]) => window.mografy.diff(a, b, 400, 2), [one, two]);
+      assert.ok(d < 3, `t=${t}: mean difference ${d}`);
+    }
+  });
+  await check('blurText matches a filter blur without using a filter', async () => {
+    for (const renderScale of [1, 2]) {
+      await page.evaluate(o => window.mografy.load('film', o), { renderScale });
+      const shadow = await page.evaluate(() => window.mografy.pixels(0, { mode: 'blurText' }));
+      assert.equal((await page.evaluate(() => window.mografy.stats())).filters, 0);
+      const filter = await page.evaluate(() => window.mografy.pixels(0, { mode: 'filterText' }));
+      const d = await page.evaluate(([a, b, w]) => window.mografy.diff(a, b, w, 1), [shadow, filter, 400 * renderScale]);
+      assert.ok(d < 2.5, `scale ${renderScale}: mean difference ${d}`);
+      assert.ok(shadow.some((v, i) => i % 4 === 0 && v > 150), 'the blurred text is visible');
+    }
+  });
+  await check('bounds give the same glow and blur as full-frame layers', async () => {
+    for (const renderScale of [1, 2]) {
+      await page.evaluate(o => window.mografy.load('film', o), { renderScale });
+      const full = await page.evaluate(() => window.mografy.pixels(0, { mode: 'glowFull' }));
+      const bounded = await page.evaluate(() => window.mografy.pixels(0, { mode: 'glowBounds' }));
+      const d = await page.evaluate(([a, b, w]) => window.mografy.diff(a, b, w, 1), [full, bounded, 400 * renderScale]);
+      assert.ok(d < .5, `scale ${renderScale}: mean difference ${d}`);
+    }
+  });
+  await check('shadows in a layer keep their film size at every render scale', async () => {
+    for (const renderScale of [1, 2]) {
+      await page.evaluate(o => window.mografy.load('film', o), { renderScale });
+      const frame = await page.evaluate(() => window.mografy.pixels(0, { mode: 'shadowFrame' }));
+      const layered = await page.evaluate(() => window.mografy.pixels(0, { mode: 'shadowLayer' }));
+      const d = await page.evaluate(([a, b, w]) => window.mografy.diff(a, b, w, 1), [frame, layered, 400 * renderScale]);
+      assert.ok(d < .5, `scale ${renderScale}: mean difference ${d}`);
+    }
+  });
+  await check('a layer fades overlapping parts as one', async () => {
+    await page.evaluate(() => window.mografy.load('film', { renderScale: 1 }));
+    const px = await page.evaluate(() => window.mografy.pixels(0, { mode: 'overlap' }));
+    const at = (x, y) => px[(y * 400 + x) * 4];
+    assert.equal(at(100, 100), at(175, 100));
+    assert.ok(at(100, 100) > 100 && at(100, 100) < 160);
+  });
+  await check('stats count filters set on the frame context', async () => {
+    await page.evaluate(() => window.mografy.load('film', { renderScale: 1 }));
+    await page.evaluate(() => window.mografy.render(0, { mode: 'filters' }));
+    assert.deepEqual(await page.evaluate(() => window.mografy.stats()), { filters: 5 });
   });
 } finally {
   await browser.close(); server.close();

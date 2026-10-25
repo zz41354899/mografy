@@ -7,8 +7,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
-import { deckSlides, shotIssues, tempoIssues } from '@mografy/core';
-import type { Snapshot } from '@mografy/core';
+import { deckSlides, frameCostReport, shotIssues, tempoIssues } from '@mografy/core';
+import type { FrameCost, Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
@@ -16,7 +16,7 @@ import { exportProject } from './export.js';
 import { launcherScript, trustCheckout, windowsLauncherScript } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { refreshSkill } from './skills.js';
-import { addExtra, extrasList, printAdd } from './extras.js';
+import { addList, addSuggestions, planAdd, runAdd } from './add.js';
 import { parse } from './options.js';
 import type { Flags } from './options.js';
 export { displayPath } from './paths.js';
@@ -44,9 +44,11 @@ function helpText(color: boolean) {
       row('mografy review <project>', 'Create visual-review sheets in renders/'),
       row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
     ]),
-    section('Extras', [
-      row('mografy add', 'List optional helpers: cinema, cjk, three, music, walkthrough'),
-      row('mografy add <extra> [project]', 'Copy one into a project (--force replaces changed files)'),
+    section('Add', [
+      row('mografy add', 'List the reference films and helpers you can add'),
+      row('mografy add <film> [folder]', 'Copy a reference film into your library to watch and build on'),
+      row('mografy add <helper...> [project]', 'Add helpers to a project: cinema, cjk, three, music, walkthrough'),
+      row('', '--force replaces helper files you changed'),
     ]),
     section('Manage', [
       row('mografy stop [project]', "Stop a project's player"),
@@ -132,7 +134,7 @@ async function installCommand() {
   const file = join(target, 'mografy');
   await writeFile(file, launcherScript(BIN, process.execPath));
   await chmod(file, 0o755);
-  console.log(`Installed: ${file}\nIt finds your Mografy folder each time it runs, so moving or deleting this checkout will not break it.\nRun \`mografy dev\` from a Mografy project.`);
+  console.log(`Installed: ${file}\nIt finds your Mografy folder each time it runs, so moving or deleting this checkout will not break it.\nRun \`mografy dev\` from a Mografy project.${await addSuggestions()}`);
 }
 
 /**
@@ -159,7 +161,7 @@ async function installWindowsCommand() {
   }
   const file = join(target, 'mografy.cmd');
   await writeFile(file, windowsLauncherScript(BIN, process.execPath));
-  console.log(`Installed: ${file}\nOpen a new terminal window, then run \`mografy dev\` from a Mografy project.`);
+  console.log(`Installed: ${file}\nOpen a new terminal window, then run \`mografy dev\` from a Mografy project.${await addSuggestions()}`);
 }
 
 export function openBrowser(url: string) {
@@ -209,7 +211,7 @@ async function dev(dir: string, flags: Flags) {
 async function checkProject(dir: string) {
   await requireProject(dir);
   console.log(`Checking ${displayPath(dir)}`);
-  const passed = (snapshot: Snapshot) => {
+  const passed = (snapshot: Snapshot & { cost?: FrameCost | undefined }) => {
     if (!snapshot.scene || snapshot.error) throw new Error(snapshot.error?.message ?? 'The scene did not publish.');
     console.log(`✓ Compiled and trial-rendered in Chromium\n  ${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s, version ${snapshot.scene.version}`);
     const { meta, autoShots } = snapshot.scene;
@@ -228,6 +230,10 @@ async function checkProject(dir: string) {
       if (issues.length) console.log(issues.map(issue => `! ${issue}`).join('\n') + '\n  Change meta.tempo or the audio settings so the picture and the music share one grid.');
       else console.log(`✓ Timed to ${meta.tempo.bpm} BPM${snapshot.project?.audio ? ', matching the audio' : ' (no audio yet)'}`);
     }
+    if (snapshot.cost) {
+      const { summary, warnings } = frameCostReport(snapshot.cost);
+      console.log(`${warnings.length ? '!' : '✓'} ${summary}${warnings.map(w => `\n! ${w}`).join('')}`);
+    }
   };
   // A running player already owns this project: ask it, so the check uses its queue and Chromium
   // and the player shows the same result, instead of starting a second Chromium beside it.
@@ -239,7 +245,7 @@ async function checkProject(dir: string) {
     if (response.status !== 409) return passed(await responseJson<Snapshot>(response));
   }
   const project = await Project.open(dir);
-  try { passed(project.snapshot()); } finally { await project.close(); }
+  try { passed({ ...project.snapshot(), cost: await project.measure().catch(() => undefined) }); } finally { await project.close(); }
 }
 
 function printReview(result: ReviewResult) {
@@ -298,11 +304,12 @@ export async function main(argv = process.argv.slice(2)) {
   // Installation must not initialize components or consult a previous project's state.
   if (command === 'install-command') return installCommand();
   if (command === 'add') {
-    const [name, target] = rest;
-    if (!name) { console.log(`Optional helpers. Add one with \`mografy add <extra> [project]\`:\n${extrasList()}`); return; }
-    const dir = target ? await resolveProjectArg(target) : process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : await implicitProject('add');
-    await requireProject(dir);
-    return printAdd(name, dir, await addExtra(workspaceRoot, dir, name, flags.force));
+    if (!rest.length) { console.log(await addList()); return; }
+    return runAdd(await planAdd(rest), workspaceRoot, async target => {
+      const dir = target ? await resolveProjectArg(target) : process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : await implicitProject('add');
+      await requireProject(dir);
+      return dir;
+    }, flags.force);
   }
   const configured = process.env.MOGRAFY_PROJECT;
   const dir = explicit

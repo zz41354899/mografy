@@ -1,4 +1,4 @@
-// An asset-free teaching scene for references/codex-motion-design.md.
+// An asset-free teaching scene for references/motion-design.md.
 // Copy into a project's scenes/ folder. This module runs only in the browser.
 import { clamp, ease, lerp, pr } from '@mografy/runtime';
 import type { FrameContext } from '@mografy/runtime';

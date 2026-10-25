@@ -197,7 +197,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     try { await this.rebuild('watch'); }
     catch (error) { throw new ApiError(422, 'SCENE_ERROR', describe(error)); }
     if (!this.scene || this.error) throw new ApiError(422, 'SCENE_ERROR', this.error?.message ?? 'The scene did not publish.');
-    return this.snapshot();
+    return { ...this.snapshot(), cost: await this.measure().catch(() => undefined) };
+  }
+  /** Time frames of the current version in Chromium, for `mografy check`. Advisory: never fails a check. */
+  measure() {
+    return this.run(async () => { const { project, build } = this.current(); return this.host.measure(build, project); });
   }
 
   /** Submitted sources are compiled and trial-rendered first; only then written to disk. */

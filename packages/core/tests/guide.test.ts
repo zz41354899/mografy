@@ -25,10 +25,12 @@ test('every shared Skill reference is reachable and its internal links resolve',
   assert.deepEqual([...visited].sort(), Object.keys(files).sort());
 });
 
-test('legacy storyboard cleanup excludes the new Codex supplement', () => {
-  const file = 'references/codex-motion-design.md';
-  assert.ok(file in sharedSkillFiles().mografy);
-  assert.equal(file in obsoleteStoryboardFiles('/old/installation'), false);
+test('legacy storyboard cleanup excludes the newer references', () => {
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'examples']) {
+    const file = `references/${name}.md`;
+    assert.ok(file in sharedSkillFiles().mografy);
+    assert.equal(file in obsoleteStoryboardFiles('/old/installation'), false);
+  }
 });
 
 test('generated skill text matches the Markdown sources', async () => {

@@ -60,7 +60,7 @@ export function renderFrame(ctx: FrameContext, time: number) {
 
 ## Direction
 
-- Keep one hero object and a motivated camera: a slow orbit, a push-in, or a reveal swing that settles. Ease camera moves with `ease.outCubic` / `ease.inOutCubic` and keep idle drift subtle.
+- Keep one hero object and a motivated camera: a slow orbit, a push-in, or a reveal swing that settles. Key the 3D camera on the film's shot table with `keys` (or read the 2D film camera's `cameraPath` so both move as one), and do not let objects drift during reading holds.
 - Put headlines and subtitles in 2D after the 3D layer, not on 3D surfaces; Canvas text is sharper and easier to edit. Use `canvasTexture` for text that belongs to an object, such as a phone screen.
 - Leave layout room for type: frame the object with the camera target and distance rather than by moving the object off-centre.
 - In portrait (1080 × 1920) the layer follows `ctx.width` / `ctx.height`; pull the camera back or narrow the composition so objects fit the width.
@@ -69,3 +69,10 @@ export function renderFrame(ctx: FrameContext, time: number) {
 
 - 3D renders with WebGL 2 in the player and in exports, so MP4, WebM, Lottie and SVGA all include it. Exports render each sample on the GPU when Chromium has one; on machines without a GPU, Chromium falls back to software rendering, which is correct but slower.
 - Review the camera's extreme poses and the first frames of a reveal, check that objects never clip the frame edge or the type, and seek out of order to confirm every animated property is set from time.
+
+## Cost
+
+- A stage costs a WebGL render plus a copy into the 2D frame on every frame it is drawn. Use one stage per film and reuse it across shots; skip `stage()` entirely while the 3D layer is fully hidden.
+- Size the layer to the area it covers (`width`, `height`, `x`, `y`) instead of the full frame when the object is small.
+- Keep geometry and materials built in `setup`; per frame, only set transforms and uniforms. Large particle fields belong in one `Points` geometry whose positions a shader or one buffer update moves, not in thousands of meshes.
+- Bloom and glow around 3D objects go through the runtime's `bloom` on the 2D side, or a single post pass; see [performance.md](performance.md). Run `mografy check` after adding the stage and compare the frame cost with and without it.

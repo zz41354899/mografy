@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "name": "為什麼我開發 Mografy",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 1,
+  "params": {},
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-500.ttf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-600.ttf",
+      "weight": 600
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-700.ttf",
+      "weight": 700
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-800.ttf",
+      "weight": 800
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-900.ttf",
+      "weight": 900
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-500-subset.ttf",
+      "weight": 500
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-600-subset.ttf",
+      "weight": 600
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-700-subset.ttf",
+      "weight": 700
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-800-subset.ttf",
+      "weight": 800
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-900-subset.ttf",
+      "weight": 900
+    },
+    {
+      "family": "JetBrains Mono",
+      "path": "assets/JetBrainsMono-500.ttf",
+      "weight": 500
+    },
+    {
+      "family": "JetBrains Mono",
+      "path": "assets/JetBrainsMono-600.ttf",
+      "weight": 600
+    },
+    {
+      "family": "JetBrains Mono",
+      "path": "assets/JetBrainsMono-700.ttf",
+      "weight": 700
+    }
+  ],
+  "audio": {
+    "path": "assets/music.mp3",
+    "bpm": 72,
+    "offset": 0,
+    "beatsPerBar": 4,
+    "gain": 1
+  },
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 60,
+    "samples": 4,
+    "mixing": "srgb",
+    "bitrate": "12M",
+    "glow": 0,
+    "grain": 0,
+    "encoding": "crf",
+    "preset": "slow",
+    "crf": 14,
+    "includeAudio": true
+  },
+  "review": {
+    "times": [
+      0.6,
+      1.6,
+      3.4,
+      4.3,
+      5.2,
+      6.4,
+      7.3,
+      8.2,
+      9.4,
+      10.4,
+      11.6,
+      12.2,
+      13.9,
+      14.6,
+      16.2,
+      17.9,
+      18.9,
+      19.4,
+      20.6,
+      21.8,
+      22.98,
+      24.26,
+      25.54,
+      26.82,
+      27.94,
+      28.58,
+      29.38,
+      30.9,
+      31.8,
+      34.2,
+      36.4,
+      37.7,
+      38.5,
+      39.2,
+      40.6,
+      42.6,
+      44.8,
+      47.6,
+      50,
+      52.4,
+      53.2,
+      54.6,
+      55.4,
+      56.6,
+      58.2,
+      59.7,
+      60.8,
+      61.5,
+      62.7,
+      64.5,
+      65.6,
+      66.4,
+      67.6,
+      68.6,
+      70
+    ],
+    "transitions": [
+      {
+        "name": "Headline to prompt bar",
+        "start": 3.8,
+        "end": 5.2,
+        "step": 0.2
+      },
+      {
+        "name": "Video settles, lock",
+        "start": 8.4,
+        "end": 10.2,
+        "step": 0.2
+      },
+      {
+        "name": "Video to the left, edits",
+        "start": 12.6,
+        "end": 14.8,
+        "step": 0.2
+      },
+      {
+        "name": "Versions fan and gather",
+        "start": 19.8,
+        "end": 23.4,
+        "step": 0.2
+      },
+      {
+        "name": "Code into the box",
+        "start": 25.7,
+        "end": 28.1,
+        "step": 0.2
+      },
+      {
+        "name": "Box opens into light",
+        "start": 27.46,
+        "end": 30.66,
+        "step": 0.2
+      },
+      {
+        "name": "Cards to timeline",
+        "start": 36.8,
+        "end": 38.4,
+        "step": 0.2
+      },
+      {
+        "name": "Into the four people",
+        "start": 41.6,
+        "end": 43.4,
+        "step": 0.2
+      },
+      {
+        "name": "Persona hand-offs",
+        "start": 45.6,
+        "end": 52.6,
+        "step": 0.35
+      },
+      {
+        "name": "People to describe",
+        "start": 53.6,
+        "end": 55,
+        "step": 0.2
+      },
+      {
+        "name": "Describe to statement",
+        "start": 58.4,
+        "end": 59.8,
+        "step": 0.2
+      },
+      {
+        "name": "Statement to logo",
+        "start": 63.2,
+        "end": 65.4,
+        "step": 0.2
+      },
+      {
+        "name": "Logo build",
+        "start": 65,
+        "end": 68.8,
+        "step": 0.25
+      }
+    ]
+  },
+  "slides": {
+    "hold": "freeze",
+    "music": "duck",
+    "pages": []
+  }
+}

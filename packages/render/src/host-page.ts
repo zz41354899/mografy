@@ -3,7 +3,7 @@
 import { outputFrameCount, sampleTimes } from '@mografy/core';
 import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
 import type { SceneModule, SceneRuntime, OutputSettings } from '@mografy/runtime';
-import type { BeatGrid, ExportSize, ParameterValues, SceneProject } from '@mografy/core';
+import type { BeatGrid, ExportSize, FrameCost, ParameterValues, SceneProject } from '@mografy/core';
 
 export interface LoadSpec {
   sceneUrl: string; assetBase: string; seed: number; renderScale: number;
@@ -114,6 +114,36 @@ const host = {
     const again = await digest(rawPixels(d / 2).data);
     if (first !== again) throw new Error('renderFrame depends on earlier calls: the same time drew two different pictures. Draw only from t, params and data prepared in setup.');
     return first;
+  },
+  /**
+   * Frame cost: draw frames spread over the film and time each one, within `budget` ms. Then draw a few of
+   * them again and count canvases created (a warm frame should allocate none).
+   */
+  cost(budget = 4000) {
+    const { runtime, canvas } = need(), d = runtime.meta.duration, ctx = canvas.getContext('2d')!;
+    const times = Array.from({ length: 24 }, (_, i) => Math.min(d, Number((d * (i + .5) / 24).toFixed(3))));
+    const measured: { time: number; ms: number; filters: number }[] = [];
+    const began = performance.now();
+    for (const time of times) {
+      const t0 = performance.now();
+      runtime.render(time); ctx.getImageData(0, 0, 1, 1);
+      measured.push({ time, ms: performance.now() - t0, filters: runtime.stats().filters });
+      if (performance.now() - began > budget) break;
+    }
+    const Native = globalThis.OffscreenCanvas, scope = globalThis as { OffscreenCanvas: typeof OffscreenCanvas };
+    let created = 0;
+    const repeat = measured.slice(0, 3);
+    scope.OffscreenCanvas = class extends Native { constructor(w: number, h: number) { super(w, h); created++; } };
+    try { for (const m of repeat) runtime.render(m.time); } finally { scope.OffscreenCanvas = Native; }
+    const ms = measured.map(m => m.ms).sort((a, b) => a - b), round = (n: number) => Math.round(n * 10) / 10;
+    const worst = measured.reduce((a, b) => b.filters > a.filters ? b : a, measured[0]!);
+    return {
+      width: canvas.width, height: canvas.height, canvas: need().spec.canvas ?? 'cpu',
+      frames: measured.length, medianMs: round(ms[Math.floor(ms.length / 2)]!),
+      slowest: [...measured].sort((a, b) => b.ms - a.ms).slice(0, 3).map(m => ({ time: m.time, ms: round(m.ms) })),
+      maxFilters: { time: worst.time, count: worst.filters },
+      canvasesPerFrame: repeat.length ? round(created / repeat.length) : 0,
+    } satisfies FrameCost;
   },
   async raw(t: number, token: string) { await upload(token, rawPixels(t).data); },
   async rawHash(t: number) { return digest(rawPixels(t).data); },

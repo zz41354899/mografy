@@ -13,6 +13,23 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-25
+
+### Added
+
+- **Film runtime helpers** — `@mografy/runtime` now includes `keys` (monotone cubic keys), `cameraPath` and `withCamera` (one camera for the whole film), `beats` (one shot table for `meta.shots`, review times and handoffs), pooled `buffer`, `bloom`, and a `bounds` option for `layer` and `blurLayer`. `blurText` blurs type with the glyph's shadow instead of a filter. All of them accept the scene context or a plain 2D canvas, so a storyboard page can draw the real film.
+- **Frame cost in `mografy check`** — check prints the median and slowest frame time and warns about frames over 100 ms, more than eight filters in one frame, and canvases created on every frame.
+- **`film-starter` example** — `mografy add film-starter <folder>` copies a twenty-second model film, with the Inter subsets it uses, to start a new film from: one light the eye follows from a point to a line, a card that grows out of the line and plots an ease curve, a ring of light and the last line's full stop; one camera, one shot table.
+- **Reference films** — `examples/` now holds three finished films: mografy-montage (60 s), mografy-triangulum (42 s) and mografy-story (71 s). They use the new runtime helpers and one shot table each; against their earlier versions they look the same frame for frame, and the montage draws a frame about four times faster. `mografy add <name> [folder]` copies one to build on. The Skill's new `examples.md` says what each one teaches.
+- **One `mografy add` for films and helpers** — `mografy add` lists the reference films and the helpers together. `mografy add <film> [folder]` copies a film into your library; `mografy add <helper...> [project]` adds one or more helpers at once (`mografy add film music`). Installation ends by suggesting a few of them.
+- **Layers in film units** — inside `layer`, `blurLayer` and `bloom`, shadow and filter lengths are now in film units like on the frame, so cards and glows keep their size on a Retina preview and in 4K exports. `TextStyle.family` accepts a CSS font stack.
+
+### Changed
+
+- **Skill** — `SKILL.md` starts with a quality floor for continuity and performance. New references: film architecture, performance, and output (aspect ratio and export, moved out of scene authoring). The Codex-only motion supplement is now the shared `motion-design.md`, with default taste (calm pacing, still holds, big type, one logo, sustained music). Walkthroughs use one film camera with a local zoom per card.
+- **Scenes** — `setup` is optional.
+- **cinema** — `crossfade` reuses one pooled buffer instead of creating a canvas per frame.
+
 ## 2026-10-24
 
 ### Fixed
@@ -38,7 +55,7 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 
 - The scene-authoring reference has new **Randomness** (decide in `setup` with `ctx.random()`, use `ctx.noise()` only for per-frame variation), **Tempo and music**, **Time and motion helpers** and **Layer helpers** sections; the extra references use `mografy add`.
 
-- **Product walkthrough films (optional extra)** — `extras/walkthrough/walkthrough.ts` turns a real app's screens into a film: the agent looks at a screenshot of each step, redraws the real UI as a large, simplified card (the control being used and just enough context; everything else dropped or turned into skeleton bars, type about 1.5× larger), and films one action per shot. Each card grows out of the control that was just used, each card has its own camera that pushes in on that control, and a big cursor or a finger tap does the clicking. The kit covers cards, buttons, inputs with typing, per-character blur-in text, count-up numbers, check marks, toasts, a phone frame, spring curves, zoom-about-a-point cameras, a cursor that follows moving cameras, and a brand-colour fluid backdrop. The shared Skill's new `product-walkthrough.md` reference describes the workflow (capture the flow without changing the user's data, inventory each screen, approve a screenshot-versus-redraw sheet, then animate) and how to adapt it to launch ads, feature tutorials, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. `walkthrough-demo.ts` is a twelve-second tour. Nothing is installed: the file is copied into a project's `scenes/` only when it needs one.
+- **Product walkthrough films (optional extra)** — `extras/walkthrough/walkthrough.ts` turns an app's screens into a film: the agent looks at a screenshot of each step, redraws the real UI as a large, simplified card (the control being used and just enough context; everything else dropped or turned into skeleton bars, type about 1.5× larger), and films one action per shot. Each card grows out of the control that was just used, each card has its own camera that pushes in on that control, and a big cursor or a finger tap does the clicking. The kit covers cards, buttons, inputs with typing, per-character blur-in text, count-up numbers, check marks, toasts, a phone frame, spring curves, zoom-about-a-point cameras, a cursor that follows moving cameras, and a brand-colour fluid backdrop. The shared Skill's new `product-walkthrough.md` reference describes the workflow (collect a screenshot of each step, inventory each screen, approve a screenshot-versus-redraw sheet, then animate) and how to adapt it to product demos, feature tutorials, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. `walkthrough-demo.ts` is a twelve-second tour. Nothing is installed: the file is copied into a project's `scenes/` only when it needs one.
 
 ### Changed
 

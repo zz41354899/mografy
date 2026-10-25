@@ -15,11 +15,6 @@ dist/
 # Editor type support shared by every project without its own tsconfig.json.
 !/projects/tsconfig.json
 
-# Local examples not ready to publish.
-/examples/analytics-product/
-/examples/follow-interaction/
-/examples/mografy-brand/
-
 # Local reference films (docs) and their Skill.
 /docs/ref/
 /.agents/skills/mografy-ref/

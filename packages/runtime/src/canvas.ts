@@ -4,6 +4,7 @@ import type { BeatGrid, BeatPosition, ExportSize, SceneMeta, ParameterDefinition
 import { hashNoise, seededRandom } from './math.js';
 import { createDrawing } from './draw.js';
 import type { DrawingApi } from './draw.js';
+import { FILM_FRAME, type FilmFrame } from './film.js';
 
 export interface SetupContext {
   width: number; height: number; seed: number;
@@ -36,13 +37,20 @@ export interface FrameContext {
 }
 export interface SceneModule {
   meta: SceneMeta; params: ParameterDefinitions;
-  setup(ctx: SetupContext): void | Promise<void>;
+  /** Optional: prepare assets and seeded data once. */
+  setup?(ctx: SetupContext): void | Promise<void>;
   renderFrame(ctx: FrameContext, time: number, params: Readonly<ParameterValues>): void;
 }
 export interface SceneRuntime {
   meta: SceneMeta; definitions: ParameterDefinitions; renderScale: number;
   render(time: number, values?: ParameterValues): void;
+  /** Costs counted during the last render, for `mografy check`. */
+  stats(): FrameStats;
   dispose(): void;
+}
+export interface FrameStats {
+  /** Filters set on the frame's own context (ctx.canvas.filter, ctx.blur): each one blurs every later draw separately. */
+  filters: number;
 }
 export interface FontSource { family: string; path: string; weight?: number | undefined }
 export interface RuntimeOptions {
@@ -98,10 +106,12 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, (size.width - width) / 2, (size.height - height) / 2, width, height);
       },
+      stats: () => runtime.stats(),
       dispose() { runtime.dispose(); source.width = source.height = 0; },
     };
   }
-  if (typeof scene.setup !== 'function' || typeof scene.renderFrame !== 'function') throw new Error('Scene must export setup and renderFrame');
+  if (typeof scene.renderFrame !== 'function') throw new Error('Scene must export renderFrame');
+  if (scene.setup !== undefined && typeof scene.setup !== 'function') throw new Error('Scene setup must be a function');
   const scale = options.renderScale ?? 1, seed = (options.seed ?? 1) >>> 0;
   if (!Number.isFinite(scale) || scale <= 0 || scale > 4) throw new Error('Invalid renderScale');
   resolveParams(definitions, options.params ?? {});
@@ -119,7 +129,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   element.width = Math.max(1, Math.round(meta.width * scale)); element.height = Math.max(1, Math.round(meta.height * scale));
   const sx = element.width / meta.width, sy = element.height / meta.height, effect = Math.sqrt(sx * sy);
   const assets: Record<string, unknown> = {};
-  await scene.setup({
+  await scene.setup?.({
     width: meta.width, height: meta.height, seed, random: seededRandom(seed), assets, asset: url,
     async loadImage(path) {
       const response = await win.fetch(url(path));
@@ -134,6 +144,8 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   // Public context speaks logical units; the native context receives device pixels.
   const base = new DOMMatrix([sx, 0, 0, sy, 0, 0]), inverse = base.inverse();
   const toNative = (m: DOMMatrix) => base.multiply(m);
+  const film: FilmFrame = Object.freeze({ base, inverse, width: meta.width, height: meta.height, hidden: true, effects: true });
+  let filters = 0;
   const overrides: Record<string, unknown> = {
     setTransform(...args: unknown[]) {
       const m = args.length >= 6 ? new DOMMatrix(args.slice(0, 6) as number[]) : DOMMatrix.fromMatrix((args[0] ?? {}) as DOMMatrixInit);
@@ -145,6 +157,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   };
   const logical = new Proxy(ctx, {
     get(target, key) {
+      if (key === FILM_FRAME) return film;
       if (typeof key === 'string' && key in overrides) return overrides[key];
       const value = Reflect.get(target, key, target);
       if (EFFECT_PROPS.has(String(key))) return Number(value) / effect;
@@ -152,6 +165,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       return typeof value === 'function' ? value.bind(target) : value;
     },
     set(target, key, value) {
+      if (key === 'filter' && value !== 'none' && value !== '') filters++;
       const next = EFFECT_PROPS.has(String(key)) ? Number(value) * effect : key === 'filter' ? scaleFilter(String(value), effect) : value;
       return Reflect.set(target, key, next, target);
     },
@@ -170,7 +184,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       drawing.draw.push();
       try { logical.clip(path, rule); draw(); } finally { drawing.draw.pop(); }
     },
-    blur(radius) { ctx.filter = radius > 0 ? `blur(${radius * effect}px)` : 'none'; },
+    blur(radius) { if (radius > 0) filters++; ctx.filter = radius > 0 ? `blur(${radius * effect}px)` : 'none'; },
     shadow(color, radius, x = 0, y = 0) { ctx.shadowColor = color; ctx.shadowBlur = radius * effect; ctx.shadowOffsetX = x * effect; ctx.shadowOffsetY = y * effect; },
     vignette(strength, inner = 0.15) {
       ctx.save(); ctx.setTransform(base); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none'; ctx.shadowColor = 'transparent';
@@ -192,7 +206,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       const resolved = resolveParams(definitions, values);
       // reset() also discards clip regions and unbalanced save stacks from the previous call.
       ctx.reset(); ctx.setTransform(base); ctx.fillStyle = meta.background; ctx.fillRect(0, 0, meta.width, meta.height);
-      drawing.reset();
+      drawing.reset(); filters = 0;
       // The scene's own globals: in an iframe they differ from this module's.
       const { Math: math, Date: date, performance: perf } = win;
       const saved = guard ? { random: math.random, now: date.now, perf: perf.now } : undefined;
@@ -202,6 +216,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       finally { if (saved) { math.random = saved.random; date.now = saved.now; perf.now = saved.perf; } }
       if (result instanceof Promise) throw new Error('renderFrame must be synchronous');
     },
+    stats: () => ({ filters }),
     dispose() {
       disposed = true;
       const Bitmap = win.ImageBitmap ?? (typeof ImageBitmap === 'undefined' ? undefined : ImageBitmap);

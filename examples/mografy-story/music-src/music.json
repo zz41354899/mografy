@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "film": "為什麼我開發 Mografy (scenes/main.ts, story-world.ts): a personal story film. Dark 'black box' half (prompt makes a video, every edit regenerates it), the box opens into light at 27.7 s, an editable system, a +0.5 s edit that touches one clip, four people Mografy is for, describing motion to AI, the closing line, the brand logo animation and URL.",
+  "duration": 70.75,
+  "bpm": 72,
+  "beatsPerBar": 4,
+  "offset": 0,
+  "key": "D",
+  "mode": "major",
+  "mood": "calm",
+  "rhythm": "sustained",
+  "fadeOut": 2.2,
+  "seed": 11,
+  "sections": [
+    {
+      "name": "question",
+      "start": 0,
+      "end": 13,
+      "mood": "pensive",
+      "energy": [
+        0.18,
+        0.26
+      ],
+      "note": "The question, one prompt makes a video, can we still control it?"
+    },
+    {
+      "name": "regenerate",
+      "start": 13,
+      "end": 22.5,
+      "mood": "pensive",
+      "energy": [
+        0.26,
+        0.34
+      ],
+      "note": "Every small edit regenerates the whole video; versions pile up into the black box."
+    },
+    {
+      "name": "idea",
+      "start": 22.5,
+      "end": 30.5,
+      "mood": "calm",
+      "energy": [
+        0.3,
+        0.5
+      ],
+      "note": "Versions dropped into the slowly turning box; code cards fall in one by one; the lid swings open and light floods in at 27.7."
+    },
+    {
+      "name": "system",
+      "start": 30.5,
+      "end": 54,
+      "mood": "warm",
+      "energy": [
+        0.5,
+        0.58
+      ],
+      "note": "Scenes, time, params, components; the +0.5 s edit; four people, one line each."
+    },
+    {
+      "name": "statement",
+      "start": 54,
+      "end": 64,
+      "mood": "warm",
+      "energy": [
+        0.55,
+        0.42
+      ],
+      "note": "Describe it to AI; 'let AI speed up the making, leave the final decisions with the creator'."
+    },
+    {
+      "name": "logo",
+      "start": 64,
+      "end": 70.75,
+      "mood": "calm",
+      "energy": [
+        0.35,
+        0.25
+      ],
+      "note": "Prompt bubble, brand logo animation (light), URL at the bottom."
+    }
+  ],
+  "hits": [
+    {
+      "at": 27.5,
+      "kind": "swell",
+      "length": 2.8,
+      "strength": 0.9,
+      "note": "the black box opens and the light floods in"
+    },
+    {
+      "at": 67.6,
+      "kind": "resolve",
+      "strength": 0.9,
+      "note": "logo locks up with the wordmark; hold"
+    }
+  ],
+  "note": "User is strict about music: no noisy or fragmented sounds. 'sustained' rhythm = pads, one soft piano chord per bar (slow attack, no hammer noise), a held bass. No whoosh, impact, pops, ticks, bells or arpeggios."
+}

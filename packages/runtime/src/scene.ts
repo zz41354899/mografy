@@ -3,3 +3,4 @@
 export * from './math.js';
 export * from './motion.js';
 export * from './layers.js';
+export * from './film.js';

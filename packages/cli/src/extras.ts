@@ -1,4 +1,4 @@
-// `mografy add <extra>`: copy an optional helper (cinema, cjk, three, music, walkthrough) into a project.
+// `mografy add <helper>`: copy an optional helper (cinema, cjk, three, music, walkthrough) into a project.
 // Extras are not part of the installed template. They come from this checkout's extras/ folder,
 // or from GitHub when the folder is missing, so an installation stays at the sixteen built-in components.
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -79,7 +79,7 @@ export interface AddResult { written: string[]; unchanged: string[]; kept: strin
 /** Copy an extra into `dir`. Files that differ from the extra are kept unless `force` is set. */
 export async function addExtra(workspaceRoot: string, dir: string, name: string, force = false): Promise<AddResult> {
   const extra = EXTRAS[name];
-  if (!extra) throw new Error(`Unknown extra: ${name}\nAvailable extras:\n${extrasList()}`);
+  if (!extra) throw new Error(`Unknown helper: ${name}\nAvailable helpers:\n${extrasList()}`);
   const result: AddResult = { written: [], unchanged: [], kept: [], fonts: [] };
   for (const [from, to] of extra.files) {
     const target = join(dir, to), data = await source(workspaceRoot, from);

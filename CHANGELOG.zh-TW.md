@@ -13,6 +13,23 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-10-25
+
+### 新增
+
+- **影片用 runtime 工具** — `@mografy/runtime` 新增 `keys`（單調三次曲線關鍵格）、`cameraPath` 與 `withCamera`（全片一顆鏡頭）、`beats`（一張鏡頭表，產生 `meta.shots`、審閱時間與交接）、共用的 `buffer`、`bloom`，以及 `layer`、`blurLayer` 的 `bounds` 選項。`blurText` 以字形陰影做文字模糊，不再使用 filter。這些工具都能接受場景 context 或一般 2D 畫布，分鏡頁面可以直接畫出真正的影片。
+- **`mografy check` 量測每格成本** — 顯示中位數與最慢一格的時間，並在單格超過 100 ms、單格設定超過八個 filter、每格都建立畫布時提出警告。
+- **`film-starter` 範例** — `mografy add film-starter <資料夾>` 會複製一部 20 秒的範本影片和它用的 Inter 字型子集，用來開始一部新影片：視線跟著一道光，從一個點畫成一條線，線長成一張畫出 ease 曲線的卡片，再變成光環，最後成為結尾句的句號；全片一顆鏡頭、一張鏡頭表。
+- **參考影片** — `examples/` 新增三部完整影片：mografy-montage（60 秒）、mografy-triangulum（42 秒）、mografy-story（71 秒）。它們改用新的 runtime 工具，各自只有一張鏡頭表；與改寫前逐格比對畫面相同，montage 每格的繪製速度約快四倍。`mografy add <名稱> [資料夾]` 會複製一部來修改。Skill 新增的 `examples.md` 說明每部影片可以學什麼。
+- **`mografy add` 同時處理影片與輔助工具** — `mografy add` 會一起列出參考影片與輔助工具。`mografy add <影片> [資料夾]` 把影片複製到你的專案庫；`mografy add <工具...> [專案]` 可一次加入一個或多個工具（`mografy add film music`）。安裝完成時會建議其中幾個。
+- **圖層使用影片單位** — 在 `layer`、`blurLayer`、`bloom` 裡，陰影與模糊的長度現在和畫面上一樣使用影片單位，卡片與光暈在 Retina 預覽和 4K 匯出時不會變小。`TextStyle.family` 可以寫成 CSS 字型串。
+
+### 變更
+
+- **Skill** — `SKILL.md` 開頭新增連貫與效能的品質底線。新增參考文件：影片架構、效能、輸出（畫面比例與匯出，從場景編寫移出）。原本只給 Codex 的動態補充改為共用的 `motion-design.md`，並加入預設品味（節奏從容、停留時不漂移、大字、Logo 只出現一次、持續型配樂）。產品操作影片改為全片一顆鏡頭，每張卡片用局部縮放。
+- **場景** — `setup` 改為選用。
+- **cinema** — `crossfade` 重複使用同一個緩衝，不再每格建立畫布。
+
 ## 2026-10-24
 
 ### 修正
@@ -38,7 +55,7 @@ mografy update
 
 - 場景撰寫參考新增 **Randomness**（在 `setup` 用 `ctx.random()` 決定，`ctx.noise()` 只用於每格變化）、**Tempo and music**、**Time and motion helpers**、**Layer helpers** 段落；各 extra 參考改用 `mografy add`。
 
-- **產品操作影片（選用 extra）** — `extras/walkthrough/walkthrough.ts` 把真實 App 的畫面做成影片：代理看每一步的截圖，把原介面重繪成放大、簡化的卡片（只留被操作的元件和看懂它所需的一點上下文，其餘刪掉或改成骨架條，字放大約 1.5 倍），每鏡只拍一個操作。每張卡片從上一鏡剛按下的元件長出來，每張卡片有自己的鏡頭、只推近要操作的那個元件，由大游標或手指點按完成操作。工具包含卡片、按鈕、會打字的輸入框、逐字模糊浮現的文字、跳數、自己畫出來的勾、提示條、手機框、彈簧曲線、以固定點縮放的鏡頭、會跟著鏡頭移動的游標，以及品牌色流體背景。共用 Skill 新增 `product-walkthrough.md` 參考，說明流程（錄製操作但不更動使用者資料、逐頁列出元件、先確認「原截圖｜重繪」對照表再做動畫），以及如何套用到發表廣告、功能教學、新功能短片、手機 App 預覽、社群短版與網站循環動圖。`walkthrough-demo.ts` 是 12 秒的示範。不會隨安裝加入：只有專案需要時才把檔案複製到 `scenes/`。
+- **產品操作影片（選用 extra）** — `extras/walkthrough/walkthrough.ts` 把 App 的畫面做成影片：代理看每一步的截圖，把原介面重繪成放大、簡化的卡片（只留被操作的元件和看懂它所需的一點上下文，其餘刪掉或改成骨架條，字放大約 1.5 倍），每鏡只拍一個操作。每張卡片從上一鏡剛按下的元件長出來，每張卡片有自己的鏡頭、只推近要操作的那個元件，由大游標或手指點按完成操作。工具包含卡片、按鈕、會打字的輸入框、逐字模糊浮現的文字、跳數、自己畫出來的勾、提示條、手機框、彈簧曲線、以固定點縮放的鏡頭、會跟著鏡頭移動的游標，以及品牌色流體背景。共用 Skill 新增 `product-walkthrough.md` 參考，說明流程（收集每一步的截圖、逐頁列出元件、先確認「原截圖｜重繪」對照表再做動畫），以及如何套用到產品示範、功能教學、新功能短片、手機 App 預覽、社群短版與網站循環動圖。`walkthrough-demo.ts` 是 12 秒的示範。不會隨安裝加入：只有專案需要時才把檔案複製到 `scenes/`。
 
 ### 變更
 

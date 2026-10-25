@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "name": "Follow interaction",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 7589,
+  "params": {},
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Regular.otf",
+      "weight": 400
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Medium.otf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-SemiBold.otf",
+      "weight": 600
+    }
+  ],
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 2,
+    "mixing": "srgb",
+    "bitrate": "8M",
+    "glow": 0,
+    "grain": 0,
+    "encoding": "crf",
+    "preset": "medium",
+    "crf": 20,
+    "includeAudio": false
+  },
+  "review": {
+    "times": [
+      0,
+      1.0,
+      1.6,
+      1.9,
+      2.2,
+      2.6,
+      3.2,
+      7.0,
+      7.98
+    ],
+    "transitions": [
+      {
+        "name": "Click and response",
+        "start": 1.7,
+        "end": 2.9,
+        "step": 0.1
+      },
+      {
+        "name": "Loop seam",
+        "start": 7.1,
+        "end": 7.99,
+        "step": 0.1
+      }
+    ]
+  }
+}

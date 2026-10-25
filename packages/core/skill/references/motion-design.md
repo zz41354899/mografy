@@ -1,6 +1,6 @@
-# Motion design decisions for Codex
+# Motion design decisions
 
-Use this supplement in Codex when creating a Mografy animation or revising its visual concept, choreography, pacing, or transitions. Claude keeps the existing shared workflow; this supplement adds no Claude requirements. A copy correction, asset swap, export, compression, or isolated timing fix needs only the relevant local check, not a new concept or storyboard. Preserve the user's chosen direction and requested scope. Continue authorized implementation without adding an approval gate.
+Use this when creating a Mografy animation or revising its visual concept, choreography, pacing, or transitions, in any host. A copy correction, asset swap, export, compression, or isolated timing fix needs only the relevant local check, not a new concept or storyboard. Preserve the user's chosen direction and requested scope. Continue authorized implementation without adding an approval gate.
 
 ## Establish a visual idea before scene code
 
@@ -11,9 +11,20 @@ Write a compact direction in the existing `storyboards/storyboard.md` for a plan
 - **Attention and rhythm:** name the focal subject and the moments of action, emphasis, and rest. Decide what stays still while the lead moves. Music can supply cues; a film does not need every element to move on every beat.
 - **Continuity:** identify what the viewer follows across a shot boundary: the same object, alignment, direction, contour, color field, or a deliberate contrasting cut. Specify its outgoing and incoming states.
 
-Use the nearest public [component](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) or [intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md), supplied reference, or existing project shot to answer a specific design question. Inspect its source and actual frames or playback when available. Note the useful relationship (such as a playhead causing a visible state change), then adapt it to this brief. A catalog of components is a technical vocabulary, not a shot list. Do not copy private project material into shared guidance.
+Use the nearest public [component](built-in-components.md) or [intro](intro.md), supplied reference, or existing project shot to answer a specific design question. Inspect its source and actual frames or playback when available. Note the useful relationship (such as a playhead causing a visible state change), then adapt it to this brief. A catalog of components is a technical vocabulary, not a shot list. Do not copy private project material into shared guidance.
 
-For a new concept that needs shot planning, follow [storyboard.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md), including Codex image generation. Use those panels to choose composition and hierarchy; keep exact geometry, copy, and timing in the written plan. Generated imagery can suggest something the Canvas implementation never produces. Compare implemented frames with the intended key poses rather than treating the generated board as proof of quality.
+For a new concept that needs shot planning, follow [storyboard.md](storyboard.md) (image generation in Codex, Artifacts or a local HTML board in Claude). Use those panels to choose composition and hierarchy; keep exact geometry, copy, and timing in the written plan. Generated imagery can suggest something the Canvas implementation never produces. Compare implemented frames with the intended key poses rather than treating the generated board as proof of quality.
+
+## Default taste
+
+When the project's `style.md` and the brief say nothing else, start from these defaults; the project's own decisions always win.
+
+- **Calm pacing.** Fewer, longer shots; hold every result long enough to read twice. When a film feels rushed, lengthen holds or cut copy rather than speeding actions up.
+- **Still holds.** No idle drift, bobbing or slow zoom while the viewer reads; motion has a cause and ends.
+- **Big type.** Headlines around 96–160 px and body copy at least 40 px at 1920 × 1080; scale up for portrait. Few words on screen at once.
+- **No decoration for its own sake.** No dot grids or busy background patterns; a quiet gradient, one glow, or the brand's colour field instead.
+- **The logo once.** The brand mark lands at the end (or opens and returns at the end), held still with the tagline; not repeated in every shot.
+- **Sustained sound.** Music follows [music.md](music.md)'s default taste: sustained, warm, no sharp high effects.
 
 ## Compose the key poses, then connect them
 
@@ -29,7 +40,7 @@ This phrase determines order, overlap, and attention. Only then choose durations
 
 This is an original teaching example, not a mandatory look, schedule, or component recipe. It needs only Canvas marks and typography. Use another mechanism when the brief calls for one.
 
-The optional [scene source](https://github.com/zz41354899/mografy/blob/main/extras/motion-design.ts) implements this example; inspect its [actual Chromium key poses](https://github.com/zz41354899/mografy/blob/main/docs/motion-design/poses.png) alongside the code when using it as a reference. Resolve these files from the current checkout when available. These poses show the implemented Canvas scene, not an image-generated concept board. The example uses a generic system sans-serif; choose project fonts for production work.
+The optional [scene source](../../../../extras/motion-design.ts) implements this example; inspect its [actual Chromium key poses](../../../../docs/motion-design/poses.png) alongside the code when using it as a reference. Resolve these files from the current checkout when available. These poses show the implemented Canvas scene, not an image-generated concept board. The example uses a generic system sans-serif; choose project fonts for production work.
 
 | Time | Composition and action | Design reason |
 | --- | --- | --- |
@@ -46,11 +57,11 @@ A weaker version would fade out the strokes, slide in an unrelated title card, a
 | Reveal or emphasis | Choose what is discovered first: silhouette, word, number, relationship, or result. Use contrast, a mask, spatial change, or a cut when it serves that order. A simple fade is appropriate for a quiet reveal. | Every object fades/slides in with equal prominence, so nothing leads the eye. |
 | Explanation | A cause visibly changes its result: a cursor presses a control, a value changes a chart, an object assembles into a system. Preserve real product behavior. | A decorative cursor or chart animates independently of the event it supposedly explains. |
 | Typography | Measure and compose the complete text first. Animate words or glyphs only where their order or rhythm adds meaning; keep the reading pose stable. | Text keeps scaling or drifting during its reading hold; long words or CJK copy change wrapping mid-reveal. |
-| Transition | Match the outgoing and incoming framing for a handoff, or make a cut whose change in scale, direction, or meaning is intentional. Brief-specific hard cuts and fades remain valid. | Unrelated panels reset to the center and repeat the same entrance; a wipe conceals a jump instead of connecting the scenes. |
+| Transition | Hand over shared geometry: the outgoing shot's last object becomes the incoming shot's first (see [film-architecture.md](film-architecture.md)). Otherwise make a cut whose change in scale, direction, or meaning is intentional. Brief-specific hard cuts and fades remain valid. | Unrelated panels reset to the center and repeat the same entrance; a wipe conceals a jump instead of connecting the scenes. |
 | Weight or response | Choose the pivot, contact, acceleration, overshoot, and delayed secondary response for the material. Rigid type and logos usually need different treatment from soft characters. | Every object uses the same spring or sinusoidal bob regardless of weight, material, or story. |
 | Held result | Give the message a readable still interval; secondary movement should reinforce it. | Motion continues merely to avoid stillness and competes with the takeaway. |
 
-Treat the easing and text-duration estimates in scene authoring as starting heuristics. Judge actual spacing and reading at the requested pace; do not apply one curve, stagger interval, or shot duration mechanically to every action. If copy cannot be read in the requested duration, resolve that conflict explicitly rather than speeding up the whole film. Choose the relevant [animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) after deciding the action; listing their names is not a design rationale.
+Treat the easing and text-duration estimates in scene authoring as starting heuristics. Judge actual spacing and reading at the requested pace; do not apply one curve, stagger interval, or shot duration mechanically to every action. If copy cannot be read in the requested duration, resolve that conflict explicitly rather than speeding up the whole film. Choose the relevant [animation principles](animation-principles.md) after deciding the action; listing their names is not a design rationale.
 
 ## Review design separately from technical correctness
 
@@ -68,12 +79,12 @@ Record a concrete observation with a time or frame, its effect on the viewer, an
 
 Stills and transition strips show composition and sampled continuity; they do not by themselves establish the experience of continuous playback. If the available tools cannot inspect playback, say which frames and intervals were inspected and leave temporal quality unverified. Likewise, describe reference fidelity only after comparing the actual rendered output with the reference. Do not claim a visual-quality improvement from a successful build or a written plan alone.
 
-## Evaluate this supplement on actual tasks
+## Evaluate guidance changes on actual tasks
 
-When evaluating a Skill revision, use the same brief, assets, dimensions, and time budget for the previous and revised guidance. Keep each run's source, plan, actual frames, playable output when available, and critique separate. Do not label the new version as the preferred answer for the reviewer. These focused briefs exercise different decisions:
+When evaluating a Skill revision in either host, use the same brief, assets, dimensions, and time budget for the previous and revised guidance. Keep each run's source, plan, actual frames, playable output when available, and critique separate. Do not label the new version as the preferred answer for the reviewer. These focused briefs exercise different decisions:
 
 1. **Motion concept:** "Create an eight-second 16:9 bumper for the fictional wordmark LUMA, using only typography and simple Canvas geometry. Communicate 'Many ideas. One direction.' End on the wordmark."
 2. **Explanatory causality:** "Create a six-second 9:16 animation showing a task move from waiting to complete after a button press. Preserve the visible cause/result and let the result read at phone size."
 3. **Scope control:** "In this existing animation, change only the last title and lengthen its final hold by half a second. Preserve its established composition and other timings."
 
-For the first two, compare the five criteria above using actual frames and playback. Let a reviewer state which version communicates the brief more clearly and cite the moment that determined the choice; document ties or regressions. For the third, verify that the requested local edit did not trigger a redesign or an unnecessary storyboard/image-generation cycle. Keep prompt-following and technical checks separate from this visual judgment. A rubric or self-score alone does not establish an improvement, and a Codex run does not establish Claude behavior or a general model ranking.
+For the first two, compare the five criteria above using actual frames and playback. Let a reviewer state which version communicates the brief more clearly and cite the moment that determined the choice; document ties or regressions. For the third, verify that the requested local edit did not trigger a redesign or an unnecessary storyboard/image-generation cycle. Keep prompt-following and technical checks separate from this visual judgment. A rubric or self-score alone does not establish an improvement, and a run in one host does not establish behavior in another or a general model ranking.

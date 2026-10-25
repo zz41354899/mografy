@@ -9,7 +9,7 @@ Run `mografy dev` to open the player. After a file change passes compilation and
 A scene module exports `meta`, `params`, optional `setup`, and synchronous `renderFrame`:
 
 ```ts
-import { pr, lerp, ease, clamp, colorLerp } from '@mografy/runtime';
+import { lerp, at, springs } from '@mografy/runtime';
 import type { FrameContext, SetupContext } from '@mografy/runtime';
 
 export const meta = { width: 1920, height: 1080, duration: 8, fps: 30, background: '#0f1115' };
@@ -26,19 +26,15 @@ export async function setup(ctx: SetupContext) { /* load images or prepare seede
 export function renderFrame(ctx: FrameContext, time: number, p: any) {
   const mografy = ctx.draw;
   mografy.fill(p.accent);
-  mografy.circle(ctx.width / 2, ctx.height / 2, lerp(20, 160, ease.outExpo(pr(time, 0.2, 1.2))));
+  mografy.circle(ctx.width / 2, ctx.height / 2, lerp(20, 160, at(time, 0.2, 1.2, springs.out)));
 }
 ```
 
-## Landscape and portrait compositions
+This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](film-architecture.md) and start from the `film-starter` example (`mografy add film-starter <folder>`).
 
-Read `mografy.json.aspectRatio` before planning or editing. It is `"16:9"` (landscape) or `"9:16"` (portrait); when absent, use the scene's `meta.width / meta.height`. This is canvas configuration only. The main player has no orientation switch: it previews the authored scene at its configured dimensions. Output orientation is chosen only in the Export dialog and never changes the project or the main preview.
+## Aspect ratio
 
-When the user requests a future 9:16 video, explicitly record **9:16 portrait** in the brief before authoring. Treat this as the intended composition, not merely an export setting. Create the scene natively in portrait, tell the user that the preview follows the authored scene, and do not rely on fitting or cropping a landscape scene to satisfy a portrait brief. For a native social video, author `meta = { width: 1080, height: 1920, ... }` and set `aspectRatio: "9:16"` in the project. A landscape scene normally uses 1920 × 1080. The shared Runtime applies the saved aspect ratio to the logical canvas before setup and rendering, preserving the scene's short edge; both `SetupContext` and `FrameContext` receive the effective dimensions. Use `ctx.width` and `ctx.height`, never imported meta dimensions, for layout, backgrounds, clipping, and camera bounds. Branch with `const portrait = ctx.height > ctx.width` when the compositions differ. Stack portrait elements vertically, wrap copy to available width, and reposition the focal subject and subtitles. Do not rotate, stretch, or merely shrink a complete landscape shot into the portrait canvas. Fixed-coordinate scenes need a scene-code layout pass; an orientation toggle cannot infer their intended design.
-
-For portrait social layouts, use conservative guides: leave about 8% above, 18% below, 6% on the left, and 12% on the right clear of critical copy and logos. Platform overlays vary; treat these as planning margins, not platform guarantees. Inspect at phone size, including long subtitles, entrances, exits, and transitions. If both outputs are requested, review both complete compositions and random seeks.
-
-MP4 and WebM exports have landscape 1280 × 720 / 1920 × 1080 and portrait 720 × 1280 / 1080 × 1920 presets, selected with orientation icons. If output orientation differs from the authored scene, show Fit: `contain` (Fit entire scene, the default) or `cover` (Fill and crop). These fit the existing artwork without reauthoring the canvas. The dialog shows an actual paused-frame preview of the output. Choose `reflow` (Adapt layout) for deliberately responsive scenes, including all sixteen built-in components: it passes the output canvas dimensions to scene code so portrait sizes, card arrangements, and text wrapping adapt. It is not a player orientation control. Export overrides do not change the saved canvas. CLI: `mografy export [project] --format mp4 --orientation portrait --resolution 1080p` (or `landscape`); without overrides it uses the saved canvas and render scale. WebM uses VP9 video and optional Opus audio, with constant quality (CRF 32) by default; MP4 uses H.264/AAC. Use `--format webm` for WebM. Higher WebM CRF values produce smaller files with less detail. MP4 and VP9 CRF values are codec-specific. Both video formats support the same orientation, resolution, sampling, and output effects. Player, stills, thumbnails, review, and exports share the effective canvas and output effects.
+Read `mografy.json.aspectRatio` (`"16:9"` or `"9:16"`) before planning or editing; when absent, use the scene's `meta.width / meta.height`. The runtime applies the saved ratio before setup, so `SetupContext` and `FrameContext` both receive the effective dimensions: use `ctx.width` and `ctx.height`, never imported meta dimensions, for layout, backgrounds, clipping and camera bounds. A portrait brief is authored natively at 1080 × 1920, never fitted from a landscape scene. Read [output.md](output.md) for portrait layout, safe margins, export sizes and formats.
 
 ## Required behavior
 
@@ -47,8 +43,9 @@ MP4 and WebM exports have landscape 1280 × 720 / 1920 × 1080 and portrait 720 
 3. The runtime resets and fills the canvas before every call. `renderFrame` must finish synchronously.
 4. Import only files inside the project and `@mografy/runtime`.
 5. Put fonts in `assets/`, list them in `mografy.json` under `fonts`, then select them with `mografy.textFont('Family', 400)`. Only loaded weights are reliable.
-6. Express effect distances such as `shadowBlur`, shadow offsets, and filter pixels in logical units. The runtime scales them for output resolution. Use `ctx.vignette(strength)` for a canvas vignette.
-7. Expose only important subtitles as `type: 'string', role: 'subtitle'` params. Titles, chat text, buttons, hints, code examples, and brand copy should stay in the scene for the AI to edit. Do not turn every string into an inspector field. Every color or numeric param must control a visible result. Do not add a dot grid unless the user explicitly asks for one.
+6. Express effect distances such as `shadowBlur`, shadow offsets, and filter pixels in logical units on `ctx.canvas`; the runtime scales them for output resolution, but not for your own transforms (a camera zoom) and not on your own offscreen contexts. Never set `ctx.filter` around a group of draws: blur a layer with `blurLayer`, type with `blurText` / `blurWords`, light with `bloom` (see [performance.md](performance.md)). Use `ctx.vignette(strength)` for a canvas vignette.
+7. Never create a canvas in `renderFrame`. Use `layer`, `blurLayer`, `bloom` or `buffer(name, w, h)`, which reuse pooled memory sized in film coordinates.
+8. Expose only important subtitles as `type: 'string', role: 'subtitle'` params. Titles, chat text, buttons, hints, code examples, and brand copy should stay in the scene for the AI to edit. Do not turn every string into an inspector field. Every color or numeric param must control a visible result. Do not add a dot grid unless the user explicitly asks for one.
 
 ## Randomness
 
@@ -106,7 +103,7 @@ const LOGO_IN = grid.onBar(10, 2);             // bar 10, beat 3
 
 ## Time and motion helpers
 
-All are pure functions of absolute time, imported from `@mografy/runtime`. Use them instead of writing curves and springs in each project.
+All are pure functions of absolute time, imported from `@mografy/runtime`. Use them instead of writing curves, springs and cameras in each project. Defaults: `springs.out` for entrances and moves, `springs.pop` for cards and buttons, `springs.camera` for camera-like moves, `keys` for any move through several poses, `ease.inOutCubic` for exits and `ease.inOutSine` only for deliberate loops.
 
 | Helper | Use |
 | --- | --- |
@@ -121,10 +118,13 @@ All are pure functions of absolute time, imported from `@mografy/runtime`. Use t
 | `pulse(time, at, width?)` | A bump that peaks at 1 at `at`: presses, flashes, highlights. |
 | `stagger(i, count, step, curve?)` | Delay for item `i`; with a curve, the group's delays are eased. |
 | `tempoGrid({ bpm, beatsPerBar?, offset? })` | Bar and beat times for timing constants (see Tempo and music). |
+| `keys([[t, v], …])` | One smooth curve through several keys (monotone cubic): velocity carries through inner keys, no overshoot. For long moves and camera paths. |
+| `cameraPath([[t, x, y, zoom?, roll?], …])`, `withCamera(c, camera, draw)` | The film's one camera: keyed position and roll, zoom in log space; `withCamera` puts the camera's (x, y) at the frame centre. |
+| `beats([{ title, end, stop?, handoff?, note? }, …])` | The shot table: `shots` for `meta.shots`, `list` start/end/stop times, `reviewTimes`, `transitions`, `at(time)`. |
 
-## Layer helpers
+## Layer and text helpers
 
-Common drawing patterns that would otherwise be copied into every film. Each runs in its own canvas scope.
+Common drawing patterns that would otherwise be copied into every film. Each runs in its own canvas scope and takes either the `FrameContext` or a native 2D context; inside a `layer`, `blurLayer` or `bloom` callback, pass the context the callback receives.
 
 | Helper | Use |
 | --- | --- |
@@ -132,7 +132,16 @@ Common drawing patterns that would otherwise be copied into every film. Each run
 | `surface(ctx, path, fill, { elevation?, tint? })` | Fill a path with a soft two-layer shadow: 0 flat, 1 resting card, 2 lifted. |
 | `text(ctx, value, x, y, style)`, `measure(ctx, value, style)` | One line with its own `size`, `color`, `family`, `weight`, `align`, `baseline`, `tracking` (letter spacing), `alpha` and `maxWidth`. |
 | `riseWords(ctx, line, x, y, style, time, start, { stagger?, duration?, curve?, exit?, colors?, separator? })` | Words rise into a mask one after another (0.07 s apart, 0.8 s each, `ease.outQuint`). Returns each word's `[left, right]` for underlines or cursors. `exit` 0–1 lifts the line out. |
-| `blurWords(ctx, line, x, y, style, time, start, { …, blur?, lift? })` | Words come into focus: blur, a small rise and opacity resolve together. |
+| `blurWords(ctx, line, x, y, style, time, start, { …, blur?, lift? })` | Words come into focus: blur, a small rise and opacity resolve together. Uses `blurText`, never a filter. |
+| `blurText(ctx, value, x, y, style, radius)` | One blurred line drawn through its shadow: about the cost of sharp text. |
+| `layer(c, name, alpha, draw, { res?, mode?, bounds? })` | Draw a group into a pooled layer and composite it once: group fades without flashing overlaps, blend modes, reduced resolution. |
+| `blurLayer(c, name, radius, draw, { alpha?, res?, mode?, bounds? })` | Blur a group in one pass; `radius` in current units (follows the camera); strong blurs drop resolution automatically. |
+| `bloom(c, draw, { radius?, strength?, halo?, mode?, res?, bounds? })` | Glow for lights and neon at quarter resolution: a tight glow and a wide halo. Draws only the glow. |
+| `buffer(name, w, h)` | A pooled, cleared offscreen canvas in device pixels, for custom effects. |
+| `devScale(c)`, `outputScale(c)`, `deviceTransform(c)` | Device pixels per current unit (with camera) and per film unit (output scale); multiply your own offscreen filter and shadow lengths by them. |
+| `filmFrame(c, width, height, base?)` | Tag a plain canvas (a storyboard page) with its film frame so the helpers above work on it. |
+
+`bounds: [x, y, w, h]` (current coordinates) limits a layer to the area it covers; use it for anything smaller than about half the frame.
 
 Pass `separator: ''` to animate CJK copy character by character. For a family, use one registered under `fonts` in mografy.json.
 
@@ -205,11 +214,11 @@ For a new animation, create the project first with `mografy init projects/<name>
 
 1. Read `mografy.json`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
 2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render, review, and presentation (`slides`) settings.
-3. Run `mografy check [project]`. This compiles the scene and trial-renders it in real Chromium. Fix every reported error before judging the design.
+3. Run `mografy check [project]`. This compiles the scene, trial-renders it in real Chromium and measures frame cost. Fix every reported error, and every `!` frame-cost warning, before judging the design.
 4. Run `mografy review [project]`. Inspect every generated PNG in `renders/`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
-5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity, and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
+5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity (the followed object is visible in every frame of a transition strip, nothing jumps, no frame is empty), and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
 6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use `mografy dev [project]` when the user should watch the live result.
-7. Export with `mografy export [project] --format mp4|webm|lottie|svga`. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `mografy dev` is running, player exports also print progress in that terminal and can be stopped with `mografy export [project] --cancel`.
+7. Export with `mografy export [project] --format mp4|webm|lottie|svga` when the user asks for a file. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `mografy dev` is running, player exports also print progress in that terminal and can be stopped with `mografy export [project] --cancel`.
 
 ## Presentations
 
@@ -221,8 +230,10 @@ Only important subtitles belong in `role: 'subtitle'` params. Let the user edit 
 
 - Show a meaningful element within the first 0.3 seconds.
 - Keep important text visible for at least roughly `character count / 4 + 1` seconds.
-- Prefer `ease.outExpo` or `ease.outCubic` for entrances and `ease.inOutCubic` for exits.
+- Use `springs.out` (or `spring()`) for entrances, `springs.pop` for cards and buttons, `keys` / `cameraPath` for moves through several poses, and `ease.inOutCubic` for exits. Keep one vocabulary per film.
 - Use a consistent curve for related elements and fixed 0.05–0.08 second intervals for a text stagger.
+- Hold readable poses still: no idle drift or bobbing while the viewer reads.
+- Connect shots through shared geometry and overlapping exits (see [film-architecture.md](film-architecture.md)).
 - Preserve whitespace and keep one dominant moving focus at a time.
 - With music, declare `meta.tempo` and time major changes from `tempoGrid(tempo).onBar(n)`, so cuts stay on bar starts when the tempo changes; use `ctx.beat(time)` for pulses inside a bar.
 

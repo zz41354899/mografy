@@ -1,6 +1,6 @@
 # Mografy extras
 
-Optional helpers that are **not installed** with Mografy. Common motion and drawing helpers (springs, easing, eased time windows, tempo grids, rounded surfaces, word reveals, gradients) are part of `@mografy/runtime`; extras build on them. Installation contains only the sixteen built-in components; these files stay on GitHub and are copied into an animation project when its brief needs them. The shared `mografy` Skill tells the agent when and how to fetch each one.
+Optional helpers that are **not installed** with Mografy. Common motion and drawing helpers (springs, easing, eased time windows, tempo grids, keyed curves, the film camera, layers, one-pass blur and bloom, the shot table, rounded surfaces, word reveals, gradients) are part of `@mografy/runtime`; extras build on them. Installation contains only the sixteen built-in components; these files stay on GitHub and are copied into an animation project when its brief needs them. The shared `mografy` Skill tells the agent when and how to fetch each one.
 
 | Extra | Files | Copy into a project | Reference |
 | --- | --- | --- | --- |

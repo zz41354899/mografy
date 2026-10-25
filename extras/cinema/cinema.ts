@@ -1,7 +1,7 @@
 // Camera, transition and atmosphere helpers for film-style scenes.
 // Every function is a pure function of time and its options; nothing keeps playback state.
 // Layout uses ctx.width / ctx.height, so the helpers work in landscape and portrait canvases.
-import { clamp, ease, lerp, pr } from '@mografy/runtime';
+import { buffer, clamp, ease, lerp, pr } from '@mografy/runtime';
 import type { FrameContext, SetupContext } from '@mografy/runtime';
 
 const TAU = Math.PI * 2;
@@ -80,8 +80,9 @@ function fadeLayer(ctx: FrameContext, alpha: number, draw: () => void) {
   if (alpha >= .999) { draw(); return; }
   if (alpha <= .001) return;
   ctx.withCanvas(c => {
+    // A pooled copy of the frame so far (never a new canvas per frame).
     const src = c.canvas as HTMLCanvasElement | OffscreenCanvas;
-    const under = new OffscreenCanvas(src.width, src.height);
+    const under = buffer('cinema:fade', src.width, src.height);
     under.getContext('2d')!.drawImage(src, 0, 0);
     draw();
     c.setTransform(1, 0, 0, 1, 0, 0);

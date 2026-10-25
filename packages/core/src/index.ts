@@ -202,6 +202,23 @@ export function tempoIssues(meta: Pick<SceneMeta, 'tempo'>, audio?: Pick<z.infer
   return issues;
 }
 
+/** Frame budget used by `mografy check`: slower frames make the player stutter. */
+export const FRAME_BUDGET = { slowMs: 100, filters: 8 } as const;
+/** One summary line and the warnings for a measured frame cost. */
+export function frameCostReport(cost: import('./protocol.js').FrameCost): { summary: string; warnings: string[] } {
+  const worst = cost.slowest[0], at = (t: number) => `${t.toFixed(1)}s`;
+  const summary = `Frame cost at ${cost.width}×${cost.height} (${cost.canvas.toUpperCase()} canvas, ${cost.frames} frames): median ${cost.medianMs} ms`
+    + (worst ? `, slowest ${worst.ms} ms at ${at(worst.time)}` : '');
+  const warnings: string[] = [];
+  if (worst && worst.ms > FRAME_BUDGET.slowMs)
+    warnings.push(`Frames take up to ${worst.ms} ms (${cost.slowest.map(s => at(s.time)).join(', ')}), so the player will stutter. Blur layers instead of setting ctx.filter, reuse buffers, and cache paths and text layout (performance reference).`);
+  if (cost.maxFilters.count > FRAME_BUDGET.filters)
+    warnings.push(`${cost.maxFilters.count} filters were set on the frame context in one frame (${at(cost.maxFilters.time)}). Each blurs every later draw separately: use blurLayer for groups and blurText for type.`);
+  if (cost.canvasesPerFrame > 0)
+    warnings.push(`renderFrame creates about ${cost.canvasesPerFrame} canvas${cost.canvasesPerFrame === 1 ? '' : 'es'} per frame. Reuse them with buffer() or layer() from @mografy/runtime.`);
+  return { summary, warnings };
+}
+
 export interface DeckSlide {
   index: number;
   /** The scene shot it comes from; its notes live at slides.pages[shot]. */

@@ -1,0 +1,229 @@
+{
+  "version": 1,
+  "name": "Mografy montage",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 1,
+  "params": {
+    "lang": "zh"
+  },
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-500.ttf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-600.ttf",
+      "weight": 600
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-700.ttf",
+      "weight": 700
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-800.ttf",
+      "weight": 800
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-400-subset.ttf",
+      "weight": 400
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-500-subset.ttf",
+      "weight": 500
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-600-subset.ttf",
+      "weight": 600
+    },
+    {
+      "family": "Noto Sans TC",
+      "path": "assets/NotoSansTC-700-subset.ttf",
+      "weight": 700
+    }
+  ],
+  "audio": {
+    "path": "assets/music.mp3",
+    "bpm": 72,
+    "offset": 0,
+    "beatsPerBar": 4,
+    "gain": 1
+  },
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 60,
+    "samples": 4,
+    "mixing": "srgb",
+    "bitrate": "12M",
+    "glow": 0,
+    "grain": 0,
+    "encoding": "crf",
+    "preset": "slow",
+    "crf": 14,
+    "includeAudio": true
+  },
+  "review": {
+    "times": [
+      1.8,
+      4.2,
+      6.6,
+      9.2,
+      12.9,
+      16,
+      18.2,
+      20.9,
+      23.6,
+      26.1,
+      28.3,
+      30.4,
+      32,
+      33.3,
+      34.4,
+      35.6,
+      38.1,
+      40,
+      41.7,
+      42.8,
+      44.6,
+      47.6,
+      52.1,
+      54.1,
+      59
+    ],
+    "transitions": [
+      {
+        "name": "Point leaves",
+        "start": 2.2,
+        "end": 3,
+        "step": 0.2
+      },
+      {
+        "name": "S-curve to wave",
+        "start": 4.4,
+        "end": 5.2,
+        "step": 0.2
+      },
+      {
+        "name": "Wave to spiral",
+        "start": 6.8,
+        "end": 7.6,
+        "step": 0.2
+      },
+      {
+        "name": "Spiral to nodes",
+        "start": 9.4,
+        "end": 10.6,
+        "step": 0.2
+      },
+      {
+        "name": "Nodes to line",
+        "start": 13,
+        "end": 14.8,
+        "step": 0.3
+      },
+      {
+        "name": "Line to arches",
+        "start": 16.4,
+        "end": 17.4,
+        "step": 0.2
+      },
+      {
+        "name": "Fly into the light",
+        "start": 18.2,
+        "end": 20.2,
+        "step": 0.2
+      },
+      {
+        "name": "Underline to pill",
+        "start": 21,
+        "end": 22.2,
+        "step": 0.2
+      },
+      {
+        "name": "Pill to window",
+        "start": 23.8,
+        "end": 25,
+        "step": 0.2
+      },
+      {
+        "name": "Dive to slider",
+        "start": 26.2,
+        "end": 27.6,
+        "step": 0.2
+      },
+      {
+        "name": "Window to Done.",
+        "start": 28.6,
+        "end": 30,
+        "step": 0.2
+      },
+      {
+        "name": "Done. to Write",
+        "start": 30.4,
+        "end": 31.6,
+        "step": 0.2
+      },
+      {
+        "name": "Verbs",
+        "start": 32.2,
+        "end": 35.6,
+        "step": 0.3
+      },
+      {
+        "name": "Ring to dot, cut",
+        "start": 36.2,
+        "end": 39.2,
+        "step": 0.3
+      },
+      {
+        "name": "Fly through the pill",
+        "start": 39.8,
+        "end": 41,
+        "step": 0.15
+      },
+      {
+        "name": "Type to whip",
+        "start": 41.8,
+        "end": 43.8,
+        "step": 0.2
+      },
+      {
+        "name": "Window into stars",
+        "start": 44.8,
+        "end": 46.2,
+        "step": 0.2
+      },
+      {
+        "name": "Galaxy",
+        "start": 46.6,
+        "end": 49.8,
+        "step": 0.4
+      },
+      {
+        "name": "Galaxy to arc",
+        "start": 49.8,
+        "end": 52.6,
+        "step": 0.2
+      },
+      {
+        "name": "Pill to logo",
+        "start": 54.2,
+        "end": 57.8,
+        "step": 0.3
+      }
+    ]
+  },
+  "slides": {
+    "hold": "freeze",
+    "music": "duck",
+    "pages": []
+  }
+}

@@ -271,6 +271,15 @@ export class SceneHost {
     } finally { await page.close(); }
   }
 
+  /** Load the scene and measure what its frames cost to draw (see FrameCost). */
+  async measure(build: SceneBuild, project: SceneProject) {
+    const page = await this.open(build, project, { params: {} });
+    try {
+      return await bounded(page.page.evaluate(() => window.mografyHost.cost()), hostTimeouts.trial,
+        `Measuring frames did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); });
+    } finally { await page.close(); }
+  }
+
   /** The project files a scene loads: run setup and a trial render, recording every request. */
   async loadedAssets(build: SceneBuild, project: SceneProject) {
     const page = await this.open(build, project, { renderScale: 0.25 });

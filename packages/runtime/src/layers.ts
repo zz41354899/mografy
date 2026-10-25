@@ -1,8 +1,9 @@
-// Drawing helpers on top of FrameContext: rounded paths, elevated surfaces and animated type.
-// Each call is a synchronous scope that restores the canvas state afterwards.
+// Drawing helpers: rounded paths, elevated surfaces and animated type. Each takes a FrameContext or any native
+// 2D context (inside layer() and blurLayer() callbacks, pass the context you were given) and is a synchronous
+// scope that restores the canvas state afterwards.
 import { clamp, ease } from './math.js';
 import { at, type Curve } from './motion.js';
-import type { FrameContext } from './canvas.js';
+import { appliedEffectScale, deviceTransform, effectUnits, scope, type Target } from './film.js';
 import type { Paint } from './draw.js';
 
 export type Corners = number | [topLeft: number, topRight: number, bottomRight: number, bottomLeft: number];
@@ -20,13 +21,15 @@ export interface SurfaceOptions {
   tint?: string;
 }
 /** Fill a path with a soft two-layer shadow under it (a wide ambient one and a tight contact one). */
-export function surface(ctx: FrameContext, path: Path2D, fill: Paint, o: SurfaceOptions = {}) {
+export function surface(ctx: Target, path: Path2D, fill: Paint, o: SurfaceOptions = {}) {
   const elevation = o.elevation ?? 1, tint = o.tint ?? '20, 24, 22';
-  ctx.withCanvas(c => {
+  scope(ctx, c => {
+    const u = effectUnits(ctx);
+    const shadow = (color: string, blur: number, y: number) => { c.shadowColor = color; c.shadowBlur = blur * u; c.shadowOffsetX = 0; c.shadowOffsetY = y * u; };
     if (elevation > 0) {
-      ctx.shadow(`rgba(${tint}, ${.07 * elevation})`, 70 * elevation, 0, 30 * elevation);
+      shadow(`rgba(${tint}, ${.07 * elevation})`, 70 * elevation, 30 * elevation);
       c.fillStyle = fill; c.fill(path);
-      ctx.shadow(`rgba(${tint}, ${.07 * elevation})`, 8, 0, 2);
+      shadow(`rgba(${tint}, ${.07 * elevation})`, 8, 2);
     }
     c.fillStyle = fill; c.fill(path);
   });
@@ -34,7 +37,7 @@ export function surface(ctx: FrameContext, path: Path2D, fill: Paint, o: Surface
 
 export interface TextStyle {
   size: number; color: Paint;
-  /** A family registered under `fonts` in mografy.json. Default: sans-serif. */
+  /** A family registered under `fonts` in mografy.json, or a CSS stack such as `Inter, "Noto Sans TC", sans-serif`. Default: sans-serif. */
   family?: string; weight?: number;
   align?: CanvasTextAlign; baseline?: CanvasTextBaseline;
   /** Letter spacing in logical pixels. */
@@ -43,11 +46,12 @@ export interface TextStyle {
   alpha?: number;
   maxWidth?: number;
 }
-const font = (s: TextStyle) => `${s.weight ?? 400} ${s.size}px "${s.family ?? 'sans-serif'}"`.replace('"sans-serif"', 'sans-serif');
+const family = (f = 'sans-serif') => /[,"']/.test(f) || /^(sans-serif|serif|monospace|system-ui)$/.test(f) ? f : `"${f}"`;
+const font = (s: TextStyle) => `${s.weight ?? 400} ${s.size}px ${family(s.family)}`;
 /** Draw one line of text with its own font, colour, tracking and alpha. */
-export function text(ctx: FrameContext, value: string, x: number, y: number, s: TextStyle) {
+export function text(ctx: Target, value: string, x: number, y: number, s: TextStyle) {
   if (!value || (s.alpha !== undefined && s.alpha <= 0.001)) return;
-  ctx.withCanvas(c => {
+  scope(ctx, c => {
     c.font = font(s);
     c.fillStyle = s.color; c.textAlign = s.align ?? 'left'; c.textBaseline = s.baseline ?? 'alphabetic';
     c.letterSpacing = `${s.tracking ?? 0}px`;
@@ -56,9 +60,9 @@ export function text(ctx: FrameContext, value: string, x: number, y: number, s: 
   });
 }
 /** Width of `value` in the given style. */
-export function measure(ctx: FrameContext, value: string, s: TextStyle) {
+export function measure(ctx: Target, value: string, s: TextStyle) {
   let width = 0;
-  ctx.withCanvas(c => { c.font = font(s); c.letterSpacing = `${s.tracking ?? 0}px`; width = c.measureText(value).width; });
+  scope(ctx, c => { c.font = font(s); c.letterSpacing = `${s.tracking ?? 0}px`; width = c.measureText(value).width; });
   return width;
 }
 
@@ -75,7 +79,7 @@ export interface WordsOptions {
   /** Split on this instead of spaces; use '' to animate each character (CJK copy). */
   separator?: string;
 }
-function layoutWords(ctx: FrameContext, line: string, x: number, s: TextStyle, separator: string) {
+function layoutWords(ctx: Target, line: string, x: number, s: TextStyle, separator: string) {
   const words = separator === '' ? [...line] : line.split(separator);
   const gap = separator === '' ? 0 : measure(ctx, separator, s);
   const widths = words.map(w => measure(ctx, w, s));
@@ -88,11 +92,11 @@ function layoutWords(ctx: FrameContext, line: string, x: number, s: TextStyle, s
  * Words rise into a mask one after another, starting at `start`. Returns each word's [left, right] in x,
  * so an underline or cursor can follow a word.
  */
-export function riseWords(ctx: FrameContext, line: string, x: number, y: number, s: TextStyle, time: number, start: number, o: WordsOptions = {}) {
+export function riseWords(ctx: Target, line: string, x: number, y: number, s: TextStyle, time: number, start: number, o: WordsOptions = {}) {
   const stagger = o.stagger ?? .07, duration = o.duration ?? .8, curve = o.curve ?? ease.outQuint, exit = o.exit ?? 0;
   const words = layoutWords(ctx, line, x, s, o.separator ?? ' ');
   const maskTop = y - s.size * 1.05, maskH = s.size * 1.45;
-  ctx.withCanvas(c => {
+  scope(ctx, c => {
     c.beginPath(); c.rect(-4000, maskTop, 10000, maskH); c.clip();
     words.forEach(({ word, left }, i) => {
       const k = at(time, start + i * stagger, start + i * stagger + duration, curve);
@@ -103,18 +107,41 @@ export function riseWords(ctx: FrameContext, line: string, x: number, y: number,
   return words.map(w => [w.left, w.right] as [number, number]);
 }
 
-/** Words come into focus one after another: blur, a small rise and opacity resolve together. */
-export function blurWords(ctx: FrameContext, line: string, x: number, y: number, s: TextStyle, time: number, start: number, o: WordsOptions & { blur?: number; lift?: number } = {}) {
+/**
+ * One line of text blurred by `radius` (current units, so it grows with camera zoom). It uses the text's shadow,
+ * not `ctx.filter`: the glyphs are drawn far outside the frame and only their blurred shadow lands in place,
+ * which costs about as much as drawing the text sharp. Gradient fills fall back to a filter.
+ */
+export function blurText(ctx: Target, value: string, x: number, y: number, s: TextStyle, radius: number) {
+  if (!value || (s.alpha !== undefined && s.alpha <= 0.001)) return;
+  if (radius <= 0.05 || typeof s.color !== 'string') {
+    scope(ctx, c => { if (radius > 0.05) c.filter = `blur(${radius * effectUnits(ctx)}px)`; text(c, value, x, y, s); });
+    return;
+  }
+  scope(ctx, c => {
+    const m = deviceTransform(c), det = m.a * m.d - m.b * m.c;
+    if (Math.abs(det) < 1e-9) return;
+    const scale = Math.sqrt(Math.abs(det)), effect = appliedEffectScale(ctx), far = 4 * Math.max(c.canvas.width, c.canvas.height) + 2000;
+    // move the glyphs `far` device pixels to the left, and the shadow (offsets are device-space) back by the same
+    c.translate(-far * m.d / det, far * m.b / det);
+    c.shadowColor = s.color as string; c.shadowOffsetX = far / effect; c.shadowOffsetY = 0;
+    c.shadowBlur = 2 * radius * scale / effect;
+    c.font = font(s); c.fillStyle = s.color; c.textAlign = s.align ?? 'left'; c.textBaseline = s.baseline ?? 'alphabetic';
+    c.letterSpacing = `${s.tracking ?? 0}px`;
+    if (s.alpha !== undefined) c.globalAlpha *= clamp(s.alpha);
+    if (s.maxWidth) c.fillText(value, x, y, s.maxWidth); else c.fillText(value, x, y);
+  });
+}
+
+/** Words come into focus one after another: blur, a small rise and opacity resolve together. No ctx.filter. */
+export function blurWords(ctx: Target, line: string, x: number, y: number, s: TextStyle, time: number, start: number, o: WordsOptions & { blur?: number; lift?: number } = {}) {
   const stagger = o.stagger ?? .07, duration = o.duration ?? .8, curve = o.curve ?? ease.outCubic, exit = o.exit ?? 0;
   const blur = o.blur ?? s.size * .16, lift = o.lift ?? s.size * .25;
   const words = layoutWords(ctx, line, x, s, o.separator ?? ' ');
   words.forEach(({ word, left }, i) => {
     const k = at(time, start + i * stagger, start + i * stagger + duration, curve);
     if (k <= 0) return;
-    ctx.withCanvas(() => {
-      ctx.blur(blur * (1 - k) + blur * exit);
-      text(ctx, word, left, y + lift * (1 - k), { ...s, align: 'left', color: o.colors ? o.colors(word, i) : s.color, alpha: (s.alpha ?? 1) * k * (1 - exit) });
-    });
+    blurText(ctx, word, left, y + lift * (1 - k), { ...s, align: 'left', color: o.colors ? o.colors(word, i) : s.color, alpha: (s.alpha ?? 1) * k * (1 - exit) }, blur * (1 - k) + blur * exit);
   });
   return words.map(w => [w.left, w.right] as [number, number]);
 }

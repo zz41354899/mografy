@@ -18,6 +18,14 @@ mografy add music projects/<name>
 
 `music-src/` is outside `scenes/` and `assets/`: the scene never imports it, and only the generated audio file goes in `assets/`.
 
+## Default taste
+
+Unless the project's `style.md` or the user says otherwise:
+
+- Prefer sustained, flowing music (`rhythm: "flowing"`): long pads, warm piano, one long bass note per bar. Avoid busy, fragmented patterns.
+- Avoid sharp, high, piercing sounds: no `sparkle`, `ticks` or `pop` hits, and no bell leads. Mark events with soft `whoosh`, `sweep`, `gather` and low `impact` hits instead.
+- Use few hits, on the moments that change the story, and let the score breathe under reading holds.
+
 ## Workflow
 
 1. **Storyboard first.** Write the cues after the shot plan (or after reading an existing scene), so every time comes from the actual animation. For a finished scene, read its source for the real transition and event times rather than the storyboard's approximations.

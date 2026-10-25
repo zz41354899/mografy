@@ -12,7 +12,7 @@ Save a project-specific plan as `storyboards/storyboard.md`. Include the audienc
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | S01 | 0.0–2.0 | Introduce the mark | Existing logo, centered, generous margins | Anticipation at 0.15; reveal at 0.4; settle by 1.1; hold | Static | Brief logo sound; no copy | Match logo position into S02 | Staging, anticipation, slow in/out | 0.15, 0.4, 1.1, 1.9 |
 
-Number shots in order; make time ranges contiguous and cover the requested duration. Specify entrance, action, settle, hold, and exit where useful. Describe start, extreme, and settle poses rather than writing vague directions such as "make it dynamic." Give each shot a clear focal point and connect transitions through position, color, shape, or meaning. Allow enough reading time for the actual copy; lengthen a shot or shorten copy when the timing is unrealistic.
+Number shots in order; make time ranges contiguous and cover the requested duration. The shot table becomes the scene's `beats([...])` table ([film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md)): give each shot a title, an end time, a settled stop frame and the handoff it uses, so the board and the code share one set of times. Specify entrance, action, settle, hold, and exit where useful. Describe start, extreme, and settle poses rather than writing vague directions such as "make it dynamic." Give each shot a clear focal point and connect transitions through position, color, shape, or meaning: name the object each shot hands to the next ("the underline becomes the card's top edge"), and plan one continuous camera rather than a reset per shot. Allow enough reading time for the actual copy; lengthen a shot or shorten copy when the timing is unrealistic.
 
 Link each shot to existing or proposed scene functions and name the assets it needs. Mark missing assets and assumptions clearly. Keep shot descriptions and visual references out of `mografy.json`; only review times and transition sampling settings belong in its existing review fields. A storyboard is a planning document, not a runtime format.
 
@@ -29,6 +29,10 @@ Generated panels are conceptual references. They do not prove that the implement
 When creating a storyboard in a Claude host with Artifacts, invoke its Artifact capability to present the same plan as an HTML storyboard. Use responsive shot cards with shot ID, time range, Canvas-drawn key poses or existing raster assets, action, transition, and motion notes. Use ordinary HTML/CSS and Canvas; do not add GSAP, SVG scene layers, or resvg. An optional playhead or shot selector may illustrate timing, but label it as a storyboard preview. Keep the artifact self-contained and avoid remote dependencies. Also save the English shot list to the project so Codex can continue from it.
 
 Claude Code environments may not expose Artifacts. Check tool availability; if absent, save `storyboards/storyboard.html` as a standalone local preview and report that fallback. Do not claim to have opened a Claude Artifact. The HTML storyboard is separate from the Mografy scene and is never imported by the Server.
+
+## Storyboard as code
+
+Once a scene exists, or for films longer than about 15 s, draw the board's panels from the scene itself: export `drawFilm(c, t, data)` from the scene and render it at each beat's stop frame on a plain canvas, as described in [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md). The board then shows the film's real pixels, and updating the scene updates the board.
 
 ## From storyboard to animation
 

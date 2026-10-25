@@ -14,6 +14,10 @@ mografy add cinema projects/<name>
 
 Import it locally (`import { plate, move, particleWipe } from './cinema.js'`). Copy `cinema-demo.ts` too only when the user wants the tour.
 
+## Continuity first
+
+These transitions are deliberate breaks: use them between acts, on a musical change, or when the film moves from one plate to another. Within a scene drawn on canvas, prefer a shared-geometry handoff and one film camera ([film-architecture.md](film-architecture.md)); a dissolve or wipe between two unrelated layouts hides a jump instead of making it readable. For a camera over drawn (not plate) content, use the runtime's `cameraPath` and `withCamera`; `move` is for framing a still plate.
+
 ## Plates and camera
 
 | Helper | Use |
@@ -30,7 +34,7 @@ Each transition takes `{ start, end, from, to }`. `from` and `to` are callbacks 
 
 | Helper | Effect | Good for |
 | --- | --- | --- |
-| `crossfade` | Dissolve | Quiet changes, a breath between sections. |
+| `crossfade` | Dissolve; the incoming frame goes through one pooled buffer, so overlaps do not flash | Quiet changes, a breath between sections. |
 | `dipTo({ color })` | Fade through a colour, cut at the midpoint | Section changes; a dip to dark when the music drops. |
 | `flash(ctx, time, at, { strength, decay })` | Exposure flash overlay (draw after the frame) | Downbeats and hard cuts. |
 | `iris({ x, y })` | A circle opens from a point with a glowing rim | Moving from a motif (a moon, an eye, a logo) into the next shot. |

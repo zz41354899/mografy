@@ -23,7 +23,7 @@ test('mografy add copies an extra, registers its fonts once and keeps changed fi
     assert.deepEqual((await addExtra(workspace, dir, 'cjk')).kept, ['scenes/cjk.ts']);
     assert.match(await readFile(join(dir, 'scenes/cjk.ts'), 'utf8'), /\/\/ mine/);
     assert.deepEqual((await addExtra(workspace, dir, 'cjk', true)).written, ['scenes/cjk.ts']);
-    await assert.rejects(addExtra(workspace, dir, 'nope'), /Unknown extra: nope[\s\S]*walkthrough/);
+    await assert.rejects(addExtra(workspace, dir, 'nope'), /Unknown helper: nope[\s\S]*walkthrough/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

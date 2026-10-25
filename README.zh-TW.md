@@ -35,7 +35,7 @@ pnpm install
 mografy dev
 ```
 
-`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
+`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
 
 執行 `mografy update --check` 可檢查是否有更新。若要安裝目前分支所追蹤上游的最新提交，請在 Mografy 資料夾中執行 `mografy update`。指令會檢查本機修改、等待進行中的匯出完成、停止目前播放器、以快轉方式更新原始碼、執行 `pnpm install`（包含建置、Chromium 設定與啟動器更新）、同步共用 Skill，最後以相同連接埠重啟原本的專案。重啟後請重新整理瀏覽器。若沒有正在執行的播放器，則只更新安裝內容，不會開啟專案。
 
@@ -83,8 +83,6 @@ export MOGRAFY_HOME="$HOME/Animations"
 
 ## Codex 與 Claude 共用一個 Skill
 
-依維護者目前的使用經驗，Claude 的工作流程校調較完整；Codex 可依需求與實際算圖結果自行調整做法，並遵守共用的場景規範。
-
 Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md)。Claude 的 `.claude/skills/mografy` 入口連結到同一個資料夾，[CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) 也會匯入它。兩種代理環境讀取同一份維護中的內容。
 
 英文參考文件涵蓋：
@@ -97,11 +95,20 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 | [介紹影片](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | 現有 12 秒影片的原始碼、素材、時間安排與審閱時間點 |
 | [分鏡](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | 鏡頭規劃及各代理環境的視覺分鏡 |
 | [動畫原則](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | 將 12 項動畫原則應用於確定性的 Canvas 動態 |
+| [影片架構](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) | 一個世界、一顆鏡頭、一張鏡頭表：連貫規則、共用幾何交接、以程式碼產生分鏡 |
+| [效能](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | 各種 Canvas 操作的成本、座標與單位，以及 `mografy check` 如何量測每格 |
+| [動態設計](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/motion-design.md) | 視覺概念、編排、連貫、節奏、預設品味與設計審閱 |
+| [輸出](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | 畫面比例、9:16 直式、匯出尺寸與格式 |
+| [參考影片](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) | `examples/` 裡的完整影片、各自示範什麼，以及如何複製一部來用 |
 | [鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) | `cinema.ts` 鏡頭運動、櫻花粒子擦拭等轉場與氣氛效果 |
 | [中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | 日文／中文直排、CJK 換行與隨附的 OFL 字型 |
 | [影片壓縮](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | 縮小已匯出 MP4 的 Python 工具、品質控制與上傳大小限制 |
 
 [packages/core/skill/](https://github.com/zz41354899/mografy/tree/main/packages/core/skill) 以 Markdown 保存 Skill 入口與參考文件，由 `packages/core/src/guide.ts` 組合產生。修改後請執行 `pnpm build`：它最後會執行 `pnpm sync:skills` 重新產生 Skill。`pnpm install` 與 `mografy update` 也會 build；`mografy dev` 啟動時若發現來源在上次同步後有變動（例如 `git pull` 之後），也會自動重新產生 Skill。動畫專案會取得 `AGENTS.md` 與 `CLAUDE.md`，指向共用 Skill。
+
+## 參考影片
+
+Mografy 附上幾部完整影片作為品質參考：[mografy-montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage)（60 秒、全片一顆鏡頭的宣傳片）、[mografy-triangulum](https://github.com/zz41354899/mografy/tree/main/examples/mografy-triangulum)（42 秒、Three.js 星系的發表預告）、[mografy-story](https://github.com/zz41354899/mografy/tree/main/examples/mografy-story)（71 秒、繁體中文的故事影片），以及 12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)。播放器會在「範例」中列出它們，代理規劃新影片前也會先讀。`mografy add` 會連同輔助工具一起列出這些影片；`mografy add <名稱> [資料夾]` 會把一部複製到你的專案庫，方便以它為基礎修改。要開始一部新影片，可以複製 [film-starter](https://github.com/zz41354899/mografy/tree/main/examples/film-starter)（`mografy add film-starter <資料夾>`）：20 秒、五個鏡頭、一顆鏡頭、一張鏡頭表，是所有多鏡頭影片的範本。
 
 ## 可運作的範例
 
@@ -116,7 +123,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 
 全部 16 個內建元件專案預設使用置中的 **9:16 直式**預覽。隨附縮圖也會顯示完整直式畫布，因此全新安裝後，不必逐一開啟專案，就能看到全部 16 張預覽。修改場景後，已開啟專案的縮圖會自動更新。維護者修改內建場景原始碼或素材後，需執行 `pnpm thumbnails:generate` 重新產生隨附預覽。
 
-選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。也可以自己用 `mografy add <extra> [project]` 加入（`mografy add` 會列出 cinema、cjk、three、music、walkthrough）。常用的動態工具（緩動曲線、彈簧、時間窗、拍點網格、圓角卡片陰影、逐字浮現與漸層）已內建在 `@mografy/runtime`。
+選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。也可以自己用 `mografy add <extra...> [project]` 加入，一次可加一個或多個（`mografy add` 會連同參考影片列出 cinema、cjk、three、music、walkthrough）。常用的動態工具已內建在 `@mografy/runtime`：緩動曲線、彈簧、時間窗、單調曲線 `keys`、全片鏡頭（`cameraPath`、`withCamera`）、鏡頭表（`beats`）、共用緩衝的圖層（`layer`、`blurLayer`、`bloom`、`buffer`）、以陰影實作的文字模糊（`blurText`、`blurWords`）、拍點網格、圓角卡片與漸層。
 
 [元件參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md)連結到各個場景入口，並說明版面、時間安排、本機匯入與審閱方式。請代理依專案自己的素材與風格改寫適合的元件。
 
@@ -266,6 +273,7 @@ mografy/
   .agents/skills/mografy/       共用 Skill、參考文件與影片壓縮工具
   .claude/skills/mografy       連結至同一個 Skill
   packages/server/template/   元件原始碼庫與專案範本
+  examples/film-starter/       20 秒範本影片，用來開始一部新影片
   examples/mografy-intro/      12 秒參考動畫
   examples/analytics-product/  8 秒數據分析互動示範
   examples/mografy-brand/      8 秒品牌介紹

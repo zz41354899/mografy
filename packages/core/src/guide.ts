@@ -5,7 +5,11 @@ import { SKILL_TEXT } from './skill-text.js';
 const GUIDE_BODY = SKILL_TEXT['references/scene-authoring.md'];
 const STORYBOARD = SKILL_TEXT['references/storyboard.md'];
 const ANIMATION_PRINCIPLES = SKILL_TEXT['references/animation-principles.md'];
-const CODEX_MOTION_DESIGN = SKILL_TEXT['references/codex-motion-design.md'];
+const MOTION_DESIGN = SKILL_TEXT['references/motion-design.md'];
+const FILM_ARCHITECTURE = SKILL_TEXT['references/film-architecture.md'];
+const PERFORMANCE = SKILL_TEXT['references/performance.md'];
+const OUTPUT = SKILL_TEXT['references/output.md'];
+const EXAMPLES_REFERENCE = SKILL_TEXT['references/examples.md'];
 const BUILTIN_COMPONENTS_REFERENCE = SKILL_TEXT['references/built-in-components.md'];
 const INTRO_REFERENCE = SKILL_TEXT['references/intro.md'];
 const CAMERA_TRANSITIONS_REFERENCE = SKILL_TEXT['references/camera-transitions.md'];
@@ -42,7 +46,10 @@ export const SKILL_REFERENCES = {
   'scene-authoring.md': GUIDE_BODY,
   'storyboard.md': STORYBOARD,
   'animation-principles.md': ANIMATION_PRINCIPLES,
-  'codex-motion-design.md': CODEX_MOTION_DESIGN,
+  'motion-design.md': MOTION_DESIGN,
+  'film-architecture.md': FILM_ARCHITECTURE,
+  'performance.md': PERFORMANCE,
+  'output.md': OUTPUT,
 } as const;
 
 
@@ -111,6 +118,7 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'product-walkthrough.md': WALKTHROUGH_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'presentations.md': PRESENTATIONS_REFERENCE,
+    'examples.md': EXAMPLES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
   })
@@ -194,7 +202,8 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/music.md'];
   delete files['references/product-walkthrough.md'];
   delete files['references/presentations.md'];
-  delete files['references/codex-motion-design.md'];
+  delete files['references/examples.md'];
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output']) delete files[`references/${name}.md`];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",
     "Skills live in the source repository's outer `.agents/skills/` folder. Codex and Claude share `mografy` and `mografy-storyboard` there, with local references. Never create Skill folders inside animation subprojects. Root `AGENTS.md` routes Codex; root `CLAUDE.md` imports the same shared Skill for Claude.",

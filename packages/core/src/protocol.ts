@@ -10,6 +10,19 @@ export interface SceneInfo {
   /** The scene lists no shots, so `meta.shots` holds Mografy's guess from the storyboard or the picture. */
   autoShots?: 'storyboard' | 'picture';
 }
+/** What frames cost to draw, measured by `mografy check` in Chromium at the project's own size. */
+export interface FrameCost {
+  width: number; height: number; canvas: 'cpu' | 'gpu';
+  /** Frames measured, spread over the whole duration. */
+  frames: number;
+  medianMs: number;
+  /** The slowest measured frames, slowest first. */
+  slowest: { time: number; ms: number }[];
+  /** Most filters set on the frame context in one frame, and when. */
+  maxFilters: { time: number; count: number };
+  /** Canvases created while re-drawing frames that were already drawn once (should be 0). */
+  canvasesPerFrame: number;
+}
 export interface SceneError { message: string; reason: 'startup' | 'watch'; at: string }
 export interface RenderStatus {
   id: string; format: ExportFormat; state: 'running' | 'done' | 'failed' | 'cancelled'; stage: 'capture' | 'encode' | 'package' | 'done';
