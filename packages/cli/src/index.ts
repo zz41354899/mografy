@@ -45,10 +45,11 @@ function helpText(color: boolean) {
       row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
     ]),
     section('Add', [
-      row('mografy add', 'List the reference films and helpers you can add'),
+      row('mografy add', 'List the reference films, helpers and templates you can add'),
       row('mografy add <film> [folder]', 'Copy a reference film into your library to watch and build on'),
       row('mografy add <helper...> [project]', 'Add helpers to a project: cinema, cjk, three, music, walkthrough'),
-      row('', '--force replaces helper files you changed'),
+      row('mografy add <template...> [project]', 'Add Mografy Templates: hooks, captions, screens, end cards (9:16 and 16:9)'),
+      row('', '--force replaces helper and template files you changed'),
     ]),
     section('Manage', [
       row('mografy stop [project]', "Stop a project's player"),
@@ -305,11 +306,13 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'install-command') return installCommand();
   if (command === 'add') {
     if (!rest.length) { console.log(await addList()); return; }
+    // The target is the named folder, MOGRAFY_PROJECT, or the project in the current folder. `add` never falls back
+    // to the last-opened project: that put helpers into a project the user had not named.
     return runAdd(await planAdd(rest), workspaceRoot, async target => {
-      const dir = target ? await resolveProjectArg(target) : process.env.MOGRAFY_PROJECT ? resolve(process.env.MOGRAFY_PROJECT) : await implicitProject('add');
-      await requireProject(dir);
-      return dir;
-    }, flags.force);
+      if (target) return resolveProjectArg(target);
+      if (process.env.MOGRAFY_PROJECT) return resolve(process.env.MOGRAFY_PROJECT);
+      return await hasProject(process.cwd()) ? process.cwd() : undefined;
+    }, flags.force, hasProject);
   }
   const configured = process.env.MOGRAFY_PROJECT;
   const dir = explicit

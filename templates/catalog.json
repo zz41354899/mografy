@@ -1,0 +1,2400 @@
+{
+  "version": 1,
+  "templates": [
+    {
+      "id": "ai-chat-stream",
+      "name": "AI chat stream",
+      "category": "screen",
+      "aspect": "9:16",
+      "pair": "ai-chat-stream-wide",
+      "summary": "A chat set like a printed interview: the prompt rises, dots think, and the reply streams in word by word.",
+      "agentHint": "Show an AI feature answering. Prompt under ~60 characters, reply under ~200 (about 30 words; longer replies stream too fast to read). Speaker labels are SPEAKERS in the file.",
+      "principles": [
+        "timing",
+        "staging",
+        "anticipation",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 6,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "prompt",
+          "name": "Prompt",
+          "type": "string",
+          "default": "Write a launch post for our new planner"
+        },
+        {
+          "key": "reply",
+          "name": "Reply",
+          "type": "string",
+          "default": "Meet the planner your team will actually open. Northwind turns scattered tasks into one calm week, so you spend less time planning and more time shipping."
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "ai-chat-stream-wide",
+      "name": "AI chat stream",
+      "category": "screen",
+      "aspect": "16:9",
+      "pair": "ai-chat-stream",
+      "summary": "A prompt types into the glass pill, the pill rises into a chat window as the user message, and the reply streams in with a teal caret.",
+      "agentHint": "Show an AI feature answering. Prompt one line (under ~44 characters), reply 1–3 sentences (under ~190 characters). The chat window is a stand-in: restyle `chat()`; never use a real AI brand name or logo.",
+      "principles": [
+        "anticipation",
+        "timing",
+        "staging",
+        "slow in and slow out"
+      ],
+      "look": "montage",
+      "duration": 6,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "prompt",
+          "name": "Prompt",
+          "type": "string",
+          "default": "Write a launch post for our new planner"
+        },
+        {
+          "key": "reply",
+          "name": "Reply",
+          "type": "string",
+          "default": "Meet the planner your team will actually open. Northwind turns scattered tasks into one calm week, so you spend less time planning and more time shipping."
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "before-after",
+      "name": "Before and after",
+      "category": "explain",
+      "aspect": "9:16",
+      "pair": "before-after-wide",
+      "summary": "A grey half with twelve messy manual steps; an orange line wipes down into the white half and its one clean, checked line.",
+      "agentHint": "Contrast the old way with the product. Write each label as \"KICKER: HEADLINE\" (the part after the colon is the big line, 1–3 words). The twelve steps and the checked line are STEPS and RESULT in the file.",
+      "principles": [
+        "staging",
+        "timing",
+        "follow-through",
+        "exaggeration"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "before",
+          "name": "Before",
+          "type": "string",
+          "default": "BEFORE: 12 MANUAL STEPS"
+        },
+        {
+          "key": "after",
+          "name": "After",
+          "type": "string",
+          "default": "AFTER: ONE CLICK"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "before-after-wide",
+      "name": "Before and after",
+      "category": "explain",
+      "aspect": "16:9",
+      "pair": "before-after",
+      "summary": "Twelve crooked manual steps fill the left half, a comet draws the split, and one checked result lands on the right.",
+      "agentHint": "Contrast the old way with the product in a landscape film. Write each label as \"Kicker: Headline\" (headline 1–3 words, under ~16 characters; [brackets] take the spectrum). The twelve steps and the result line are STEPS and the Result param; a full-frame explainer, not an overlay.",
+      "principles": [
+        "staging",
+        "timing",
+        "follow-through",
+        "exaggeration"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "before",
+          "name": "Before",
+          "type": "string",
+          "default": "Before: 12 manual steps"
+        },
+        {
+          "key": "after",
+          "name": "After",
+          "type": "string",
+          "default": "After: [One click.]"
+        },
+        {
+          "key": "result",
+          "name": "Result",
+          "type": "string",
+          "default": "Report sent to the team"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "browser-window-wide",
+      "name": "Browser",
+      "category": "screen",
+      "aspect": "16:9",
+      "summary": "A URL types into a glass pill; the camera pulls back to reveal it is the address bar of a browser window, and the page builds inside.",
+      "agentHint": "Open a website or web-app demo. Keep the URL short (under ~24 characters, no https://). The page is a stand-in: redraw `page()` (1400 × 764 below the bar) or draw a screenshot there; avoid real browser or brand UI.",
+      "principles": [
+        "staging",
+        "anticipation",
+        "slow in and slow out",
+        "overlapping action"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "url",
+          "name": "URL",
+          "type": "string",
+          "default": "northwind.app"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "bullet-points-wide",
+      "name": "Morphing points",
+      "category": "slides",
+      "aspect": "16:9",
+      "summary": "One outline morphs pill → track → wave → ring under each point in big kinetic type; earlier points settle into a list on the left.",
+      "agentHint": "Three to four short points for a talk, a pitch or a product walkthrough, one per line (each 1–3 words, under ~18 characters); a fifth point reuses the pill. The shapes read as write (a field), tune (a slider), pulse (a wave) and present (play), so order the points to match.",
+      "principles": [
+        "staging",
+        "timing",
+        "squash and stretch",
+        "follow-through"
+      ],
+      "look": "montage",
+      "duration": 6,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "points",
+          "name": "Points",
+          "type": "string",
+          "default": "Write the plan\nTune the timeline\nTrack the pulse\nPresent it"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "callout",
+      "name": "Callout",
+      "category": "explain",
+      "aspect": "9:16",
+      "pair": "callout-wide",
+      "summary": "An orange ring focuses one element of a dark product screen, the rest dims, and a leader runs out to a printed label.",
+      "agentHint": "Point at one feature. Title 1–3 words ([brackets] mark orange words), detail one short sentence. Over a film picture (backdrop false) the whole frame dims around FOCUS and the label sits on a white panel; move FOCUS to the element in your picture.",
+      "principles": [
+        "staging",
+        "anticipation",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "Live insights"
+        },
+        {
+          "key": "detail",
+          "name": "Detail",
+          "type": "string",
+          "default": "Updates the moment your team does."
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "callout-wide",
+      "name": "Callout",
+      "category": "explain",
+      "aspect": "16:9",
+      "pair": "callout",
+      "summary": "A comet rings one element of a product window on a tilted plane, the rest dims, and a leader opens a glass label.",
+      "agentHint": "Point at one feature of a product window. Title 1–3 words ([brackets] take the spectrum), detail one short sentence. With backdrop false the window is skipped and the frame dims around FOCUS over your own picture; move FOCUS (a rect in the 1400 × 860 window) to your element, or redraw the window in `appUI`.",
+      "principles": [
+        "staging",
+        "anticipation",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "montage",
+      "duration": 4.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "[Live] insights"
+        },
+        {
+          "key": "detail",
+          "name": "Detail",
+          "type": "string",
+          "default": "Updates the moment your team does."
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-highlight",
+      "name": "Highlight caption",
+      "category": "caption",
+      "aspect": "9:16",
+      "summary": "One big caption line rises under a picture window; the marked words are swept orange and underlined by hand.",
+      "agentHint": "One statement of up to ~40 characters with the key words in [brackets]. Put assets/highlight.jpg in the project for the picture; with backdrop false the caption sits on a white panel over your own footage.",
+      "principles": [
+        "staging",
+        "timing",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Caption",
+          "type": "string",
+          "default": "Plan the week in [one view]."
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Feature notes"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-pop",
+      "name": "Pop captions",
+      "category": "caption",
+      "aspect": "9:16",
+      "summary": "Short-video captions: one or two words at a time pop into a white strip over the picture, the last group in orange.",
+      "agentHint": "Punchy spoken line of 2–8 short words; words of up to three letters ride with the next word. Put assets/pop.jpg in the project for the picture, or play it with backdrop false over your own footage (the strip carries the words).",
+      "principles": [
+        "squash and stretch",
+        "timing",
+        "follow-through",
+        "exaggeration"
+      ],
+      "look": "editorial",
+      "duration": 4,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Caption",
+          "type": "string",
+          "default": "Plan less ship more"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Team notes"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-stack",
+      "name": "Stacked caption",
+      "category": "caption",
+      "aspect": "9:16",
+      "summary": "Tall words stack up line by line at the margin beside a growing orange rule; the last line lands in orange.",
+      "agentHint": "A slogan of 2–5 very short lines (1 word each, up to ~6 letters), one per \"\\n\". Put assets/stack.jpg in the project for the picture strip; with backdrop false the stack sits on a white panel.",
+      "principles": [
+        "staging",
+        "timing",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Lines",
+          "type": "string",
+          "default": "PLAN\nLESS.\nSHIP\nMORE."
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Team notes"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-subtitle",
+      "name": "Speaker subtitle",
+      "category": "caption",
+      "aspect": "9:16",
+      "pair": "caption-subtitle-wide",
+      "summary": "A spoken line rises in white over a dark picture window, with the speaker named behind a short orange rule.",
+      "agentHint": "Interview or founder quote: one sentence up to ~60 characters (wraps to two lines) and a \"Name · Role\" line. Put assets/speaker.jpg in the project for the picture; with backdrop false it draws its own scrim over your footage.",
+      "principles": [
+        "staging",
+        "timing",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Subtitle",
+          "type": "string",
+          "default": "We built Northwind for teams that ship."
+        },
+        {
+          "key": "speaker",
+          "name": "Speaker",
+          "type": "string",
+          "default": "Maya Chen · Founder, Northwind"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "In conversation"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-subtitle-wide",
+      "name": "Wide subtitle",
+      "category": "caption",
+      "aspect": "16:9",
+      "pair": "caption-subtitle",
+      "summary": "A subtitle sharpens in over the picture on a soft scrim, a short spectrum underline draws, and the speaker follows.",
+      "agentHint": "Subtitle or pull quote over footage in a landscape film: one sentence (wraps to two lines past ~45 characters) and a speaker line. Play it with `backdrop: false` over your own picture; the product screen underneath is only a stand-in.",
+      "principles": [
+        "timing",
+        "staging",
+        "slow in and slow out",
+        "secondary action"
+      ],
+      "look": "montage",
+      "duration": 4,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "text",
+          "name": "Subtitle",
+          "type": "string",
+          "default": "We built Northwind for teams that ship."
+        },
+        {
+          "key": "speaker",
+          "name": "Speaker",
+          "type": "string",
+          "default": "Maya Chen · Founder, Northwind"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "caption-word",
+      "name": "Word captions",
+      "category": "caption",
+      "aspect": "9:16",
+      "summary": "A line opens into a picture window; below it the subtitles build word by word and each key word is swept in orange.",
+      "agentHint": "Spoken subtitles for a voice-over: 2–3 lines of up to ~24 characters, one per \"\\n\"; mark key words with [brackets] (default: the last word of each line). Put assets/caption.jpg in the project for the picture, or play it with backdrop false over your own footage.",
+      "principles": [
+        "timing",
+        "staging",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Caption",
+          "type": "string",
+          "default": "We built Northwind\nfor teams that ship\nwithout the busywork"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "chapter-title-wide",
+      "name": "Chapter title",
+      "category": "slides",
+      "aspect": "16:9",
+      "summary": "A falling comet leaves a thin spectrum line; a huge spectrum chapter number and the title sharpen in on either side.",
+      "agentHint": "Section divider for a talk, a course or a long demo: number 1–3 characters, title under ~28 characters, subtitle under ~50. Long titles shrink to fit. Neon or night reads best.",
+      "principles": [
+        "staging",
+        "timing",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "montage",
+      "duration": 3.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "number",
+          "name": "Number",
+          "type": "string",
+          "default": "01"
+        },
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "Planning the quarter"
+        },
+        {
+          "key": "subtitle",
+          "name": "Subtitle",
+          "type": "string",
+          "default": "How three teams agree on goals in one afternoon"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "neon",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "click-zoom",
+      "name": "Click zoom",
+      "category": "screen",
+      "aspect": "9:16",
+      "summary": "A big cursor clicks a button in a dark product window, the camera pushes in on it and an orange label names it.",
+      "agentHint": "Highlight one button or control. Label 2–5 words. The editor in the window is a stand-in: redraw `editor` with the real screen and move BTN to the control (keep it in the top half so the leader stays short).",
+      "principles": [
+        "anticipation",
+        "squash and stretch",
+        "staging",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "label",
+          "name": "Label",
+          "type": "string",
+          "default": "Export in one click"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "cta-endcard",
+      "name": "Call to action",
+      "category": "end",
+      "aspect": "9:16",
+      "pair": "cta-endcard-wide",
+      "summary": "A paper sheet rises over the last picture; the call to action rises with a soft ring, and a search field types the name and is tapped.",
+      "agentHint": "Last 3–4 s of a post: a call to action of 1–3 short words (mark one with [brackets]) and a name to search for, under ~16 characters. The picture above the sheet is a stand-in: put assets/endcard.jpg in the project, or play the template with backdrop: false over your own last shot.",
+      "principles": [
+        "staging",
+        "anticipation",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "cta",
+          "name": "Call to action",
+          "type": "string",
+          "default": "Link in [bio]"
+        },
+        {
+          "key": "kicker",
+          "name": "Label",
+          "type": "string",
+          "default": "Try Northwind free"
+        },
+        {
+          "key": "or",
+          "name": "Search label",
+          "type": "string",
+          "default": "Or search"
+        },
+        {
+          "key": "search",
+          "name": "Search for",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "cta-endcard-wide",
+      "name": "Website end card",
+      "category": "end",
+      "aspect": "16:9",
+      "pair": "cta-endcard",
+      "summary": "The headline sharpens in, a light arc draws a pill round the web address, and a cursor clicks the button beside a QR card.",
+      "agentHint": "Closing call to action of a landscape film or a talk: a headline under ~28 characters, an address under ~24 and a button label of 1–3 words. The QR pattern is a stand-in that does not scan: replace the modules in `qrCard()` with your real code image (load it in `setup`, draw it into the same square).",
+      "principles": [
+        "anticipation",
+        "staging",
+        "arcs",
+        "follow-through"
+      ],
+      "look": "montage",
+      "duration": 4.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "headline",
+          "name": "Headline",
+          "type": "string",
+          "default": "Plan your next launch."
+        },
+        {
+          "key": "url",
+          "name": "Address",
+          "type": "string",
+          "default": "northwind.app"
+        },
+        {
+          "key": "button",
+          "name": "Button",
+          "type": "string",
+          "default": "Try it free"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "desktop-follow",
+      "name": "Desktop follow",
+      "category": "screen",
+      "aspect": "9:16",
+      "summary": "A window opens onto a wide desktop app; the camera follows the cursor and pushes in on each of two clicks.",
+      "agentHint": "Show a two-click desktop flow in a portrait post. Label 2–5 words, [brackets] mark the orange words. The app is a stand-in 1440 × 1000 dashboard: redraw `app` with the real product and move CLICKS to its targets (the camera follows them).",
+      "principles": [
+        "staging",
+        "anticipation",
+        "slow in and slow out",
+        "follow-through"
+      ],
+      "look": "editorial",
+      "duration": 6,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "label",
+          "name": "Label",
+          "type": "string",
+          "default": "One click, [one report]"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "device-stack",
+      "name": "Device stack",
+      "category": "screen",
+      "aspect": "9:16",
+      "summary": "A flat laptop and a phone rise out of an orange rule in turn, both showing the same product counting up in step.",
+      "agentHint": "Say the product works everywhere. Title 2–4 words ([brackets] mark orange words), detail one short line. Both screens come from `product` (landscape and portrait layouts of one stand-in dashboard): redraw it, or draw screenshots into the two screen rects.",
+      "principles": [
+        "staging",
+        "overlapping action",
+        "slow in and slow out",
+        "follow-through"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "Desktop and [mobile]"
+        },
+        {
+          "key": "detail",
+          "name": "Detail",
+          "type": "string",
+          "default": "One account, every screen."
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "feature-grid-wide",
+      "name": "Feature grid",
+      "category": "explain",
+      "aspect": "16:9",
+      "summary": "Quiet glass cards rise into a grid, then a comet runs around each in turn and lights it up in the spectrum.",
+      "agentHint": "Show what a product does in one frame: 3–6 features, one per line as \"Name: detail\" (name 1–3 words, detail under ~38 characters), headline under ~32 characters with [brackets] for the spectrum. Draw your own icons in `icon()` (one per card, by index).",
+      "principles": [
+        "staging",
+        "timing",
+        "overlapping action",
+        "secondary action"
+      ],
+      "look": "montage",
+      "duration": 5.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Headline",
+          "type": "string",
+          "default": "Everything your [week] needs."
+        },
+        {
+          "key": "features",
+          "name": "Features",
+          "type": "string",
+          "default": "Shared plans: One calm view of the week\nLive reports: Numbers that update themselves\nGoals: Progress the whole team can see\nTeam spaces: Every project in one place\nGentle alerts: Only what needs you today\nInsights: Patterns found for you"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "growth-bars-wide",
+      "name": "Growth bars",
+      "category": "data",
+      "aspect": "16:9",
+      "summary": "Bars rise one by one in soft spectrum gradients, then a comet runs along the trend and leaves a point at the last value.",
+      "agentHint": "A single growth story (revenue, users, speed) in a landscape film or a talk. The twelve monthly values are constants in `DATA` and the end label in `LABEL`; keep the headline under ~34 characters. It is a mood chart, not an exact one: no axis values.",
+      "principles": [
+        "staging",
+        "overlapping action",
+        "follow-through",
+        "arcs"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Headline",
+          "type": "string",
+          "default": "Revenue, three times in a year"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "hook-impact",
+      "name": "Impact headline",
+      "category": "hook",
+      "aspect": "9:16",
+      "summary": "The page opens in orange, a quote mark drops and three tall lines rise letter by letter; one word is underlined.",
+      "agentHint": "First 3–4 s of a post. Up to three lines of 1–3 short words, uppercase reads best; mark one word with [brackets]. Not for sentences longer than ~25 characters.",
+      "principles": [
+        "anticipation",
+        "staging",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 4,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Headline",
+          "type": "string",
+          "default": "Your product\ndeserves\nto be [seen.]"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Launch notes"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Why it matters"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "more",
+          "name": "Footer link",
+          "type": "string",
+          "default": "See more"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "hook-number",
+      "name": "Number hook",
+      "category": "hook",
+      "aspect": "9:16",
+      "summary": "One huge figure rolls into place digit by digit like an odometer, its unit rises in orange and a caption follows.",
+      "agentHint": "Open on a single striking figure (1–4 characters: \"3\", \"24\", \"9.5\") with a short unit and a one-line caption under 30 characters. For several figures use stat-count.",
+      "principles": [
+        "anticipation",
+        "slow in and slow out",
+        "follow-through",
+        "staging"
+      ],
+      "look": "editorial",
+      "duration": 3.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "number",
+          "name": "Number",
+          "type": "string",
+          "default": "3"
+        },
+        {
+          "key": "unit",
+          "name": "Unit",
+          "type": "string",
+          "default": "MIN"
+        },
+        {
+          "key": "caption",
+          "name": "Caption",
+          "type": "string",
+          "default": "From link to launch film"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Launch notes"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "hook-question",
+      "name": "Question hook",
+      "category": "hook",
+      "aspect": "9:16",
+      "summary": "A question rises in tall lines, an orange block sweeps the key words, and a huge question mark rises into place beside it.",
+      "agentHint": "Opening 3–4 s that asks the viewer a pain-point question. Up to three short uppercase lines (≤ 14 characters each); mark the key words with [brackets]; the question mark is drawn for you.",
+      "principles": [
+        "anticipation",
+        "squash and stretch",
+        "staging",
+        "follow-through"
+      ],
+      "look": "editorial",
+      "duration": 3.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "text",
+          "name": "Question",
+          "type": "string",
+          "default": "STILL EDITING\nVIDEOS\n[BY HAND]?"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Quick question"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "For product teams"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "more",
+          "name": "Footer link",
+          "type": "string",
+          "default": "See more"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "laptop-frame-wide",
+      "name": "Laptop",
+      "category": "screen",
+      "aspect": "16:9",
+      "summary": "A minimal laptop rises, its lid swings open on the hinge and the screen lights from a glow into the product, beside a kinetic title.",
+      "agentHint": "Show a desktop product in context. Title under ~26 characters; it breaks after a comma, and [bracketed] words (else the last line) take the spectrum. The screen is a stand-in: redraw `screen()` or draw a 1400 × 860 screenshot into it.",
+      "principles": [
+        "anticipation",
+        "arcs",
+        "overlapping action",
+        "staging"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "Your week, in one view"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "logo-tagline",
+      "name": "Logo and tagline",
+      "category": "end",
+      "aspect": "9:16",
+      "pair": "logo-tagline-wide",
+      "summary": "The mark builds stroke by stroke, the wordmark opens out of its centre as its spacing closes, and a tagline rises under a rule.",
+      "agentHint": "Closing logo of a 9:16 post. Brand 1–2 words, tagline under ~28 characters with one [marked] phrase. The N mark is a fictional stand-in: redraw `mark()` with your own logo as two or three flat strokes that grow in order.",
+      "principles": [
+        "staging",
+        "anticipation",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "brand",
+          "name": "Brand",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "tagline",
+          "name": "Tagline",
+          "type": "string",
+          "default": "Plan less. [Ship more.]"
+        },
+        {
+          "key": "link",
+          "name": "Link",
+          "type": "string",
+          "default": "northwind.app"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "logo-tagline-wide",
+      "name": "Logo and tagline",
+      "category": "end",
+      "aspect": "16:9",
+      "pair": "logo-tagline",
+      "summary": "A point of light glides in and traces the mark, the stroke fills, the wordmark rises in letter by letter and the tagline sharpens below.",
+      "agentHint": "Closing logo of a landscape film. Brand 1–2 words, tagline under ~40 characters. The mark is a fictional stand-in: redraw `markPath()` (a centre line, traced then filled) and `ribbon()` with your own logo, keeping the trace → fill → letters order. Night or neon reads best.",
+      "principles": [
+        "follow-through",
+        "arcs",
+        "staging",
+        "anticipation"
+      ],
+      "look": "montage",
+      "duration": 4,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "brand",
+          "name": "Brand",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "tagline",
+          "name": "Tagline",
+          "type": "string",
+          "default": "Plan less. Ship more."
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "logo-wall-wide",
+      "name": "Logo wall",
+      "category": "proof",
+      "aspect": "16:9",
+      "summary": "Partner names as glass chips with coloured dots float out of a soft light and settle into a loose grid under the headline.",
+      "agentHint": "Social proof in a landscape film or a talk. The twelve names are fictional stand-ins in `NAMES`: replace them with real customers you may name (or draw their logos inside the chips, keeping the chip and dot). The first number in the headline takes the spectrum.",
+      "principles": [
+        "staging",
+        "overlapping action",
+        "slow in and slow out",
+        "appeal"
+      ],
+      "look": "montage",
+      "duration": 4,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Headline",
+          "type": "string",
+          "default": "Trusted by 1,200 teams"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "multi-window-wide",
+      "name": "Multi-window",
+      "category": "screen",
+      "aspect": "16:9",
+      "summary": "Three windows of one board stand in depth; a card moves in the first and a comet of light carries the change to the others in turn.",
+      "agentHint": "Real-time sync or collaboration. Title under ~28 characters; [bracketed] words (else the last word) take the spectrum. The board is a stand-in: rename the columns and cards in `COLS`, or redraw `board()`.",
+      "principles": [
+        "overlapping action",
+        "follow-through",
+        "arcs",
+        "staging"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "Everyone sees it at once"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "name-lower-wide",
+      "name": "Wide lower third",
+      "category": "caption",
+      "aspect": "16:9",
+      "summary": "A comet draws a line, the name sharpens in above it as the light passes, the role follows; it exits into a dot.",
+      "agentHint": "Name and role over an interview or talking-head shot in a landscape film. Name 1–3 words, role under ~40 characters. Play it with `backdrop: false` over your footage; the soft-focus speaker underneath is only a stand-in.",
+      "principles": [
+        "follow-through",
+        "staging",
+        "timing",
+        "secondary action"
+      ],
+      "look": "montage",
+      "duration": 4,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "name",
+          "name": "Name",
+          "type": "string",
+          "default": "Maya Chen"
+        },
+        {
+          "key": "role",
+          "name": "Role",
+          "type": "string",
+          "default": "Founder, Northwind"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "phone-recording",
+      "name": "Phone recording",
+      "category": "screen",
+      "aspect": "9:16",
+      "summary": "A flat black phone rises out of an orange rule under a tall title, and a touch checks off one task on its screen.",
+      "agentHint": "Show a mobile app in use. Title 2–4 words. The screen is a stand-in task list: put assets/screen.jpg (portrait, about 9:19) in the project to show a real recording frame, or redraw `phoneScreen`; the tap lands on the second row (TAP_ROW).",
+      "principles": [
+        "staging",
+        "anticipation",
+        "follow-through",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "title",
+          "name": "Title",
+          "type": "string",
+          "default": "See it in action"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "product-hero-wide",
+      "name": "Product hero",
+      "category": "hook",
+      "aspect": "16:9",
+      "summary": "The name sharpens out of a spectrum blur, two pills land, and the product window swings in on a tilted plane.",
+      "agentHint": "Opening of a landing-page loop, Product Hunt or YouTube demo. Name 1–2 words, tagline under ~40 characters, button labels 1–3 words. The window is a stand-in: redraw it in `appUI` or draw a screenshot into the same 1400 × 860 card.",
+      "principles": [
+        "staging",
+        "overlapping action",
+        "slow in and slow out",
+        "appeal"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "name",
+          "name": "Product name",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "tagline",
+          "name": "Tagline",
+          "type": "string",
+          "default": "Your whole week in one calm view."
+        },
+        {
+          "key": "kicker",
+          "name": "Kicker",
+          "type": "string",
+          "default": "New · Version 2"
+        },
+        {
+          "key": "primary",
+          "name": "Primary button",
+          "type": "string",
+          "default": "Start free"
+        },
+        {
+          "key": "secondary",
+          "name": "Secondary button",
+          "type": "string",
+          "default": "Watch the film"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "push-transition",
+      "name": "Vertical push",
+      "category": "transition",
+      "aspect": "9:16",
+      "pair": "push-transition-wide",
+      "summary": "The next picture pushes the last one up out of frame, with a page gap and an orange leading edge between them; its title rises in.",
+      "agentHint": "Between two full-frame pictures or screens of a 9:16 film. Titles 1–4 words. The pictures are stand-in product screens: put assets/from.jpg and assets/to.jpg in the project (or redraw `picture`) so the push carries your own last and next shot.",
+      "principles": [
+        "anticipation",
+        "follow-through",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 2.6,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "from",
+          "name": "From title",
+          "type": "string",
+          "default": "Plan the sprint"
+        },
+        {
+          "key": "to",
+          "name": "To title",
+          "type": "string",
+          "default": "Ship on Friday"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "push-transition-wide",
+      "name": "Push transition",
+      "category": "transition",
+      "aspect": "16:9",
+      "pair": "push-transition",
+      "summary": "An edge of spectrum light wipes right to left: the old picture is pushed away, the new one slides in and holds.",
+      "agentHint": "Cut between two landscape shots. The pictures are stand-ins: draw the outgoing shot in `pictureA` and the incoming one in `pictureB` (each is already offset). With backdrop false only the light edge and its shade are drawn. Titles under ~30 characters; the template ends on picture B, so the next shot starts from it.",
+      "principles": [
+        "timing",
+        "slow in and slow out",
+        "overlapping action",
+        "staging"
+      ],
+      "look": "montage",
+      "duration": 2.4,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "from",
+          "name": "Outgoing title",
+          "type": "string",
+          "default": "This week at a glance"
+        },
+        {
+          "key": "to",
+          "name": "Incoming title",
+          "type": "string",
+          "default": "Reports that [write themselves]."
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "quote-wide",
+      "name": "Quote pill",
+      "category": "slides",
+      "aspect": "16:9",
+      "summary": "A light arc draws a wide neon pill, the quote types itself inside, and the attribution sharpens in below.",
+      "agentHint": "One-sentence quote or principle for a talk, a launch film or a testimonial: under ~60 characters reads on one line, up to ~120 wraps to two. Leave the quote marks out; the template adds them. Neon or night reads best.",
+      "principles": [
+        "staging",
+        "arcs",
+        "timing",
+        "anticipation"
+      ],
+      "look": "montage",
+      "duration": 5.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "quote",
+          "name": "Quote",
+          "type": "string",
+          "default": "The best plan is the one your whole team can see."
+        },
+        {
+          "key": "author",
+          "name": "Author",
+          "type": "string",
+          "default": "Maya Chen, Northwind"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "neon",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "review-cards",
+      "name": "Review carousel",
+      "category": "proof",
+      "aspect": "9:16",
+      "summary": "Three reviews swipe past like a carousel, each with a big orange quote mark, the quote, a rule and the reviewer.",
+      "agentHint": "Social proof for a post: three reviews, one per line as \"quote | name | role\", quotes up to ~70 characters. Fictional people by default; use real reviews only with permission.",
+      "principles": [
+        "staging",
+        "follow-through",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 6.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "heading",
+          "name": "Headline",
+          "type": "string",
+          "default": "What teams say"
+        },
+        {
+          "key": "reviews",
+          "name": "Reviews (quote | name | role)",
+          "type": "string",
+          "default": "We cut weekly planning from two hours to twenty minutes. | Priya Nair | Head of Operations, Fernhill\nEveryone sees the same plan now. Our stand-ups got shorter overnight. | Tom Okafor | Engineering Lead, Brightline\nThe first tool our whole team opened without being asked. | Lena Vogel | Product Manager, Harbor & Co."
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Reviews"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "stat-count",
+      "name": "Numbers table",
+      "category": "data",
+      "aspect": "9:16",
+      "pair": "stat-count-wide",
+      "summary": "Three figures count up in an editorial table, each row drawn in under a thin rule with its label in caps.",
+      "agentHint": "Three key figures with short labels, one per line as \"value | label\" (a unit or suffix may follow the value: \"4.9/5\", \"3 MIN\"). Values up to 6 digits, labels under ~20 characters; the headline is one line of up to ~22 characters.",
+      "principles": [
+        "timing",
+        "slow in and slow out",
+        "staging",
+        "overlapping action"
+      ],
+      "look": "editorial",
+      "duration": 4.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "title",
+          "name": "Headline",
+          "type": "string",
+          "default": "The numbers so far"
+        },
+        {
+          "key": "stats",
+          "name": "Figures (value | label)",
+          "type": "string",
+          "default": "12,480 | Teams\n4.9/5 | Average rating\n3 MIN | To first film"
+        },
+        {
+          "key": "kicker",
+          "name": "Header left",
+          "type": "string",
+          "default": "Launch notes"
+        },
+        {
+          "key": "label",
+          "name": "Header right",
+          "type": "string",
+          "default": "Northwind"
+        },
+        {
+          "key": "brand",
+          "name": "Footer brand",
+          "type": "string",
+          "default": "Northwind · Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "stat-count-wide",
+      "name": "Wide numbers",
+      "category": "data",
+      "aspect": "16:9",
+      "pair": "stat-count",
+      "summary": "Three numbers count up in a row in kinetic type, each landing on a short spectrum line with its label.",
+      "agentHint": "Traction or results in a landscape film or a talk. Figures are the `stats` param, one \"value | label\" per line (\"4.9/5\", \"3 min\": the text after the number is its unit): keep three, labels under ~18 characters, values up to six digits. Digits sit in fixed slots, so numbers do not jitter while they count.",
+      "principles": [
+        "timing",
+        "staging",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "montage",
+      "duration": 4.5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "title",
+          "name": "Headline",
+          "type": "string",
+          "default": "The numbers so far"
+        },
+        {
+          "key": "stats",
+          "name": "Figures (value | label)",
+          "type": "string",
+          "default": "12,480 | teams\n4.9 | average rating\n3 min | to first film"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "terminal-wide",
+      "name": "Terminal",
+      "category": "screen",
+      "aspect": "16:9",
+      "summary": "A light traces a terminal window into a neon rim; a command types, output lines tick off and the success line lands in the spectrum.",
+      "agentHint": "CLI, SDK or developer-tool launch. One command under ~34 characters. Output and success copy live in `OUTPUT` and `SUCCESS`; keep them to four short lines and one line. Neon ground reads best.",
+      "principles": [
+        "timing",
+        "staging",
+        "follow-through",
+        "secondary action"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "command",
+          "name": "Command",
+          "type": "string",
+          "default": "npx northwind init"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "neon",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "three-steps",
+      "name": "Three steps",
+      "category": "explain",
+      "aspect": "9:16",
+      "summary": "A line opens into a window and three step cards swipe through it like a carousel, each with its title above.",
+      "agentHint": "Explain a 3-step flow. Step titles 2–4 words, details one short line. The window shows a stand-in screen: put assets/step-1.jpg … step-3.jpg in the project (or redraw `screen`) to show the real product.",
+      "principles": [
+        "staging",
+        "follow-through",
+        "overlapping action",
+        "slow in and slow out"
+      ],
+      "look": "editorial",
+      "duration": 7,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "kicker",
+          "name": "Band label",
+          "type": "string",
+          "default": "How it works"
+        },
+        {
+          "key": "step1",
+          "name": "Step 1",
+          "type": "string",
+          "default": "Paste a link"
+        },
+        {
+          "key": "step2",
+          "name": "Step 2",
+          "type": "string",
+          "default": "Pick a style"
+        },
+        {
+          "key": "step3",
+          "name": "Step 3",
+          "type": "string",
+          "default": "Export the film"
+        },
+        {
+          "key": "details",
+          "name": "Details (one per line)",
+          "type": "string",
+          "default": "Drop in your product page.\nChoose the look and the pace.\nMP4, ready to post."
+        },
+        {
+          "key": "hint",
+          "name": "Swipe hint",
+          "type": "string",
+          "default": "Swipe for the next step"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "title-wide",
+      "name": "Wide headline",
+      "category": "hook",
+      "aspect": "16:9",
+      "summary": "A comet of light runs in under the headline and writes its second line as it passes, then rests as a point.",
+      "agentHint": "Opening statement for a landing page, YouTube or a talk: two short lines (under ~26 characters each), the [bracketed] words in the spectrum. Night or neon ground reads best.",
+      "principles": [
+        "follow-through",
+        "arcs",
+        "staging",
+        "secondary action"
+      ],
+      "look": "montage",
+      "duration": 5,
+      "width": 1920,
+      "height": 1080,
+      "params": [
+        {
+          "key": "line1",
+          "name": "Line 1",
+          "type": "string",
+          "default": "Every product deserves"
+        },
+        {
+          "key": "line2",
+          "name": "Line 2",
+          "type": "string",
+          "default": "a [launch film]."
+        },
+        {
+          "key": "eyebrow",
+          "name": "Eyebrow",
+          "type": "string",
+          "default": "Northwind Studio"
+        },
+        {
+          "key": "theme",
+          "name": "Ground",
+          "type": "enum",
+          "default": "night",
+          "options": [
+            "night",
+            "light",
+            "neon"
+          ]
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    },
+    {
+      "id": "type-input",
+      "name": "Typed input",
+      "category": "screen",
+      "aspect": "9:16",
+      "summary": "A flat input box draws itself, a query types behind an orange caret, send presses and three results rise below.",
+      "agentHint": "Show a prompt or search being typed and answered. Query up to ~60 characters (two lines). The three result rows are stand-ins in RESULTS: replace them with what the real product returns.",
+      "principles": [
+        "timing",
+        "anticipation",
+        "staging",
+        "follow-through"
+      ],
+      "look": "editorial",
+      "duration": 4.5,
+      "width": 1080,
+      "height": 1920,
+      "params": [
+        {
+          "key": "query",
+          "name": "Query",
+          "type": "string",
+          "default": "Make a 30-second launch film for Northwind"
+        },
+        {
+          "key": "kicker",
+          "name": "Label",
+          "type": "string",
+          "default": "Ask Northwind"
+        },
+        {
+          "key": "theme",
+          "name": "Theme",
+          "type": "enum",
+          "default": "light",
+          "options": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "key": "accent",
+          "name": "Accent",
+          "type": "color",
+          "default": "#D4643A"
+        },
+        {
+          "key": "safeGuide",
+          "name": "Safe-area guide",
+          "type": "boolean",
+          "default": false
+        }
+      ]
+    }
+  ]
+}

@@ -19,6 +19,8 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 
 ## Latest updates
 
+**2026-10-27** — [Mografy Templates](#mografy-templates): 43 free, ready-made templates for product videos, 22 native 9:16 in an editorial look and 21 16:9 in the montage look. `mografy add <template...> projects/<name>` starts a project from them.
+
 **2026-10-21** — Contextual music: the agent describes what each part of the film needs and an optional generator composes a score that lands on its moments; 3D layers with Three.js; a project style file (`style.md`) that fixes a project's design and motion decisions; and the shared Skill now keeps itself up to date after every install, build or update.
 
 **2026-10-20** — Edits no longer get stuck behind a stalled scene or a long review; the `mografy` command keeps working when the folder it was installed from is moved or deleted. See the [changelog](CHANGELOG.md).
@@ -35,7 +37,7 @@ pnpm install
 mografy dev
 ```
 
-`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
+`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: templates to start a film from, a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
 
 To check for updates, run `mografy update --check`. To install the latest commit from your branch's tracked upstream, run `mografy update` from the Mografy folder. The command checks for local changes, waits for an active export to finish, stops the active player, fast-forwards the source, runs `pnpm install` (including build, Chromium setup and launcher refresh), synchronizes the shared Skill, then restarts the same project on the same port. Refresh the browser after it restarts. Without an active player, it updates the installation without opening a project.
 
@@ -111,6 +113,16 @@ Its English references cover:
 ## Reference films
 
 Mografy ships finished films as references for quality: [mografy-montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage) (60 s promo in one continuous camera), [mografy-triangulum](https://github.com/zz41354899/mografy/tree/main/examples/mografy-triangulum) (42 s launch teaser with a Three.js galaxy) and [mografy-story](https://github.com/zz41354899/mografy/tree/main/examples/mografy-story) (71 s story film in Traditional Chinese), next to the twelve-second [intro](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro). The player lists them under Examples, and the agent reads them before planning a new film. `mografy add` lists them with the helpers; `mografy add <name> [folder]` copies one into your library to build on. To start a new film, copy [film-starter](https://github.com/zz41354899/mografy/tree/main/examples/film-starter) (`mografy add film-starter <folder>`): twenty seconds, five shots, one camera and one shot table, written as the model for every multi-shot film.
+
+## Mografy Templates
+
+[Mografy Templates](https://github.com/zz41354899/mografy/tree/main/templates) is a free library of ready-made templates for product demo videos: opening hooks, captions, phone, desktop and laptop screens, callouts, before/after, steps, numbers, reviews, logos, slides, end cards and transitions, all in English. Twenty-two are designed natively for 9:16 (Threads, Reels, Shorts) in an editorial look: a white printed page, black Anton headlines that rise letter by letter and one orange accent. Twenty-one are for 16:9 (landing pages, YouTube, decks; their ids end in `-wide`) in the look of the [montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage) film: night grounds, light trails and kinetic type in the Mografy spectrum. Every template plays live, with its copy editable, at [mografy.app/docs/templates](https://www.mografy.app/en/docs/templates).
+
+```sh
+mografy add hook-impact three-steps cta-endcard projects/my-film
+```
+
+A folder that is not a project yet becomes one: `mografy add` creates it with the templates' aspect ratio and a scene that plays them in order, so `mografy dev projects/my-film` opens a working film. Each template is a complete scene module copied to `scenes/templates/<id>.ts` with the shared `kit.ts`, `editorial.ts` and `montage.ts`, and Inter and Anton are registered in `mografy.json`. Play one inside a film with `play(ctx, time, start, template, { ...params })`; overlay templates take `backdrop: false` to draw over the film's picture. `mografy add` lists them all, and the Skill's [templates reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/templates.md) tells the agent when to use which. Maintainers: see [templates/README.md](templates/README.md).
 
 ## Working examples
 
@@ -277,6 +289,7 @@ mografy/
   .agents/skills/mografy/       Shared Skill, references, and video-compression helper
   .claude/skills/mografy       Link to the same Skill
   packages/server/template/   Source component library and project template
+  templates/                  Mografy Templates: 43 ready-made scenes for product videos
   examples/film-starter/       Twenty-second model film to start a new film from
   examples/mografy-intro/      Twelve-second reference animation
   examples/analytics-product/  Eight-second analytics interaction demo

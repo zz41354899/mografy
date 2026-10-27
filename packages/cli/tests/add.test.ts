@@ -16,5 +16,5 @@ test('mografy add lists both groups, and installation suggests names that exist'
   const list = await addList();
   assert.match(list, /Reference films[\s\S]*mografy-montage[\s\S]*Helpers[\s\S]*walkthrough/);
   const next = await addSuggestions();
-  assert.match(next, /mografy add film-starter[\s\S]*mografy add mografy-montage[\s\S]*mografy add music cjk[\s\S]*mografy add  /);
+  assert.match(next, /mografy add hook-impact cta-endcard projects\/my-post[\s\S]*mografy add film-starter[\s\S]*mografy add mografy-montage[\s\S]*mografy add music cjk[\s\S]*mografy add  /);
 });

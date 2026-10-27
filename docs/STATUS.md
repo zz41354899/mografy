@@ -1,6 +1,15 @@
 # Development status
 
-Updated: 2026-10-20
+Updated: 2026-10-27
+
+## Mografy Templates (2026-10-27)
+
+- New `templates/` library: 43 ready-made templates for product demo videos, all in English. 22 native 9:16 templates share an editorial look built from the SUPERHUNTER post (`templates/editorial.ts`: white page, black Anton headlines rising letter by letter, one orange accent, header and footer rules, picture windows, carousel; `light` / `dark`). 21 16:9 templates (ids ending in `-wide`) share the look of the montage film (`templates/montage.ts`: `night` / `light` / `neon` grounds, kinetic Inter type, spectrum comets, rims and pills, product windows on tilted planes). Eight templates exist in both ratios and point at each other with `pair`. `templates/kit.ts` holds the stage, safe areas, envelopes and `play`.
+- Fonts: Inter 500–800 Latin subsets and Anton (both SIL OFL 1.1) in `templates/fonts/`.
+- `mografy add <template...> [folder]` copies templates, the three shared modules and the fonts and registers the fonts. When the folder is not a project yet, it creates one with the templates' aspect ratio, a `scenes/main.ts` that plays them in order, `render.glow` / `render.grain` 0 and review times.
+- Root cause of "mografy add has no project": `add` treated templates like helpers that need an existing project, and there is no user-facing command that creates one (`dev` only opens, `init` is internal). A new path always failed with "has no mografy.json"; outside a project the error printed a wrong command; inside the Mografy folder `add` silently used the last opened project. Now templates create the project, `add` never falls back to the last project, and helpers without a project fail with the command to run. Covered by the CLI tests.
+- Maintainer scripts: `pnpm templates:preview <id...|all> [--theme=<name>]`, `pnpm templates:sync` (catalog and Skill reference), `pnpm templates:media <dir> [id...|all]` (720p MP4 previews and posters for the website), `pnpm templates:web <dir>` (a browser bundle that plays templates live, for a future gallery), `pnpm templates:typecheck`.
+- Validation (Linux cloud workspace, shared 2-core machine): `templates:typecheck` passes; every template was previewed with `mografy check` and `mografy review` in two themes or grounds and its stills reviewed. Frame-cost medians are about 2–5 ms for 9:16 and 20–45 ms for 16:9; a few cold first frames of 16:9 exits reach 100–130 ms under load, as the montage film itself does. CLI tests for the catalog rules, `mografy add` planning, copying and project creation pass. Run `pnpm check` and `pnpm test:browser` on macOS to confirm.
 
 ## PATH launcher repair (2026-10-20)
 

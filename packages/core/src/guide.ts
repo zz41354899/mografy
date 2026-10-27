@@ -19,6 +19,7 @@ const MUSIC_REFERENCE = SKILL_TEXT['references/music.md'];
 const WALKTHROUGH_REFERENCE = SKILL_TEXT['references/product-walkthrough.md'];
 const PRESENTATIONS_REFERENCE = SKILL_TEXT['references/presentations.md'];
 const VIDEO_COMPRESSION_REFERENCE = SKILL_TEXT['references/video-compression.md'];
+const TEMPLATES_REFERENCE = SKILL_TEXT['references/templates.md'];
 export const SKILL = SKILL_TEXT['SKILL.md'];
 export const GUIDE = SKILL_TEXT['project-guide.md'];
 
@@ -118,6 +119,7 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'product-walkthrough.md': WALKTHROUGH_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'presentations.md': PRESENTATIONS_REFERENCE,
+    'templates.md': TEMPLATES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'examples.md': EXAMPLES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'project.md': project,
@@ -202,6 +204,7 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/music.md'];
   delete files['references/product-walkthrough.md'];
   delete files['references/presentations.md'];
+  delete files['references/templates.md'];
   delete files['references/examples.md'];
   for (const name of ['motion-design', 'film-architecture', 'performance', 'output']) delete files[`references/${name}.md`];
   files['references/project.md'] = files['references/project.md']!.replace(

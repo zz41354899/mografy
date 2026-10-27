@@ -1,0 +1,17 @@
+{
+  "//": "Editor support and type checking for Mografy Templates. Strict, with no implicit any. Projects resolve @mografy/runtime through Mografy's own build.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": [],
+    "paths": {
+      "@mografy/runtime": ["../packages/runtime/src/index.ts"]
+    }
+  },
+  "include": ["*.ts"]
+}

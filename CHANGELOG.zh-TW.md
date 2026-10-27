@@ -13,6 +13,20 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-10-27
+
+### 新增
+
+- **Mografy Templates 模板庫** — [`templates/`](templates/) 收錄 43 個免費的產品影片現成模板，文案全部為英文：22 個 9:16 原生短影音模板（開場、字幕、手機與桌面畫面、點擊放大、輸入、AI 對話、功能標註、前後對比、步驟、數據、使用者評價、Logo、片尾卡、轉場），以及 21 個給官網、YouTube 與簡報用的 16:9 模板（id 以 `-wide` 結尾）。9:16 共用編輯風（白頁、黑色 Anton 大標、一個橘色強調色；`light`／`dark` 主題），16:9 沿用 montage 影片的風格（`night`／`light`／`neon` 背景、光譜光軌與動態文字）。兩種比例都有的模板以 `pair` 互相指向。文案、主題與強調色都是參數，`safeGuide` 會在預覽中顯示社群安全區。
+- **`mografy add <template...> [folder]`** — 把模板連同共用的 `kit.ts`、`editorial.ts`、`montage.ts` 與 Inter（500–800）、Anton 字型複製進專案並登記字型；模板和 helper 可以在同一行指令加入。資料夾還不是專案時會直接建立，依模板的畫面比例，附上依序播放模板的 `scenes/main.ts`，並關閉輸出的 glow 與 grain。沒有 `tsconfig.json` 的專案會自動加上一份給編輯器用，所有模板都通過 strict 型別檢查、沒有隱含的 `any`。在影片裡用 `play(ctx, time, start, template, params)` 播放模板；`backdrop: false` 讓疊加類模板畫在影片畫面上。
+- **安裝與更新** — `pnpm install` 結束時會多建議一個模板指令（`mografy add hook-impact cta-endcard projects/my-post`），排在參考影片與輔助工具前面。`mografy update` 會連同模板一起更新並重新同步 Skill，不需要額外步驟。
+- **Skill 新增 templates 參考** — `references/templates.md` 說明何時從模板開始、如何加入與修改，並列出完整目錄。
+- **維護腳本** — `pnpm templates:preview <id> [--theme=<name>]`、`pnpm templates:sync`、`pnpm templates:media <dir>`、`pnpm templates:web <dir>`（官網即時播放用的瀏覽器套件）與 `pnpm templates:typecheck`。
+
+### 修正
+
+- **`mografy add` 找不到專案** — 把模板加到新資料夾（`mografy add hook-impact projects/my-film`）會出現「has no mografy.json」；在專案以外執行時，錯誤訊息提示的指令是錯的；在 Mografy 資料夾裡沒指定專案時，會悄悄加進上一次開過的專案。現在加模板會自動建立需要的專案，`add` 不再回退到上一次的專案，沒有專案時加 helper 會清楚報錯並給出正確指令。
+
 ## 2026-10-25
 
 ### 新增

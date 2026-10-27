@@ -19,6 +19,8 @@ Mografy 是為 Claude Code 與 Codex 設計的本機 Canvas 動畫工具。共�
 
 ## 最新更新
 
+**2026-10-27** — [Mografy Templates 模板庫](#mografy-templates-模板庫)：43 個免費的產品影片現成模板，22 個 9:16 編輯風、21 個 16:9 montage 風。`mografy add <template...> projects/<name>` 直接用它們開一個專案。
+
 **2026-10-21** — 新增情境配樂：agent 描述影片每個段落需要什麼，選用的生成器就會譜出對準畫面時間點的配樂；新增 Three.js 3D 圖層；新增專案風格檔（`style.md`），可固定專案的設計與動態決定；共用 Skill 現在會在每次安裝、建置或更新後自動保持最新。
 
 **2026-10-20** — 修改不會再被卡住的場景或冗長的審閱擋住；安裝 `mografy` 指令的資料夾即使被搬走或刪除，指令也能繼續使用。詳見[更新紀錄](CHANGELOG.zh-TW.md)。
@@ -35,7 +37,7 @@ pnpm install
 mografy dev
 ```
 
-`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
+`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
 
 執行 `mografy update --check` 可檢查是否有更新。若要安裝目前分支所追蹤上游的最新提交，請在 Mografy 資料夾中執行 `mografy update`。指令會檢查本機修改、等待進行中的匯出完成、停止目前播放器、以快轉方式更新原始碼、執行 `pnpm install`（包含建置、Chromium 設定與啟動器更新）、同步共用 Skill，最後以相同連接埠重啟原本的專案。重啟後請重新整理瀏覽器。若沒有正在執行的播放器，則只更新安裝內容，不會開啟專案。
 
@@ -109,6 +111,16 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 ## 參考影片
 
 Mografy 附上幾部完整影片作為品質參考：[mografy-montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage)（60 秒、全片一顆鏡頭的宣傳片）、[mografy-triangulum](https://github.com/zz41354899/mografy/tree/main/examples/mografy-triangulum)（42 秒、Three.js 星系的發表預告）、[mografy-story](https://github.com/zz41354899/mografy/tree/main/examples/mografy-story)（71 秒、繁體中文的故事影片），以及 12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)。播放器會在「範例」中列出它們，代理規劃新影片前也會先讀。`mografy add` 會連同輔助工具一起列出這些影片；`mografy add <名稱> [資料夾]` 會把一部複製到你的專案庫，方便以它為基礎修改。要開始一部新影片，可以複製 [film-starter](https://github.com/zz41354899/mografy/tree/main/examples/film-starter)（`mografy add film-starter <資料夾>`）：20 秒、五個鏡頭、一顆鏡頭、一張鏡頭表，是所有多鏡頭影片的範本。
+
+## Mografy Templates 模板庫
+
+[Mografy Templates](https://github.com/zz41354899/mografy/tree/main/templates) 是免費的產品影片現成模板庫：開場、字幕、手機／桌面／筆電畫面、功能標註、前後對比、步驟、數據、使用者評價、Logo、簡報、片尾卡與轉場，文案全部是英文。二十二個為 9:16 原生設計（Threads、Reels、Shorts），採編輯風：像印刷品的白頁、逐字升起的黑色 Anton 大標和一個橘色強調色。二十一個為 16:9（官網、YouTube、簡報，id 以 `-wide` 結尾），沿用 [montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage) 影片的風格：夜色背景、光軌，以及 Mografy 光譜色的動態文字。每個模板都可以在 [mografy.app/docs/templates](https://www.mografy.app/zh-TW/docs/templates) 即時播放、改文案。
+
+```sh
+mografy add hook-impact three-steps cta-endcard projects/my-film
+```
+
+還不是專案的資料夾會直接建立成專案：`mografy add` 依模板的畫面比例建立專案，並附上依序播放這些模板的場景，`mografy dev projects/my-film` 就能打開一支可以播的片。每個模板都是完整的場景模組，會複製到 `scenes/templates/<id>.ts`，連同共用的 `kit.ts`、`editorial.ts`、`montage.ts`，並在 `mografy.json` 登記 Inter 與 Anton 字型。在影片裡用 `play(ctx, time, start, template, { ...params })` 播放，疊加類模板傳入 `backdrop: false` 就會畫在影片畫面上。`mografy add` 會列出所有模板，Skill 的 [templates 參考](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/templates.md) 讓 AI 知道什麼時候用哪一個。維護者請看 [templates/README.md](templates/README.md)。
 
 ## 可運作的範例
 
@@ -273,6 +285,7 @@ mografy/
   .agents/skills/mografy/       共用 Skill、參考文件與影片壓縮工具
   .claude/skills/mografy       連結至同一個 Skill
   packages/server/template/   元件原始碼庫與專案範本
+  templates/                  Mografy Templates：43 個產品影片現成場景
   examples/film-starter/       20 秒範本影片，用來開始一部新影片
   examples/mografy-intro/      12 秒參考動畫
   examples/analytics-product/  8 秒數據分析互動示範

@@ -13,6 +13,20 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-27
+
+### Added
+
+- **Mografy Templates** — a free library of 43 ready-made templates for product demo videos in [`templates/`](templates/), all in English: 22 native 9:16 templates for short video (hooks, captions, phone and desktop screens, click zoom, typing, AI chat, callouts, before/after, steps, numbers, reviews, logo, end card, transition) and 21 16:9 templates for landing pages, YouTube and decks (ids ending in `-wide`). The 9:16 templates share an editorial look (white page, black Anton headlines, one orange accent; `light` / `dark` themes) and the 16:9 templates the look of the montage film (`night` / `light` / `neon` grounds, spectrum light and kinetic type). Templates that exist in both ratios point at each other with `pair`. Copy, theme and accent are params, and `safeGuide` shows the social safe area in the preview.
+- **`mografy add <template...> [folder]`** — copies templates with the shared `kit.ts`, `editorial.ts` and `montage.ts`, Inter (500–800) and Anton into a project and registers the fonts; templates and helpers can be added in one command. When the folder is not a project yet, it is created with the templates' aspect ratio, a `scenes/main.ts` that plays them in order and output glow and grain off. A project without a `tsconfig.json` gets one for editor support, and every template type-checks in strict mode with no implicit `any`. `play(ctx, time, start, template, params)` plays a template inside a film; `backdrop: false` draws overlay templates over the film's picture.
+- **Install and update** — `pnpm install` now ends by suggesting a template command (`mografy add hook-impact cta-endcard projects/my-post`) next to the reference films and helpers. `mografy update` brings new templates with the rest of the checkout and re-syncs the Skill, so nothing extra is needed.
+- **Templates reference in the Skill** — `references/templates.md` tells the agent when to start from a template, how to add and edit it, and lists the catalog.
+- **Maintainer scripts** — `pnpm templates:preview <id> [--theme=<name>]`, `pnpm templates:sync`, `pnpm templates:media <dir>`, `pnpm templates:web <dir>` (the website's live player) and `pnpm templates:typecheck`.
+
+### Fixed
+
+- **`mografy add` without a project** — adding templates to a new folder (`mografy add hook-impact projects/my-film`) failed with "has no mografy.json", outside a project the error suggested a wrong command, and inside the Mografy folder `add` silently put the files into the last opened project. Templates now create the project they need, `add` never falls back to the last opened project, and helpers without a project fail with the command to run.
+
 ## 2026-10-25
 
 ### Added
