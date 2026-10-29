@@ -9,6 +9,7 @@ const MOTION_DESIGN = SKILL_TEXT['references/motion-design.md'];
 const FILM_ARCHITECTURE = SKILL_TEXT['references/film-architecture.md'];
 const PERFORMANCE = SKILL_TEXT['references/performance.md'];
 const OUTPUT = SKILL_TEXT['references/output.md'];
+const TASTE = SKILL_TEXT['references/taste.md'];
 const EXAMPLES_REFERENCE = SKILL_TEXT['references/examples.md'];
 const BUILTIN_COMPONENTS_REFERENCE = SKILL_TEXT['references/built-in-components.md'];
 const INTRO_REFERENCE = SKILL_TEXT['references/intro.md'];
@@ -51,6 +52,7 @@ export const SKILL_REFERENCES = {
   'film-architecture.md': FILM_ARCHITECTURE,
   'performance.md': PERFORMANCE,
   'output.md': OUTPUT,
+  'taste.md': TASTE,
 } as const;
 
 
@@ -206,7 +208,7 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/presentations.md'];
   delete files['references/templates.md'];
   delete files['references/examples.md'];
-  for (const name of ['motion-design', 'film-architecture', 'performance', 'output']) delete files[`references/${name}.md`];
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste']) delete files[`references/${name}.md`];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",
     "Skills live in the source repository's outer `.agents/skills/` folder. Codex and Claude share `mografy` and `mografy-storyboard` there, with local references. Never create Skill folders inside animation subprojects. Root `AGENTS.md` routes Codex; root `CLAUDE.md` imports the same shared Skill for Claude.",

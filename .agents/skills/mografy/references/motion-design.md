@@ -17,14 +17,7 @@ For a new concept that needs shot planning, follow [storyboard.md](https://githu
 
 ## Default taste
 
-When the project's `style.md` and the brief say nothing else, start from these defaults; the project's own decisions always win.
-
-- **Calm pacing.** Fewer, longer shots; hold every result long enough to read twice. When a film feels rushed, lengthen holds or cut copy rather than speeding actions up.
-- **Still holds.** No idle drift, bobbing or slow zoom while the viewer reads; motion has a cause and ends.
-- **Big type.** Headlines around 96–160 px and body copy at least 40 px at 1920 × 1080; scale up for portrait. Few words on screen at once.
-- **No decoration for its own sake.** No dot grids or busy background patterns; a quiet gradient, one glow, or the brand's colour field instead.
-- **The logo once.** The brand mark lands at the end (or opens and returns at the end), held still with the tagline; not repeated in every shot.
-- **Sustained sound.** Music follows [music.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/music.md)'s default taste: sustained, warm, no sharp high effects.
+When the project's `style.md` and the brief say nothing else, start from [taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md): hold times, type sizes, safe margins, still holds, one logo at the end and sustained sound, each with its reason. The project's own decisions always win.
 
 ## Compose the key poses, then connect them
 

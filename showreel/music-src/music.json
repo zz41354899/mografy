@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "film": "Mografy 2x2 showreel: four launch films (Mografy montage, Ovra, Halora, ohmi) play at once in a grid; each cuts through its highlights, all four land on their logos between 16s and 17.6s",
+  "duration": 20,
+  "bpm": 120,
+  "beatsPerBar": 4,
+  "offset": 0,
+  "key": "D",
+  "mode": "major",
+  "mood": "tech",
+  "rhythm": "flowing",
+  "seed": 7,
+  "sections": [
+    { "name": "open",  "start": 0,  "end": 4,  "mood": "tech",    "energy": [0.3, 0.5], "note": "Four films open together: headlines, prompt box, big type." },
+    { "name": "build", "start": 4,  "end": 12, "mood": "hopeful", "energy": [0.5, 0.7], "note": "Product UI: invoices, relighting, dashboards, the film builds itself." },
+    { "name": "peak",  "start": 12, "end": 16, "mood": "epic",    "energy": 0.8,        "note": "Fastest cutting: galaxy, approval, Sol, room relit." },
+    { "name": "logos", "start": 16, "end": 20, "mood": "hopeful", "energy": 0.35,       "note": "All four resolve on their logos and hold." }
+  ],
+  "hits": [
+    { "at": 4.0,  "kind": "whoosh", "length": 0.6, "strength": 0.6, "note": "Halora cuts to Choose the light; Ovra into the invoice" },
+    { "at": 8.0,  "kind": "sweep",  "length": 1.0, "strength": 0.5, "note": "midpoint lift into the second half" },
+    { "at": 12.0, "kind": "whoosh", "length": 0.6, "strength": 0.7, "note": "into the peak: Halora relight, Mografy galaxy" },
+    { "at": 16.0, "kind": "burst",  "build": 1.0,  "note": "Mografy logo starts; endings begin" },
+    { "at": 17.6, "kind": "resolve", "note": "all four logos on screen; hold" }
+  ]
+}

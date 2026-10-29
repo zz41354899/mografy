@@ -47,7 +47,7 @@ Longer Latin words read poorly in vertical copy; prefer a separate horizontal la
 
 ## Direction
 
-- Keep important copy visible for at least about `characters / 4 + 1` seconds; CJK characters carry more meaning per glyph than Latin letters, so long lines need longer holds.
+- Keep important copy readable for at least the caption hold in [taste.md](taste.md) (characters ÷ 4.5 + 0.5 s); CJK characters carry more meaning per glyph than Latin letters, so long lines need longer holds.
 - Use `stagger` of 0.04–0.08 s for titles and 0.015–0.03 s for longer captions.
 - On bright or busy images, add a dark gradient scrim or `outline` (about 0.1 × size) rather than relying on glow alone.
 - In portrait, wrap captions to the social safe area and shorten columns with `columnHeight`.

@@ -13,6 +13,13 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-29
+
+### Changed
+
+- **Mografy Skill rewritten.** `SKILL.md` now opens with hard rules, a glossary and a table of which reference to read for which job, then numbered steps with their outputs and a checklist before delivery. The description lists the requests that should trigger it, in English and Chinese. A new [`taste.md`](.agents/skills/mografy/references/taste.md) gathers the default taste in numbers, each with its reason: caption and result holds, smooth timing, type sizes and safe margins, and a design system (four type roles, a five-role palette, one layout for repeated shots, about 40 % empty space). A new film starts from one visual idea that travels through every shot.
+- **Every project keeps a `style.md`.** The Skill writes it when it plans a new film, or from the scene before changing a project that has none. `mografy check` warns when it is missing.
+
 ## 2026-10-27
 
 ### Added

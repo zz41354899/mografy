@@ -13,6 +13,13 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-10-29
+
+### 變更
+
+- **Mografy Skill 改寫。** `SKILL.md` 開頭先列硬規則、詞彙表，以及「什麼工作讀哪份參考」的對照表，接著是每一步的產出和交片前檢查清單；description 列出會觸發它的中英文說法。新增 [`taste.md`](.agents/skills/mografy/references/taste.md)，把預設品味寫成數字並附原因：字卡與結果停留、順暢的節奏、字級與安全邊距，以及設計系統（四種字級角色、五種配色角色、重複鏡頭共用版面、約 40% 留白）。新作品先想一個貫穿每個鏡頭的視覺點子。
+- **每個專案都有 `style.md`。** Skill 規劃新作品時會寫；沒有的專案在修改前先依 scene 補上。缺少時 `mografy check` 會警告。
+
 ## 2026-10-27
 
 ### 新增

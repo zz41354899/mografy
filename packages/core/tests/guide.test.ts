@@ -26,7 +26,7 @@ test('every shared Skill reference is reachable and its internal links resolve',
 });
 
 test('legacy storyboard cleanup excludes the newer references', () => {
-  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'examples']) {
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste', 'examples']) {
     const file = `references/${name}.md`;
     assert.ok(file in sharedSkillFiles().mografy);
     assert.equal(file in obsoleteStoryboardFiles('/old/installation'), false);

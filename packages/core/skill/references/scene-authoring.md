@@ -229,7 +229,7 @@ Only important subtitles belong in `role: 'subtitle'` params. Let the user edit 
 ## Motion direction
 
 - Show a meaningful element within the first 0.3 seconds.
-- Keep important text visible for at least roughly `character count / 4 + 1` seconds.
+- Keep important text readable for at least the caption hold in [taste.md](taste.md).
 - Use `springs.out` (or `spring()`) for entrances, `springs.pop` for cards and buttons, `keys` / `cameraPath` for moves through several poses, and `ease.inOutCubic` for exits. Keep one vocabulary per film.
 - Use a consistent curve for related elements and fixed 0.05–0.08 second intervals for a text stagger.
 - Hold readable poses still: no idle drift or bobbing while the viewer reads.
@@ -239,10 +239,10 @@ Only important subtitles belong in `role: 'subtitle'` params. Let the user edit 
 
 ## Project style
 
-A project can fix its own design and motion decisions in `style.md` at the project root, so every shot and every later session follows them. The file is optional and lives in the project, never in `mografy.json` or a Skill. Write it in English: do and don't rules, the motion character, palette, type, tempo and timing choices, composition habits, and reference stills (paths under `storyboards/` or `assets/`). Keep each rule short enough to check against a frame.
+Every project keeps its design and motion decisions in `style.md` at the project root, so every shot and every later session follows them. It lives in the project, never in `mografy.json` or a Skill. A new film writes it at the storyboard step; a project that has a scene but no `style.md` gets one written from the scene before the next change. Write it in English: do and don't rules, the motion character, palette, type, tempo and timing choices, composition habits, and reference stills (paths under `storyboards/` or `assets/`). Keep each rule short enough to check against a frame.
 
 Values themselves stay in scene code. Define each fixed value (a colour, font family, easing curve, duration, tempo) once, in the scene module or in a shared module the scenes already import, and change it there rather than inline in one shot. Font files are registered under `fonts` in `mografy.json`.
 
 When `style.md` exists, read it before planning a storyboard or editing a scene. Precedence: the user's current request, then `style.md`, then this Skill's default motion and design guidance. The scene contract above (deterministic `renderFrame`, browser-only code, check and review) always applies. If a request conflicts with the style, follow the request for that change and ask whether the style should change too.
 
-Create or update `style.md` only from decisions the user states or approves as lasting ("always", "from now on", "use this for every shot"), not from your own taste or a one-off fix; when the decision is a value, also change it in the scene code. During review, check the frames against the `style.md` rules as well as the general criteria. To reuse a style in another project, copy `style.md` and adapt the values in that project's scene code.
+What goes in: the film's idea, its design system (type roles, palette, the layout repeated shots share, the travelling motif), its motion character and tempo, and every decision the user states or approves as lasting ("always", "from now on", "use this for every shot"). What stays out: one-off fixes and your passing preferences. When a decision is a value, also change it in the scene code. Mark rules you wrote yourself, before the user confirmed them, so they can be overruled without discussion. During review, check the frames against the `style.md` rules as well as the general criteria. To reuse a style in another project, copy `style.md` and adapt the values in that project's scene code.

@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, readFile, unlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TEMPLATE_DIR } from '@mografy/server';
@@ -103,6 +103,10 @@ test('mografy check asks the running player, which shows the same result', async
   const ok = await runCli('check', dir);
   assert.equal(ok.code, 0, ok.stderr);
   assert.match(ok.stdout, /✓ Compiled and trial-rendered/);
+  assert.match(ok.stdout, /! No style\.md/);
+  await writeFile(join(dir, 'style.md'), '# Style\n');
+  assert.doesNotMatch((await runCli('check', dir)).stdout, /No style\.md/);
+  await unlink(join(dir, 'style.md'));
   await writeFile(join(dir, 'scenes/main.ts'), source + '\nexport const = 1;\n');
   const broken = await runCli('check', dir);
   assert.notEqual(broken.code, 0);

@@ -34,6 +34,6 @@ The copy is an ordinary project: open it with `mografy dev <folder>`, and edit, 
 - **Continuity.** Each shot ends on the geometry the next one starts from: the comet's head becomes the underline, the underline becomes the prompt pill, the pill becomes the window's field. Read the transitions in the montage before designing your own.
 - **Camera.** Moves start before the action, ease through every key and never stop on a pose that is not a story beat. Cards and windows have their own local transforms inside the camera.
 - **Cost.** Blur goes through layers or the text's shadow, glow through `bloom`, and buffers are pooled. Run `mografy check` on a copy to see what a frame costs, and keep your own film in the same range.
-- **Taste.** Calm pacing, big type, still holds, one logo at the end, and sustained music without sharp high sounds. Treat these as defaults; the project's `style.md` overrides them.
+- **Taste.** Calm pacing, big type, still holds, one logo at the end, and sustained music without sharp high sounds; the numbers are in [taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md). The project's `style.md` overrides them.
 
 Do not copy their copy, brand marks or music into another brand's film. Take the structure and the techniques, and build the new film from its own brief, assets and style.

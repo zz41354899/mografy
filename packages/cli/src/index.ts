@@ -212,6 +212,8 @@ async function dev(dir: string, flags: Flags) {
 async function checkProject(dir: string) {
   await requireProject(dir);
   console.log(`Checking ${displayPath(dir)}`);
+  // Every film keeps its design decisions in style.md, so later sessions keep its look (the Skill writes it).
+  const hasStyle = dir.split(sep).includes('.components') || await access(join(dir, 'style.md')).then(() => true, () => false);
   const passed = (snapshot: Snapshot & { cost?: FrameCost | undefined }) => {
     if (!snapshot.scene || snapshot.error) throw new Error(snapshot.error?.message ?? 'The scene did not publish.');
     console.log(`✓ Compiled and trial-rendered in Chromium\n  ${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s, version ${snapshot.scene.version}`);
@@ -235,6 +237,7 @@ async function checkProject(dir: string) {
       const { summary, warnings } = frameCostReport(snapshot.cost);
       console.log(`${warnings.length ? '!' : '✓'} ${summary}${warnings.map(w => `\n! ${w}`).join('')}`);
     }
+    if (!hasStyle) console.log('! No style.md: write the film\'s idea, design system and motion decisions to style.md (see the Skill\'s taste.md), so later changes keep this look.');
   };
   // A running player already owns this project: ask it, so the check uses its queue and Chromium
   // and the player shows the same result, instead of starting a second Chromium beside it.
