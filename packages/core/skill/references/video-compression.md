@@ -1,10 +1,10 @@
 # Compress an exported video
 
-Use this workflow when a finished render is too large to upload or share, or when the user requests a smaller video. Work from the actual exported video (normally in the project's `renders/` folder). Scene edits, a new render, and a storyboard are unnecessary for compression alone. This helper outputs H.264 MP4; it does not compress Lottie JSON or SVGA packages, and does not preserve transparency or HDR.
+Use this workflow when a finished render is too large to upload or share, or when the user requests a smaller video. Work from the actual exported video (normally in the project's `renders/` folder). Scene edits, a new render, and a storyboard are unnecessary for compression alone. This helper outputs H.265 MP4 (tagged `hvc1`) by default, or H.264 with `--codec h264`; it does not compress Lottie JSON or SVGA packages, and does not preserve transparency or HDR. Use H.264 when the file goes into a website `<video>`, to Firefox users or to Windows PCs without HEVC support.
 
 ## Run the bundled Python helper
 
-Requires Python 3.10+ and FFmpeg with `libx264`, AAC, and `ffprobe` on PATH. No pip packages are needed. On macOS, `brew install ffmpeg` supplies FFmpeg and ffprobe. The helper accepts `--ffmpeg` / `--ffprobe` or `MOGRAFY_FFMPEG` / `MOGRAFY_FFPROBE` executable overrides; it does not automatically discover Mografy's bundled FFmpeg. If a dependency is absent, report it and use the environment's normal installation process.
+Requires Python 3.10+ and FFmpeg with `libx265` (or `libx264` for `--codec h264`), AAC, and `ffprobe` on PATH; the helper stops with a clear message when libx265 is missing. No pip packages are needed. On macOS, `brew install ffmpeg` supplies FFmpeg and ffprobe. The helper accepts `--ffmpeg` / `--ffprobe` or `MOGRAFY_FFMPEG` / `MOGRAFY_FFPROBE` executable overrides; it does not automatically discover Mografy's bundled FFmpeg. If a dependency is absent, report it and use the environment's normal installation process.
 
 Resolve `../scripts/compress-video.py` relative to this reference's local Skill directory, not the animation project's directory. From the owning repository root, these commands invoke the shared Skill copy (quote paths containing spaces):
 
@@ -26,7 +26,7 @@ The maintained source is [scripts/compress-video.py](__REPOSITORY__/scripts/comp
 
 ## Choose settings and verify
 
-- Default: CRF 23, medium preset, AAC 128 kbps, original frame timing and dimensions (rounded down to even pixels for H.264). It preserves the first video and first audio stream; additional streams, selectable subtitles, and attachments are omitted. Burned-in captions remain visible.
+- Default: H.265, CRF 23 on the H.264 scale, medium preset, AAC 128 kbps, original frame timing and dimensions (rounded down to even pixels). It preserves the first video and first audio stream; additional streams, selectable subtitles, and attachments are omitted. Burned-in captions remain visible.
 - CRF 18–20 keeps more detail; 26–28 trades detail for smaller files. CRF is lossy and does not guarantee a file size or reduction. `--crf` and `--target-mb` are mutually exclusive.
 - Use `--target-mb` for a stated upload limit. The budget reserves space for audio and container overhead, then checks actual bytes. An impossible budget or oversize result fails without publishing an output; report that failure rather than promising the limit was met.
 - Change resolution only when appropriate to the request. For portrait 720p, use `--max-width 720 --max-height 1280`. Both caps preserve aspect ratio without cropping or upscaling. Small text and fine artwork may need a higher resolution or lower CRF.
@@ -36,4 +36,4 @@ The helper never overwrites any existing file or the original export. It default
 
 Read the stdout JSON and report the actual output path, original/result bytes, and percentage saved. For a skipped result, explain that the original is already smaller with these settings. Inspect the compressed video for text legibility, banding, motion artifacts, and audio sync before delivery; automated decoding does not prove visual quality. Keep the original as the master. Do not automatically replace a website asset or upload a file unless that is part of the user's request.
 
-Option semantics: [FFmpeg documentation](https://ffmpeg.org/ffmpeg.html) and [libx264 encoder options](https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb).
+Option semantics: [FFmpeg documentation](https://ffmpeg.org/ffmpeg.html), [libx265](https://ffmpeg.org/ffmpeg-codecs.html#libx265) and [libx264 encoder options](https://ffmpeg.org/ffmpeg-codecs.html#libx264_002c-libx264rgb).

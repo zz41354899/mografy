@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sceneRuntimeKey } from '../src/scene-inputs.js';
 import { projectPatchRequestSchema, sheetRequestSchema } from '../src/index.js';
-import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema } from '../src/index.js';
+import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema, hevcQuality, HEVC_EQUIVALENT } from '../src/index.js';
 test('runtime identity includes setup and beat inputs, excluding output settings and audio gain', () => {
  const project = validateSceneProject({ version: 1, name: 'identity', scene: 'scenes/main.ts', audio: { path: 'assets/music.wav', bpm: 60 } });
  const key = sceneRuntimeKey('version', project);
@@ -66,8 +66,17 @@ test('output samples are centered, non-overlapping and segments align to frames'
 });
 test('manifest render defaults are explicit', () => {
  const r = validateSceneProject({ version: 1, name: 'a', scene: 's.ts' }).render;
- assert.deepEqual(r, { scale: 1, workers: 2, fps: 30, samples: 4, mixing: 'srgb', bitrate: '12M', glow: .12, grain: .008, encoding: 'two-pass', preset: 'medium', crf: 18, includeAudio: true });
+ assert.deepEqual(r, { scale: 1, workers: 2, fps: 30, samples: 4, mixing: 'srgb', bitrate: '12M', glow: .12, grain: .008, codec: 'h265', encoding: 'two-pass', preset: 'medium', crf: 18, includeAudio: true });
  assert.throws(() => validateSceneProject({ version: 1, name: 'a', scene: 's.ts', review: { transitions: [{ start: 2, end: 1 }] } }));
+});
+
+test('H.265 gets the CRF and bitrate that match H.264-scale settings', () => {
+ assert.deepEqual(hevcQuality({ crf: 18, bitrate: '12M' }), { crf: 18 + HEVC_EQUIVALENT.crfOffset, bitrate: `${Math.round(12000 * HEVC_EQUIVALENT.bitrateScale)}k` });
+ assert.equal(hevcQuality({ crf: 51, bitrate: '1k' }).crf, 51, 'never past the CRF range');
+ assert.equal(hevcQuality({ crf: 51, bitrate: '1k' }).bitrate, '1k', 'at least 1 kbps');
+ assert.equal(hevcQuality({ crf: 18, bitrate: '800k' }).bitrate, `${Math.round(800 * HEVC_EQUIVALENT.bitrateScale)}k`);
+ assert.equal(exportRequestSchema.parse({ render: { codec: 'h264' } }).render?.codec, 'h264');
+ assert.throws(() => exportRequestSchema.parse({ render: { codec: 'av1' } }));
 });
 
 test('per-export overrides preserve unspecified project settings', () => {

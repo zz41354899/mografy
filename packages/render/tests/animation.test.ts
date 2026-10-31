@@ -205,3 +205,23 @@ for (const encoding of ['crf', 'two-pass'] as const) {
     await assert.rejects(renderVideo({ format: 'webm', projectDir: dir, project: { ...p, render: { ...p.render, fps: 61 } }, build, host, output: join(dir, 'renders/invalid.webm') }), /60 fps/);
   });
 }
+
+for (const [codec, encoding] of [['h265', 'two-pass'], ['h265', 'crf'], ['h264', 'two-pass']] as const) {
+  test(`MP4 ${codec} ${encoding}: video and AAC audio decode to the full duration`, { timeout: 60_000 }, async () => {
+    const p = structuredClone(project);
+    p.render = { ...p.render, codec, encoding, crf: 20, bitrate: '100k', preset: 'veryfast', includeAudio: true };
+    await ffmpegOutput(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-f', 'wav', '-y', join(dir, 'assets/mp4-beep.wav')]);
+    p.audio = { path: 'assets/mp4-beep.wav', bpm: 120, offset: 0, beatsPerBar: 4, gain: .5 };
+    const build = await buildScene(dir, p), output = join(dir, `renders/${codec}-${encoding}.mp4`);
+    const result = await renderVideo({ projectDir: dir, project: p, build, host, output });
+    assert.equal(result.audio, true);
+    const info = spawnSync(ffmpegPath(), ['-hide_banner', '-i', output], { encoding: 'utf8' }).stderr;
+    // hvc1 (not hev1) is the tag QuickTime, Safari and iOS require for HEVC in MP4
+    assert.match(info, codec === 'h265' ? /Video: hevc \(Main\) \(hvc1/ : /Video: h264/);
+    assert.match(info, /Audio: aac/);
+    const frames = await ffmpegOutput(['-i', output, '-map', '0:v:0', '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
+    assert.equal(frames.length, 8 * 96 * 54 * 4);
+    const pcm = await ffmpegOutput(['-i', output, '-vn', '-f', 's16le', '-ac', '1', '-ar', '8000', 'pipe:1']);
+    assert.ok(Math.abs(pcm.length / 16000 - 8) < .1);
+  });
+}

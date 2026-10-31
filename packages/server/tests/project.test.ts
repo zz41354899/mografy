@@ -186,3 +186,37 @@ export async function setup(ctx) { image = await ctx.loadImage('assets/used.png'
   assert.match(html, /"assets\/used\.png"/);
   assert.doesNotMatch(html, /assets\/unused\.png|assets\/music\.wav/, 'files the scene never loads stay out');
 });
+
+test('opening publishes before the trial render, which runs in the background and reports failures', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-open-test-'));
+  let project: Project | undefined;
+  t.after(async () => { await project?.close(); await rm(dir, { recursive: true, force: true }); });
+  await mkdir(join(dir, 'scenes'));
+  // setup fails: a blocking trial would refuse to open; the described open publishes, then the background trial reports it
+  await writeFile(join(dir, 'scenes/main.ts'), source.replace('export function setup() {}', "export function setup() { throw new Error('setup broke'); }"));
+  await writeFile(join(dir, 'mografy.json'), JSON.stringify({ version: 1, name: 'Open', scene: 'scenes/main.ts', seed: 1 }));
+  project = await Project.open(dir);
+  assert.equal(project.snapshot().error, null);
+  assert.equal(project.snapshot().scene!.meta.duration, 1);
+  const deadline = Date.now() + 30_000;
+  while (!project.snapshot().error && Date.now() < deadline) await new Promise(r => setTimeout(r, 200));
+  assert.match(project.snapshot().error?.message ?? '', /setup broke/);
+});
+
+test('a build that passed its background trial reopens from verified.json without Chromium', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-verified-test-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(join(dir, 'scenes'));
+  await writeFile(join(dir, 'scenes/main.ts'), source);
+  await writeFile(join(dir, 'mografy.json'), JSON.stringify({ version: 1, name: 'Verified', scene: 'scenes/main.ts', seed: 1 }));
+  const first = await Project.open(dir);
+  const file = join(dir, '.mografy', 'verified.json'), deadline = Date.now() + 30_000;
+  let saved: { key?: string } | undefined;
+  while (!saved && Date.now() < deadline) { saved = await readFile(file, 'utf8').then(JSON.parse, () => undefined); if (!saved) await new Promise(r => setTimeout(r, 200)); }
+  await first.close();
+  assert.ok(saved?.key, 'the background trial saved its result');
+  const again = await Project.open(dir);
+  t.after(() => again.close());
+  assert.equal(again.snapshot().error, null);
+  assert.equal(again.snapshot().scene!.meta.duration, 1);
+});

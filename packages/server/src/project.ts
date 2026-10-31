@@ -20,6 +20,8 @@ import { libraryDir } from './installation.js';
 const isBuiltIn = (dir: string) => { const rel = relative(join(libraryDir(), '.components'), dir); return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.includes(sep); };
 export { ApiError } from './errors.js';
 const now = () => new Date().toISOString();
+/** What a passed trial render reports, saved in .mografy/verified.json. */
+type Verified = Awaited<ReturnType<SceneHost['inspect']>>;
 
 // Scaffolding and live updates share the same writer for each project directory.
 const writers = new Map<string, Promise<unknown>>();
@@ -131,12 +133,22 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   }
 
   /** Compile and trial-render in Chromium. Nothing is published or written here. */
-  private async prepare(project: SceneProject, overrides?: Record<string, string>) {
+  private async prepare(project: SceneProject, overrides?: Record<string, string>, opening = false) {
     const build = await buildScene(this.dir, project, overrides);
     const key = sceneRuntimeKey(build.version, project);
     const known = this.preparedKey === key ? this.scene : undefined;
-    const loaded = known ? { meta: known.meta, params: known.params } : await this.host.inspect(build, project);
-    return { build, meta: loaded.meta, params: loaded.params, key };
+    // Opening a project used to trial-render the unchanged build again in headless Chromium, whose WebGL is software
+    // (SwiftShader): 3D films took many seconds to switch to. A build that already passed keeps its result on disk;
+    // any source or settings change gives a new key, so edits are always trial-rendered.
+    const verifiedFile = join(this.dir, '.mografy', 'verified.json');
+    const saved = !known && opening ? await readJson<{ key?: string } & Partial<Verified>>(verifiedFile) : undefined;
+    const reused = saved?.key === key && saved.meta && saved.params ? { meta: saved.meta, params: saved.params } : undefined;
+    // An unverified build being opened is only described (module exports, no setup); its trial runs later in the
+    // background (verifyLater), so the player starts at once. Edits still wait for the trial before publishing.
+    const unverified = !known && !reused && opening;
+    const loaded = known ? { meta: known.meta, params: known.params } : reused ?? (unverified ? await this.host.describe(build, project) : await this.host.inspect(build, project));
+    if (!known && !reused && !unverified) await atomicWrite(verifiedFile, JSON.stringify({ key, meta: loaded.meta, params: loaded.params }) + '\n').catch(() => {});
+    return { build, meta: loaded.meta, params: loaded.params, key, unverified };
   }
 
   /** Make a prepared build current: keep compatible saved values, persist the build, publish. */
@@ -158,6 +170,24 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return { changed, issues };
   }
 
+  /**
+   * The trial render of a build opened unverified, a few seconds after the player has it (so the two do not compete
+   * for the machine). Passing saves the result for the next open; failing shows the error, as a blocking trial would.
+   */
+  private verifyLater(build: SceneBuild, project: SceneProject, key: string) {
+    const timer = setTimeout(() => {
+      if (this.closed || this.preparedKey !== key) return;
+      void this.host.inspect(build, project).then(
+        loaded => this.run(() => atomicWrite(join(this.dir, '.mografy', 'verified.json'), JSON.stringify({ key, meta: loaded.meta, params: loaded.params }) + '\n')),
+        error => this.run(async () => {
+          if (this.closed || this.preparedKey !== key) return;
+          this.error = { message: describe(error), reason: 'startup', at: now() }; this.publish('error');
+        }),
+      ).catch(() => {});
+    }, 4000);
+    timer.unref();
+  }
+
   /** Keep the newest saved builds on disk, so a player still showing a recent version can reload it. */
   private async pruneBuilds(keep = 16) {
     const folder = join(this.dir, '.mografy', 'builds');
@@ -175,10 +205,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         const manifestChanged = raw !== this.raw;
         this.raw = raw;
         if (!this.scene) this.project = project;
-        const prepared = await this.prepare(project);
+        const prepared = await this.prepare(project, undefined, reason === 'startup');
         const hadError = !!this.error;
         const { changed } = await this.commit(project, prepared, reason);
         if (changed || manifestChanged || hadError || reason === 'startup') this.publish(changed ? 'scene' : 'project');
+        if (prepared.unverified) this.verifyLater(prepared.build, project, prepared.key);
         else this.shots.schedule(); // the storyboard may have changed
       } catch (error) {
         const message = describe(error);
@@ -297,7 +328,23 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     });
   }
 
-  private scheduleThumb() { this.frames.scheduleThumbnail(() => this.refreshThumbnail()); }
+  private scheduleThumb() {
+    const version = this.scene?.version, revision = sha256(this.raw);
+    void this.thumbIsCurrent(version, revision).then(current => {
+      if (this.closed || this.scene?.version !== version) return;
+      if (current) this.publish('thumbnail');
+      else this.frames.scheduleThumbnail(() => this.refreshThumbnail());
+    });
+  }
+  /** The saved thumbnail was drawn from this version and manifest, so it need not be drawn again on open. */
+  private async thumbIsCurrent(version: string | undefined, revision: string) {
+    const saved = await readJson<{ version?: string; revision?: string }>(join(this.dir, '.mografy', 'thumb.json'));
+    if (!version || saved?.version !== version || saved.revision !== revision) return false;
+    const png = await readFile(join(this.dir, '.mografy', 'thumb.png')).catch(() => null);
+    if (!png) return false;
+    this.thumbnail = sha256(png);
+    return true;
+  }
 
   /** Capture then queue the write; discard a capture superseded by a source/parameter update. */
   async refreshThumbnail(time?: number) {
@@ -309,6 +356,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return this.run(async () => {
       if (this.scene?.version !== version || sha256(this.raw) !== revision) return;
       await atomicWrite(join(this.dir, '.mografy', 'thumb.png'), png);
+      await atomicWrite(join(this.dir, '.mografy', 'thumb.json'), JSON.stringify({ version, revision }) + '\n').catch(() => {});
       this.thumbnail = sha256(png);
       this.publish('thumbnail');
       return this.thumbnail;

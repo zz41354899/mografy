@@ -6,7 +6,7 @@ Design plan: [Mografy rebuild plan](https://claude.ai/code/artifact/41f66790-af5
 
 - Animation content lives only in scene modules. `mografy.json` stores settings, never layers or keyframes.
 - Scenes are pure functions of time: `renderFrame(ctx, time, params)` draws from time, params, and data prepared by setup.
-- The Server is the application's single project writer. After Claude or Codex edits a scene file, the same Server queue compiles, trial-renders in headless Chromium, and publishes it.
+- The Server is the application's single project writer. After Claude or Codex edits a scene file, the same Server queue compiles, trial-renders in headless Chromium, and publishes it. Opening a project publishes first and trial-renders in the background (see Opening and switching projects).
 - Scene code runs only in the browser, either the player or headless Chromium; the Server's Node process never executes it.
 - The player and exports load the same compiled scene, runtime, and post-processing code.
 
@@ -59,6 +59,12 @@ CLI check/review/export ---------------------------------------------+
 `ProjectSession` owns the active Project, lock, event subscription, catalog invalidation, serialized switches, and shutdown. `http.ts` owns transport startup, static serving, and WebSockets; `http-io.ts` owns body parsing and file responses, while workspace and project routes dispatch separately. Project routes capture their Project before awaiting bodies. Player writes include a project directory header, so a delayed action from a previously displayed project returns 409 rather than modifying the newly opened project; unscoped API clients remain compatible.
 
 The shared `sceneRuntimeKey` identifies compiled version, canvas, seed, font descriptors, and the audio beat grid. Inspection, still pages, and player setup use this identity. Audio gain and output settings update without requiring scene setup. API changes to runtime inputs are trial-rendered before writing, and a failed disk configuration retains the last working runtime inputs. A later unrelated patch must also validate pending disk inputs before publishing them.
+
+## Opening and switching projects
+
+Opening is the one publication that does not wait for the trial. When the compiled build's runtime key is not the verified one, `Project.prepare` calls `SceneHost.describe`: a headless page imports the scene module and returns its exported `meta` and `params`, which the Server validates with the same core schemas as a trial, without running setup or drawing. The Project publishes immediately and `verifyLater` runs the full trial four seconds later, so the two do not compete with the player's own setup. A passing trial writes `{ key, meta, params }` to `.mografy/verified.json`; a failing one publishes the scene error, exactly as a blocking trial would. A later open whose key matches `verified.json` uses it and needs no Chromium. Scene edits and API changes keep the blocking trial, so a broken edit never replaces a working version. Thumbnail capture starts 1.5 s after a publish.
+
+The player keeps up to two previously shown projects set up in hidden iframes (`KEEP_LOADED`), keyed by project folder and runtime key. Switching back to one adopts its runtime, canvas and frame instead of running setup; a newer version of the same project disposes the kept one. Each kept 3D project holds a WebGL context. While a project loads, its saved thumbnail covers the stage and fades out when the film is shown. Audio URLs carry a project tag, because every project serves its files under `/__mografy/files/` and decoded audio is cached by URL.
 
 ## Versions
 
@@ -153,9 +159,13 @@ After source or param changes, Chromium captures a fresh 480px PNG after a 300ms
 
 Mografy source code and documentation use the root [MIT License](../LICENSE), with `license: "MIT"` in the workspace and all six package manifests. Third-party assets and dependencies keep their original terms, including the bundled ABeeZee font's SIL Open Font License.
 
+## MP4 codec
+
+`render.codec` selects libx265 (`h265`, the default) or libx264 (`h264`) for MP4. `crf` and `bitrate` are on the H.264 scale; `hevcQuality` converts them with `HEVC_EQUIVALENT` for libx265. HEVC output is tagged `hvc1` for Apple players. libx265 in FFmpeg 6 ignores `-pass`, so two-pass H.265 passes `pass=N:stats=x265.log` in `-x265-params` with FFmpeg running in the job's work folder (the option list is colon-separated, so it cannot hold a Windows drive path). The Export dialog plays the finished file in a `<video>` element, which needs HEVC support in that browser.
+
 ## WebM video export
 
-WebM shares the video capture, FFV1 intermediate, sampling, effects, cancellation, and queued output publication pipeline with MP4. `renderVideo` selects libvpx-vp9 / Opus for WebM and libx264 / AAC for MP4. API and CLI WebM export defaults resolve to CRF 32 with zero target bitrate and 128 kbps Opus audio; explicit request overrides can select two-pass target bitrate. The player retains independent per-format drafts and uses VP9 CRF 38/32/26 for Draft/Standard/High. Encoder speed maps the shared preset names to VP9 cpu-used values 8/6/4/2/1. Both formats enforce even dimensions and a 60 fps limit, support portrait presets and Fit, and play completed outputs in the dialog. HTTP serves `.webm` as `video/webm`; CLI accepts `--format webm` with the video orientation/resolution flags. Existing project render defaults are unchanged. Direct `renderVideo` callers provide resolved render settings and select `format: 'webm'`. CRF mode varies size with scene complexity; it is not a byte budget or a promise of smaller files at the same bitrate.
+WebM shares the video capture, FFV1 intermediate, sampling, effects, cancellation, and queued output publication pipeline with MP4. `renderVideo` selects libvpx-vp9 / Opus for WebM and libx265 or libx264 / AAC for MP4. API and CLI WebM export defaults resolve to CRF 32 with zero target bitrate and 128 kbps Opus audio; explicit request overrides can select two-pass target bitrate. The player retains independent per-format drafts and uses VP9 CRF 38/32/26 for Draft/Standard/High. Encoder speed maps the shared preset names to VP9 cpu-used values 8/6/4/2/1. Both formats enforce even dimensions and a 60 fps limit, support portrait presets and Fit, and play completed outputs in the dialog. HTTP serves `.webm` as `video/webm`; CLI accepts `--format webm` with the video orientation/resolution flags. Existing project render defaults are unchanged. Direct `renderVideo` callers provide resolved render settings and select `format: 'webm'`. CRF mode varies size with scene complexity; it is not a byte budget or a promise of smaller files at the same bitrate.
 
 ## Source installation updates
 

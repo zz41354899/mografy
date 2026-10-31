@@ -27,6 +27,14 @@ The repository provides two OFL-licensed subsets in [extras/cjk/fonts/](__REPOSI
 
 Use the exported `CJK_SANS` and `CJK_SERIF` names with the registered weights. Without registration, the browser falls back to system fonts, so previews may differ between computers and exports. Serif (Mincho / Song) suits titles, poetry and Japanese PV copy; Sans suits subtitles and UI. For a character outside the subsets, or JP / SC / KR glyph forms, regenerate a subset with [subset-cjk-fonts.py](__REPOSITORY__/extras/cjk/subset-cjk-fonts.py) from the [Noto CJK](https://github.com/notofonts/noto-cjk) sources (`--extra` adds characters). Check unusual names and rare characters in actual frames.
 
+The 9.5 MB of subsets load every time the project opens. Once the copy is settled, shrink them to the film's own characters:
+
+```sh
+python3 extras/cjk/subset-film-fonts.py projects/my-film
+```
+
+It reads `scenes/`, `mografy.json` and the JSON, Markdown, text and CSV files in `assets/` and `storyboards/`, writes `<font>-film.otf` beside each registered font (about 100–170 KB), and points `mografy.json` at those files. The originals stay; running it again always rebuilds from them, so run it after every copy change, and before delivery. Characters it lists as missing from a font were already missing before (fine when they only appear in code comments). Copy built at runtime from character codes is not seen: pass it with `--extra "字元"`.
+
 ## Vertical text
 
 `verticalText(ctx, time, { text, x, y, size, columnHeight?, tracking?, columnGap?, font?, weight?, color?, glow?, outline?, start?, stagger?, duration?, lift?, end?, out? })` draws columns top to bottom and right to left. `x` is the centre of the first (rightmost) column, `y` its top. `columnHeight` wraps automatically; `\n` starts a new column. It returns the layout (`glyphs`, `columns`, `width`, `height`) for placing rules or ornaments; `verticalLayout` returns the same without drawing.

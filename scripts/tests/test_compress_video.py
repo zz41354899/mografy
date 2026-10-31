@@ -69,10 +69,19 @@ class CompressionTests(unittest.TestCase):
         self.assertEqual((result["width"], result["height"]), (320, 180))
         data = self.inspect(result["output"])
         video = next(s for s in data["streams"] if s["codec_type"] == "video")
-        self.assertEqual(video["codec_name"], "h264")
+        self.assertEqual(video["codec_name"], "hevc")
+        self.assertEqual(video["codec_tag_string"], "hvc1")
+        self.assertEqual(result["codec"], "hevc")
         self.assertEqual(video["avg_frame_rate"], "24/1")
         self.assertEqual(int(video["nb_frames"]), 72)
         self.assertAlmostEqual(float(data["format"]["duration"]), 3, delta=.1)
+
+    def test_h264_on_request_in_both_modes(self):
+        quality = self.invoke("--codec", "h264")
+        self.assertEqual(quality["codec"], "h264")
+        budget = self.invoke("--codec", "h264", "--target-mb", "0.12", "-o", self.folder / "budget.mp4")
+        self.assertEqual(budget["codec"], "h264")
+        self.assertLessEqual(budget["compressed_bytes"], 120_000)
 
     def test_two_pass_respects_actual_size_budget(self):
         result = self.invoke("--target-mb", "0.12")

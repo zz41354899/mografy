@@ -41,9 +41,10 @@ export async function exportProject(dir: string, flags: Flags) {
   if (flags.format === 'html') throw new Error('Presentation files are written by `mografy export --format html`.');
   const format = flags.format ?? 'mp4';
   if ((flags.orientation || flags.resolution) && !isVideoFormat(format)) throw new Error('--orientation and --resolution are MP4/WebM options');
+  if (flags.codec && format !== 'mp4') throw new Error('--codec is an MP4 option (WebM is always VP9)');
   const preset = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
   const size = flags.orientation || flags.resolution ? { width: preset.width, height: preset.height, fit: 'contain' as const } : undefined;
-  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}) };
+  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}), ...(flags.codec ? { render: { codec: flags.codec } } : {}) };
   const connection = await openExportConnection(dir);
   try {
     const status = await connection.start(request);

@@ -204,13 +204,14 @@ Scene 檢查器分為 Subtitles（字幕）、Colors（顏色）與 Controls（�
 
 ```sh
 mografy export ./projects/my-animation --format mp4
+mografy export ./projects/my-animation --format mp4 --codec h264
 mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
 
-MP4 使用 H.264 視訊與 AAC 音訊。WebM 使用 VP9 視訊與 128 kbps 的 Opus 音訊，預設採用 CRF 32 固定品質，而非 MP4 的目標位元率。兩者都支援音訊、動態取樣、光暈、顆粒與編碼控制。完成的檔案會寫入 `renders/`。
+MP4 預設使用 H.265（HEVC）視訊與 AAC 音訊。在 3D 紙張材質片與 2D 動態片的實測中，同樣 CRF 下 H.265 畫質與 H.264 相當，檔案只有 50–58%，編碼時間也一樣（編碼速度選 Slow 時使用 x265 的 medium，速度與 x264 的 slow 相當）。檔案標記為 `hvc1`，可在 QuickTime、Safari、iOS 與 Android、Chrome、Edge 播放，也能直接上傳 YouTube、Instagram、TikTok。Firefox 與部分 Windows 電腦要有硬體支援或安裝「HEVC 視訊延伸模組」才能播放，所以要放在網站 `<video>` 或寄給不確定用什麼播放的人時，請在匯出視窗選 **Codec → H.264**、加上 `--codec h264`，或在 `mografy.json` 的 `render` 設定 `"codec": "h264"`。兩種編碼的 MP4 CRF 與位元率都以 H.264 為準。WebM 使用 VP9 視訊與 128 kbps 的 Opus 音訊，預設採用 CRF 32 固定品質，而非 MP4 的目標位元率。兩者都支援音訊、動態取樣、光暈、顆粒與編碼控制。完成的檔案會寫入 `renders/`。
 
 WebM 品質預設：
 
@@ -233,7 +234,7 @@ python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation
 python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4 --target-mb 10 -o ./projects/my-animation/renders/film-share.mp4
 ```
 
-預設會另外寫入使用 CRF 23 的 `film-compressed.mp4`，並保留音訊。`--target-mb` 會執行雙次編碼，並檢查實際檔案是否符合十進位 MB 限制。既有檔案不會被覆寫；沒有縮小檔案的候選結果會被捨棄。品質、解析度、相依工具覆寫與結果驗證，請參閱[壓縮參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md)。維護中的腳本位於 `scripts/compress-video.py`；`pnpm sync:skills` 會將它複製到共用 Skill，供 Codex 與 Claude 使用。
+預設會另外寫入使用 CRF 23（以 H.264 為準）的 H.265 `film-compressed.mp4`，並保留音訊；`--codec h264` 則輸出 H.264。`--target-mb` 會執行雙次編碼，並檢查實際檔案是否符合十進位 MB 限制。既有檔案不會被覆寫；沒有縮小檔案的候選結果會被捨棄。品質、解析度、相依工具覆寫與結果驗證，請參閱[壓縮參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md)。維護中的腳本位於 `scripts/compress-video.py`；`pnpm sync:skills` 會將它複製到共用 Skill，供 Codex 與 Claude 使用。
 
 播放器的 Export 對話框提供以下輸出尺寸：
 

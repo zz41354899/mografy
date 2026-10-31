@@ -60,6 +60,7 @@ function helpText(color: boolean) {
       row('--format <mp4|webm|lottie|svga|html>', 'Output format (default: mp4); html writes a presentation file'),
       row('-o, --output <file>', 'File name, or a path inside renders/'),
       row('--orientation <landscape|portrait>', 'MP4/WebM at 16:9 or 9:16, fitting the whole scene'),
+      row('--codec <h265|h264>', 'MP4 video codec (default: h265, about half the size; h264 plays everywhere)'),
       row('--resolution <720p|1080p>', 'MP4/WebM size (default with orientation: 720p)'),
       row('--cancel', "Cancel the project's current export"),
     ]),

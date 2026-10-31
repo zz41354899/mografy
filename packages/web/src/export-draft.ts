@@ -33,7 +33,11 @@ export function exportDraftReducer(state: ExportDraft, action: ExportDraftAction
   const current = state.formats[format];
   let next: FormatDraft;
   switch (action.type) {
-    case 'patch': next = { ...current, settings: { ...current.settings, ...action.settings }, quality: 'custom' }; break;
+    case 'patch': {
+      // The codec does not change the look, so choosing it keeps the quality preset.
+      const quality = Object.keys(action.settings).every(key => key === 'codec') ? current.quality : 'custom';
+      next = { ...current, settings: { ...current.settings, ...action.settings }, quality }; break;
+    }
     case 'size': next = { ...current, size: { width: action.size.width, height: action.size.height, fit: current.size.fit } }; break;
     case 'fit': next = { ...current, size: { ...current.size, fit: action.fit } }; break;
     case 'orientation': {

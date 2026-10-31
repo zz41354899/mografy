@@ -1,6 +1,43 @@
 # Development status
 
-Updated: 2026-10-27
+Updated: 2026-10-31
+
+## H.265 MP4 export (2026-10-31)
+
+- `render.codec` (`h265` default, `h264`) selects the MP4 encoder; WebM is unchanged. H.265 uses libx265 with the `hvc1` tag (required by QuickTime, Safari and iOS). The Export dialog has a Codec row (changing it keeps the Quality preset), and `mografy export --codec h265|h264` overrides it for one export.
+- `crf` and `bitrate` stay on the H.264 scale, so existing projects and the Quality presets keep their meaning; `hevcQuality` in core applies `HEVC_EQUIVALENT` (CRF unchanged, two-pass bitrate × 0.6). The `slow` encoder speed uses x265 `medium`.
+- libx265 in FFmpeg 6 ignores `-pass` / `-passlogfile` (the stats file stays empty and pass 2 falls back to one-pass ABR). Two-pass H.265 passes `pass=1|2:stats=x265.log` through `-x265-params`, with FFmpeg running in the job's work folder: the parameter list is colon-separated, so an absolute Windows path cannot appear in it. `startFfmpeg` / `runFfmpeg` take an optional `cwd`.
+- Measurements (cloud workspace, 2 cores, FFmpeg 6.1; 10-second excerpts decoded to lossless masters from the user's own exports, SSIM against the master):
+
+| Excerpt (1280 × 720) | Encoder | Size | SSIM | PSNR dB | Encode |
+| --- | --- | --- | --- | --- | --- |
+| aesthetic-usability, 3D paper textures, 8 s at 30 fps, lossless master | x264 CRF 16 slow (the project's setting) | 23.1 MB | 0.9431 | 35.43 | 43 s |
+| | **x265 CRF 16 medium** | **11.5 MB (50 %)** | 0.9408 | 35.46 | 41 s |
+| | x265 CRF 16 slow | 11.8 MB | 0.9430 | 35.49 | 77 s |
+| | x265 CRF 18 medium | 6.0 MB | 0.9361 | 35.37 | 31 s |
+| mografy-montage, 2D, 8 s at 60 fps, lossless master | x264 CRF 14 slow | 1.20 MB | 0.9957 | 41.27 | 15 s |
+| | **x265 CRF 14 medium** | **0.70 MB (58 %)** | 0.9954 | 41.25 | 15 s |
+| | x265 CRF 16 medium | 0.54 MB | 0.9950 | 41.22 | 15 s |
+| | x265 CRF 16 slow | 0.65 MB | 0.9951 | 41.24 | 35 s |
+| shadow-psychology, the user's H.264 export as source, 10 s at 30 fps | x264 CRF 16 slow | 30.3 MB | 0.9494 | – | 54 s |
+| | x265 CRF 16 medium | 15.6 MB (51 %) | 0.9416 | – | 55 s |
+| | x265 CRF 14 medium | 25.9 MB | 0.9482 | – | 68 s |
+
+- At the same CRF, x265 medium matched x264 slow on both lossless masters (PSNR within 0.03 dB, SSIM within 0.003; 2× crops of subtitles, small screen text, stars, gradients and paper grain showed no visible difference) at 50–58 % of the size and the same encode time, so `HEVC_EQUIVALENT` is `{ crfOffset: 0, bitrateScale: 0.6 }` (0.6 is a little above the measured ratio, so a two-pass H.265 target is never worse than the H.264 one). x265 `slow` took 1.9–2.4× as long for no smaller file, so the `slow` encoder speed uses x265 `medium`. SSIM falls fastest with CRF on paper grain (CRF 18 halves the size again but visibly softens the grain), so judge CRF increases on grainy films. Re-encoding an H.264 export favours x264, which re-finds its own block structure; the equivalence comes from lossless masters captured through the export path.
+- `scripts/compress-video.py` takes `--codec h265|h264` (default `h265`) with the same CRF scale, checks that FFmpeg has libx265 and reports the codec in its JSON. `scripts/templates.ts` keeps H.264 for the website's preview loops.
+- The Export dialog plays a finished MP4 in a `<video>` element. A browser without HEVC either reports an error or plays only the sound with a zero-size picture (Chromium on Linux); both now replace the player with a note that the file is fine and how to get H.264. The export end-to-end tests check that note where the test browser lacks HEVC and play the file where it has it; the progress/cancel/retry test exports H.264 through the new Codec choice.
+- Validation (Linux cloud workspace, system FFmpeg 6.1 through `MOGRAFY_FFMPEG`, since the cloud has no bundled binary): `pnpm build`, `pnpm typecheck`; core 28, render 47 (including H.265 two-pass, H.265 CRF and H.264 two-pass exports with AAC, `hvc1` tag, full frame count and duration), server 30, web 15, CLI 52 (including `--codec` and the three export-dialog end-to-end tests) and compression 9 tests passed. `test:browser` covers the unchanged runtime package and was not rerun. Run `pnpm check` and `pnpm test:browser` on macOS to confirm, where the bundled FFmpeg (with libx265) and Playwright's Chromium are used.
+
+## Faster project opening and switching (2026-10-31)
+
+- Cause of the slow switch: every open compiled the scene and ran the full Chromium trial (setup plus five frames) before publishing. In the headless browser 3D scenes run on SwiftShader (software WebGL), so a Three.js film's setup and trial took 30–45 s, and the player only started after that. The thumbnail capture ran another headless setup 300 ms later, competing with the player.
+- Opening an unverified build now calls `SceneHost.describe`: the headless page imports the module and returns `meta` and `params`, validated with the core schemas and `resolveParams`, without setup or a frame. The project publishes at once; `verifyLater` runs the full trial 4 s later, saves `{ key, meta, params }` to `.mografy/verified.json` on success, and publishes a scene error on failure. A build whose runtime key matches `verified.json` reopens without Chromium. Edits keep the blocking trial, so a broken edit never replaces a working version. Thumbnail capture waits 1.5 s.
+- Player: `KEEP_LOADED = 2` projects stay set up in hidden iframes after switching away (one WebGL context each for 3D scenes); switching back to an unchanged one adopts the kept runtime instead of running setup. Stale versions of the same project are disposed. While a project loads, its saved thumbnail (`/__mografy/projects/thumb`) covers the stage and fades out when the film appears; an error removes it.
+- Audio: every project serves files from `/__mografy/files/`, and the player cached decoded audio by URL, so two projects with the same audio path shared the first one's track. The audio URL now carries a project tag.
+- `extras/cjk/subset-film-fonts.py` subsets each registered font to the characters in `scenes/`, `mografy.json` and the data files (`.json .md .txt .csv`) in `assets/` and `storyboards/`, plus ASCII and the vertical forms `cjk.ts` substitutes; it keeps woff/woff2 compression and the originals, and reports characters the source font lacks. Library code in `assets/` (for example `three.module.js`) is not scanned.
+- Skill: `performance.md` gains an "Opening and switching speed" section, `three-d.md` the shader-compilation rules (constant light count, `compileAsync`, shared textures, no mipmaps on redrawn canvas textures), `cjk-typography.md` the subset step.
+- Measurements (cloud workspace, aesthetic-usability, 74 s Three.js film): first open 45.8 s → 0.5 s; reopen with `verified.json` 0.0 s server time. Player switch between two kept projects 0.8–1.1 s, against 37.5 s for a first load in the same headless browser; the poster showed during the first load and the restored film drew its own frame and audio. Font subset 9.5 MB → 290 KB (346 characters) with identical frames. In that film, baking procedural textures into Cache Storage (project code, not the runtime) cut setup from 13.1 s to 9.6 s with identical frame hashes.
+- New server tests: opening publishes before the trial and the background trial reports a broken setup; a build that passed its background trial reopens from `verified.json`. Validation: server 30/30 and web 14/14 tests passed.
 
 ## Mografy Templates (2026-10-27)
 

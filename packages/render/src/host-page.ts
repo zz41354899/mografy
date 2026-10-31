@@ -93,6 +93,11 @@ class OutputPipeline {
 }
 
 const host = {
+  /** The scene's exported meta and params, without running setup or drawing: what opening a project needs first. */
+  async describe(sceneUrl: string) {
+    const scene = await import(/* @vite-ignore */ sceneUrl) as SceneModule;
+    return JSON.parse(JSON.stringify({ meta: scene.meta, params: scene.params ?? {} })) as { meta: unknown; params: unknown };
+  },
   async load(next: LoadSpec) {
     runtime?.dispose(); canvas?.remove(); pipeline?.dispose(); pipeline = undefined;
     spec = next;

@@ -42,6 +42,24 @@ test('CLI exports through an owned project when no server is running', { timeout
   assert.equal((await readFile(join(dir, 'renders/Local.mp4'))).subarray(4, 8).toString(), 'ftyp');
 });
 
+test('CLI MP4 is H.265 by default and --codec h264 selects H.264 for one export', { timeout: 30_000 }, async t => {
+  const dir = await fixture(t);
+  const manifest = await readFile(join(dir, 'mografy.json'), 'utf8');
+  const hevc = await run(dir, 'mp4', ['-o', 'hevc.mp4']);
+  assert.equal(hevc.code, 0, hevc.stderr);
+  const avc = await run(dir, 'mp4', ['--codec', 'h264', '-o', 'avc.mp4']);
+  assert.equal(avc.code, 0, avc.stderr);
+  // the sample entry's four-character code names the codec
+  const hevcFile = await readFile(join(dir, 'renders/hevc.mp4')), avcFile = await readFile(join(dir, 'renders/avc.mp4'));
+  assert.ok(hevcFile.includes('hvc1') && !hevcFile.includes('avc1'));
+  assert.ok(avcFile.includes('avc1') && !avcFile.includes('hvc1'));
+  assert.equal(await readFile(join(dir, 'mografy.json'), 'utf8'), manifest, 'the override does not change the project');
+  const wrong = await run(dir, 'mp4', ['--codec', 'av1']);
+  assert.equal(wrong.code, 1); assert.match(wrong.stderr, /--codec must be h265 or h264/);
+  const webm = await run(dir, 'webm', ['--codec', 'h264']);
+  assert.equal(webm.code, 1); assert.match(webm.stderr, /--codec is an MP4 option/);
+});
+
 test('CLI closes its owned project when export startup rejects', { timeout: 20_000 }, async t => {
   const dir = await fixture(t, 60);
   const result = await run(dir, 'lottie');

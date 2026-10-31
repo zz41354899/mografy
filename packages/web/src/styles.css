@@ -89,6 +89,8 @@ input[type=number] { font-variant-numeric: tabular-nums; }
 .stage-canvas, .stage-frame { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 /* Each version runs in its own iframe; clicks and keys stay with the stage. */
 .stage-frame { border: 0; pointer-events: none; }
+/* The opening project's saved thumbnail, over the stage until its film appears. */
+.stage-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; z-index: 1; pointer-events: none; background: #000; }
 .scene-scratch { position: fixed; left: 0; top: 0; width: 0; height: 0; border: 0; pointer-events: none; }
 .guides { position: absolute; inset: 0; pointer-events: none; }
 .guides i { position: absolute; border: 1px dashed rgba(255, 255, 255, .35); }
@@ -423,6 +425,7 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 
 .export-job-footer .export-primary, .export-job-download { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 15px; border-radius: 8px; text-decoration: none; }
 .export-job-footer .text-button { color: #a5b9ae; padding: 8px; }
 .export-job-file { margin: 0; color: #b9cfc1; line-height: 1.7; font-size: 13px; overflow-wrap: anywhere; }
+.export-job-note { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
 .export-result-video { display: block; width: 100%; max-height: 265px; border-radius: 7px; background: #09120d; box-shadow: 0 15px 45px #0005; }
 .export-result-mark { width: 112px; height: 112px; display: grid; place-items: center; border-radius: 30px; border: 1px solid #7ca99030; color: #8fb4a1; background: #17413344; }
 .export-result-mark.complete { color: #9cf8c6; border-color: #80efb950; }

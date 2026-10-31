@@ -103,13 +103,18 @@ test('export dialog: four usable formats, keyboard choices, advanced controls an
     await modal.locator('[data-testid=export-job][data-state=done]').waitFor();
     assert.equal(await modal.getByRole('link',{name:'Download',exact:true}).count(),1);
     if(format==='MP4' || format==='WebM') {
-      const video = modal.getByLabel('Exported video');
-      await video.evaluate((element: HTMLVideoElement) => new Promise<void>((done, fail) => {
-        if (element.readyState >= 2) return done();
-        element.addEventListener('loadeddata', () => done(), { once: true });
-        element.addEventListener('error', () => fail(new Error('Exported video cannot play')), { once: true });
-        element.preload = 'auto'; element.load();
-      }));
+      // MP4 is H.265: a browser without HEVC (Chromium on Linux) shows the frame preview and a note instead of a player
+      const hevc = format === 'MP4' && await page.evaluate(() => document.createElement('video').canPlayType('video/mp4; codecs="hvc1.1.6.L93.B0"') === '');
+      if (hevc) await modal.getByText('This browser cannot play the video here', { exact: false }).waitFor();
+      else {
+        const video = modal.getByLabel('Exported video');
+        await video.evaluate((element: HTMLVideoElement) => new Promise<void>((done, fail) => {
+          if (element.readyState >= 2) return done();
+          element.addEventListener('loadeddata', () => done(), { once: true });
+          element.addEventListener('error', () => fail(new Error('Exported video cannot play')), { once: true });
+          element.preload = 'auto'; element.load();
+        }));
+      }
     }
     await modal.getByRole('button',{name:'Done',exact:true}).click();
     await modal.waitFor({state:'hidden'});
@@ -255,6 +260,12 @@ test('export dialog continues through progress, background work, cancellation, f
   await page.getByRole('button',{name:'Export',exact:true}).click();
   const modal = page.getByRole('dialog',{name:'Export animation'});
   await modal.getByRole('group',{name:'MP4 orientation'}).getByRole('button',{name:'Portrait 9:16'}).click();
+  // H.264 so the finished file plays in this test browser whatever its HEVC support; choosing the codec keeps the Quality preset
+  const codec = modal.getByRole('combobox',{name:'Codec',exact:true}), qualityChoice = modal.getByRole('combobox',{name:'Quality',exact:true});
+  const presetBefore = await qualityChoice.innerText();
+  await codec.click(); await codec.press('End'); await codec.press('Enter');
+  assert.equal(await codec.innerText(), 'H.264 · plays everywhere');
+  assert.equal(await qualityChoice.innerText(), presetBefore);
   const quality = modal.getByRole('combobox',{name:'Quality',exact:true});
   await quality.click(); await quality.press('Home'); await quality.press('Enter');
   await page.screenshot({path:join(qa,'settings.png')});

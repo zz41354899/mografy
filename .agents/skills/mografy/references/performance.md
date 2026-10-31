@@ -18,6 +18,17 @@ A Mografy scene draws every frame from scratch, so its cost is paid on every fra
 | A Three.js stage | A WebGL render plus a GPU → CPU copy into the 2D frame on CPU canvases | One stage per film; skip `stage()` while the 3D layer is invisible; keep its size to the area it covers. |
 | `imageSmoothingQuality = 'high'` when scaling a soft buffer up | High-quality resampling of the whole frame | `'low'` for blurred or glow buffers (the layer helpers already do this). |
 
+## Opening and switching speed
+
+Frame cost decides playback; `setup` and the project's files decide how long a project takes to open. The player shows a project as soon as its scene module is read (its trial render runs in the background a few seconds later, and its result is kept in `.mografy/verified.json`, so an unchanged scene reopens without one). It keeps the last two projects loaded, so switching back to one is immediate; what remains is each project's first setup:
+
+| Cost on open | Fix |
+| --- | --- |
+| Every font in `mografy.json` is fetched and parsed. The CJK subsets are about 4–5 MB each. | `python3 extras/cjk/subset-film-fonts.py <project>` keeps only the characters the film draws (about 9.5 MB → 300 KB) and points `mografy.json` at the result. Run it again after every copy change; it always rebuilds from the original fonts. |
+| Procedural textures (paper, wood, noise) drawn pixel by pixel in `setup` | Draw each once and keep it: store the canvas as a PNG in Cache Storage under a key that includes a version number, decode it on later opens, and draw it again when the cache is empty (exports and checks start with none, so frames stay identical). Bump the version when the generator changes. |
+| `getImageData` on a canvas you just drew, to add noise | It waits for the GPU and copies the canvas back. Fill a `new ImageData(w, h)` yourself and `putImageData` it, or draw the noise with shapes. |
+| A 3D stage: shader compilation and texture uploads | See **Cost** in [three-d.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/three-d.md): keep the light count constant, `compileAsync` in setup, share textures. |
+
 ## Coordinates and units
 
 The runtime gives scenes a logical context (`ctx.canvas`, `ctx.withCanvas`) whose units are film pixels: it scales transforms, `shadowBlur`, shadow offsets and filter lengths by the output scale for you. Two things it cannot do:

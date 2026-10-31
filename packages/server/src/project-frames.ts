@@ -34,7 +34,7 @@ export class ProjectFrames {
   scheduleThumbnail(capture: () => Promise<unknown>) {
     this.cancelThumbnail();
     if (this.closed) return;
-    this.timer = setTimeout(() => { void capture().catch(() => {}); }, 300);
+    this.timer = setTimeout(() => { void capture().catch(() => {}); }, 1500);   // after the player has loaded
     this.timer.unref();
   }
 

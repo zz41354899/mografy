@@ -206,13 +206,14 @@ Export from the player or CLI:
 
 ```sh
 mografy export ./projects/my-animation --format mp4
+mografy export ./projects/my-animation --format mp4 --codec h264
 mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
 
-MP4 uses H.264 video and AAC audio. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
+MP4 uses H.265 (HEVC) video and AAC audio by default. In tests on a 3D paper-texture film and a 2D motion film, H.265 at the same CRF matched H.264's quality at 50–58 % of the file size and took the same time to encode (Encoder speed Slow uses x265's medium preset, which is as fast as x264's slow). The file is tagged `hvc1`, so it plays in QuickTime, Safari, iOS and Android, Chrome and Edge, and uploads to YouTube, Instagram and TikTok. Firefox and some Windows PCs play HEVC only with hardware support or the HEVC Video Extensions, so for a website `<video>` or files sent to unknown players choose **Codec → H.264** in the Export dialog, pass `--codec h264`, or set `"codec": "h264"` under `render` in `mografy.json`. MP4 CRF and bitrate are on the H.264 scale for both codecs. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
 
 WebM quality presets:
 
@@ -235,7 +236,7 @@ python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation
 python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4 --target-mb 10 -o ./projects/my-animation/renders/film-share.mp4
 ```
 
-The default writes a separate `film-compressed.mp4` using CRF 23 and retains audio. `--target-mb` uses two passes and checks the actual decimal MB limit. Existing files are never overwritten; candidates that do not reduce size are discarded. See the [compression reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) for quality, resolution, dependency overrides, and result verification. The maintained script is `scripts/compress-video.py`; `pnpm sync:skills` copies it into the shared Skill for both Codex and Claude.
+The default writes a separate H.265 `film-compressed.mp4` using CRF 23 (H.264 scale) and retains audio; `--codec h264` writes H.264. `--target-mb` uses two passes and checks the actual decimal MB limit. Existing files are never overwritten; candidates that do not reduce size are discarded. See the [compression reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) for quality, resolution, dependency overrides, and result verification. The maintained script is `scripts/compress-video.py`; `pnpm sync:skills` copies it into the shared Skill for both Codex and Claude.
 
 The player's Export dialog offers these output sizes:
 

@@ -13,6 +13,23 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-10-31
+
+### Changed
+
+- **MP4 exports use H.265 (HEVC) by default** — about half the file size at the same look (50–58 % of the H.264 size at the same CRF in tests on a 3D paper-texture film and a 2D motion film). Files are tagged `hvc1`, so they play in QuickTime, Safari, iOS and Android, Chrome and Edge, and upload to YouTube, Instagram and TikTok. Firefox and some Windows PCs play HEVC only with hardware or the HEVC Video Extensions; for a website `<video>` or files sent to unknown players, choose **Codec → H.264** in the Export dialog, `mografy export --codec h264`, or `"codec": "h264"` under `render` in `mografy.json`. CRF and bitrate keep their H.264 meaning, so existing projects keep their quality settings. The bundled FFmpeg already includes the encoder; Encoding takes about as long as before: the `slow` encoder speed uses x265's `medium` preset, which is as fast as x264's `slow` and already compresses better.
+- **The compression helper also writes H.265** by default (`--codec h264` for the previous output).
+- **Projects open without waiting for the trial render.** Opening reads the scene's meta and params and shows the film at once; the full trial render runs a few seconds later in the background and still reports a broken scene. Its result is saved in `.mografy/verified.json`, so an unchanged scene reopens with no Chromium work at all. Edits still wait for their trial, so a broken edit never replaces a working version. Opening the 74-second 3D film *aesthetic-usability* went from 45.8 s to 0.5 s in the test workspace.
+- **Switching between projects** — the player keeps the last two projects loaded (hidden), so switching back to one of them is immediate (about 1 s instead of a full setup), and a project that is still loading shows its saved thumbnail instead of the previous film. Thumbnails are captured a little later, so they no longer compete with the player for the machine.
+
+### Added
+
+- **`extras/cjk/subset-film-fonts.py <project>`** shrinks a project's fonts to the characters its film draws (the CJK pair goes from about 9.5 MB to 300 KB) and points `mografy.json` at the result; the original fonts stay. Run it again after copy changes. The Skill's performance, CJK and 3D references now cover opening speed: font subsets, caching procedural textures, and keeping the Three.js light count constant.
+
+### Fixed
+
+- **The wrong soundtrack after switching projects** — two projects whose audio had the same file name played the first project's track, because the player cached decoded audio by path alone. Audio is now cached per project.
+
 ## 2026-10-29
 
 ### Changed

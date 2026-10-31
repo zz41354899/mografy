@@ -82,6 +82,12 @@ export const renderSettingsSchema = z.strictObject({
   bitrate: z.string().regex(/^\d+(\.\d+)?[kM]$/).default('12M'),
   glow: z.number().finite().min(0).max(1).default(0.12),
   grain: z.number().finite().min(0).max(0.1).default(0.008),
+  /**
+   * MP4 video codec (WebM is always VP9). H.265 / HEVC keeps the same look in a markedly smaller file and plays in
+   * QuickTime, Safari, Chrome, Edge, phones and social uploads; H.264 also plays in Firefox, older players and
+   * Windows PCs without HEVC support.
+   */
+  codec: z.enum(['h265', 'h264']).default('h265'),
   encoding: z.enum(['two-pass', 'crf']).default('two-pass'),
   preset: z.enum(['ultrafast', 'veryfast', 'fast', 'medium', 'slow']).default('medium'),
   crf: z.number().int().min(0).max(51).default(18),
@@ -92,6 +98,19 @@ export const exportFormatSchema = z.enum(['mp4', 'webm', 'lottie', 'svga']);
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
 export type VideoFormat = Extract<ExportFormat, 'mp4' | 'webm'>;
 export const isVideoFormat = (format: ExportFormat): format is VideoFormat => format === 'mp4' || format === 'webm';
+/**
+ * MP4 `crf` and `bitrate` are on the H.264 scale (the numbers existing projects and the quality presets use). Measured
+ * on lossless masters of a 3D paper-texture film and a 2D motion film (docs/STATUS.md, 2026-10-31), libx265 at the
+ * same CRF matched libx264's quality at 50–58 % of the size, so the CRF carries over unchanged; a two-pass target
+ * takes 0.6 of the bitrate, a little above that ratio, so H.265 is never worse than the H.264 target.
+ */
+export const HEVC_EQUIVALENT = { crfOffset: 0, bitrateScale: 0.6 } as const;
+/** The libx265 CRF and bitrate that match these H.264-scale settings. */
+export function hevcQuality(settings: Pick<RenderSettings, 'crf' | 'bitrate'>) {
+  const [, value, unit] = /^(\d+(?:\.\d+)?)([kM])$/.exec(settings.bitrate)!;
+  const kbps = Math.max(1, Math.round(Number(value) * (unit === 'M' ? 1000 : 1) * HEVC_EQUIVALENT.bitrateScale));
+  return { crf: Math.min(51, settings.crf + HEVC_EQUIVALENT.crfOffset), bitrate: `${kbps}k` };
+}
 /** WebM uses quality-based VP9 by default rather than inheriting the MP4 bitrate target. */
 export const WEBM_DEFAULTS = { encoding: 'crf', crf: 32, preset: 'medium' } as const;
 export const EXPORT_MAX_FPS = { mp4: 60, webm: 60, lottie: 30, svga: 30 } as const;
@@ -125,6 +144,7 @@ export const renderOverridesSchema = z.strictObject({
   bitrate: renderSettingsSchema.shape.bitrate.unwrap().optional(),
   glow: renderSettingsSchema.shape.glow.unwrap().optional(),
   grain: renderSettingsSchema.shape.grain.unwrap().optional(),
+  codec: renderSettingsSchema.shape.codec.unwrap().optional(),
   encoding: renderSettingsSchema.shape.encoding.unwrap().optional(),
   preset: renderSettingsSchema.shape.preset.unwrap().optional(),
   crf: renderSettingsSchema.shape.crf.unwrap().optional(),

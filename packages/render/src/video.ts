@@ -1,8 +1,8 @@
-// Video output: parallel segment capture → FFV1 segments → lossless concat → H.264/AAC MP4 or VP9/Opus WebM.
+// Video output: parallel segment capture → FFV1 segments → lossless concat → H.265 (or H.264)/AAC MP4 or VP9/Opus WebM.
 import { access, copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
-import { outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
+import { hevcQuality, outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
 import type { ExportSize, SceneProject, VideoFormat } from '@mografy/core';
 import type { SceneBuild } from './build.js';
 import { runFfmpeg, startFfmpeg } from './ffmpeg.js';
@@ -87,25 +87,33 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
     // Two-pass target bitrate from the same master; audio joins on pass 2 only.
     job.onProgress?.(frames, frames, 'encode');
     const length = frames / settings.fps;
-    const passlog = join(work, webm ? 'vp9' : 'x264');
-    const twoPass = settings.encoding === 'two-pass';
-    const codec = webm
+    const twoPass = settings.encoding === 'two-pass', hevc = !webm && settings.codec === 'h265';
+    // crf and bitrate are on the H.264 scale; H.265 gets the values that keep the same look (HEVC_EQUIVALENT).
+    const quality = hevc ? hevcQuality(settings) : { crf: settings.crf, bitrate: settings.bitrate };
+    // libx265 ignores -pass / -passlogfile, so its passes go through -x265-params; the stats file is named relative
+    // to the work folder (FFmpeg runs there), because the option list is colon-separated.
+    const codec = (pass?: 1 | 2) => webm
       ? ['-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', String({ ultrafast: 8, veryfast: 6, fast: 4, medium: 2, slow: 1 }[settings.preset]), '-row-mt', '1',
-        ...(twoPass ? ['-b:v', settings.bitrate] : ['-b:v', '0', '-crf', String(settings.crf)])]
-      : ['-c:v', 'libx264', '-preset', settings.preset, ...(twoPass ? ['-b:v', settings.bitrate] : ['-crf', String(settings.crf)])];
-    const video = [...codec, '-pix_fmt', 'yuv420p',
+        ...(twoPass ? ['-b:v', quality.bitrate] : ['-b:v', '0', '-crf', String(quality.crf)]), '-passlogfile', join(work, 'vp9'), ...(pass ? ['-pass', String(pass)] : [])]
+      : hevc
+        // x265 `medium` takes about as long as x264 `slow` and already compresses better; x265 `slow` took 2.4× as long
+        // for a slightly larger, marginally sharper file, so `slow` encodes with `medium`.
+        ? ['-c:v', 'libx265', '-preset', settings.preset === 'slow' ? 'medium' : settings.preset, ...(twoPass ? ['-b:v', quality.bitrate] : ['-crf', String(quality.crf)]),
+          '-x265-params', ['log-level=error', ...(pass ? [`pass=${pass}`, 'stats=x265.log'] : [])].join(':'), '-tag:v', 'hvc1']
+        : ['-c:v', 'libx264', '-preset', settings.preset, ...(twoPass ? ['-b:v', quality.bitrate] : ['-crf', String(quality.crf)]), '-passlogfile', join(work, 'x264'), ...(pass ? ['-pass', String(pass)] : [])];
+    const video = (pass?: 1 | 2) => [...codec(pass), '-pix_fmt', 'yuv420p',
       '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
       '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-      '-r', String(settings.fps), '-passlogfile', passlog];
-    if (twoPass) await runFfmpeg(['-i', master, '-an', ...video, '-pass', '1', '-f', webm ? 'null' : 'mp4', '-y', nullDevice], job.signal);
+      '-r', String(settings.fps)];
+    if (twoPass) await runFfmpeg(['-i', master, '-an', ...video(1), '-f', webm ? 'null' : 'mp4', '-y', nullDevice], job.signal, work);
     const audio = project.audio && settings.includeAudio ? resolve(job.projectDir, project.audio.path) : undefined;
     if (audio && !await exists(audio)) throw new Error(`Audio not found: ${project.audio!.path}`);
     const partial = join(work, `out.${format}`);
     await runFfmpeg([
       '-i', master, ...(audio ? ['-i', audio] : []),
       '-map', '0:v:0', ...(audio ? ['-map', '1:a:0', '-af', `volume=${project.audio!.gain},apad,atrim=0:${length}`, '-c:a', webm ? 'libopus' : 'aac', '-b:a', webm ? '128k' : '192k'] : ['-an']),
-      ...video, ...(twoPass ? ['-pass', '2'] : []), '-t', String(length), ...(webm ? [] : ['-movflags', '+faststart']), '-y', partial,
-    ], job.signal);
+      ...video(twoPass ? 2 : undefined), '-t', String(length), ...(webm ? [] : ['-movflags', '+faststart']), '-y', partial,
+    ], job.signal, work);
     await mkdir(dirname(output), { recursive: true });
     await rename(partial, output).catch(async error => {
       if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;

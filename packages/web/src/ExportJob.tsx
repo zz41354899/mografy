@@ -24,6 +24,9 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
   const { stopped, error, cancel } = useExportCancellation(job, session);
   const [now, setNow] = useState(Date.now());
   const title = useRef<HTMLHeadingElement>(null);
+  // A browser without H.265 support either reports an error or plays only the sound with an empty picture.
+  const [unplayable, setUnplayable] = useState(false);
+  useEffect(() => { setUnplayable(false); }, [job.id]);
   useEffect(() => { title.current?.focus(); }, [job.id, job.state]);
   useEffect(() => {
     if (!running) return;
@@ -37,7 +40,8 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
   return <div className={`export-job-view ${ready ? 'is-ready' : failed ? 'is-failed' : !running ? 'is-cancelled' : 'is-rendering'}`} data-testid="export-job" data-state={job.state}>
     <div className="export-job-scene">
       <div className="export-job-art">
-        {running ? <ExportMascot paused={stopped} /> : ready && isVideoFormat(job.format) ? <video className="export-result-video" src={url} controls playsInline preload="metadata" aria-label="Exported video" />
+        {running ? <ExportMascot paused={stopped} /> : ready && isVideoFormat(job.format) && !unplayable ? <video className="export-result-video" src={url} controls playsInline preload="metadata" aria-label="Exported video"
+            onError={() => setUnplayable(true)} onLoadedMetadata={e => { if (!e.currentTarget.videoWidth) setUnplayable(true); }} />
           : ready && preview ? <ExportPreview {...preview} label="Export frame preview" />
           : <div className={`export-result-mark ${ready ? 'complete' : ''}`} aria-hidden="true">{ready ? <CheckIcon size={48} weight="bold" /> : failed ? <WarningCircleIcon size={48} /> : <PauseIcon size={44} />}</div>}
       </div>
@@ -50,6 +54,7 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
         <ExportProgressBar percentage={percentage} indeterminate={indeterminate} />
         <div className="export-job-detail"><span>{job.done.toLocaleString()} / {job.total.toLocaleString()} frames</span><time title="Elapsed time">{clock(elapsed)}</time></div>
       </> : ready ? <p className="export-job-file" title={filename}>{filename}</p> : null}
+      {ready && unplayable ? <p className="export-job-note" role="status">This browser cannot play the video here. The file is fine: open it in QuickTime, a phone or a video player, or export with Codec H.264 for this browser.</p> : null}
       {job.error || error || requestError ? <p className="export-job-error" role="alert">{requestError || error || job.error}</p> : null}
       {running && session.connection !== 'connected' ? <p className="export-job-error" role="status">Reconnecting…</p> : null}
       <div className="export-job-footer">

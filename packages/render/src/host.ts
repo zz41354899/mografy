@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { build as esbuild } from 'esbuild';
 import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
+import { parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
 import type { ExportSize, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
 import type { Cell, HostApi, LoadSpec, SheetSpec } from './host-page.js';
 import type { SceneBuild } from './build.js';
@@ -261,6 +262,31 @@ export class SceneHost {
   }
 
   /** Load in Chromium, validate exports and params, run setup and a trial render. */
+  /**
+   * Meta and parameter definitions read from the module's exports, validated exactly as the runtime does, without
+   * setup or a frame: seconds faster than `inspect` for 3D scenes, whose headless WebGL is software. Opening a
+   * project uses this and runs the full trial afterwards in the background.
+   */
+  async describe(build: SceneBuild, project: SceneProject): Promise<LoadedScene> {
+    const sceneUrl = this.register(build);
+    const context = await this.context();
+    const page = await context.newPage();
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    try {
+      await page.goto(`${this.origin}/`, { timeout: hostTimeouts.load });
+      await page.waitForFunction(() => 'mografyHost' in window, undefined, { timeout: hostTimeouts.load });
+      const raw = await bounded(page.evaluate(url => window.mografyHost.describe(url), sceneUrl), hostTimeouts.load,
+        `Loading the scene module did not finish within ${seconds(hostTimeouts.load)}.`, () => context.close());
+      const meta = sceneMetaForAspect(sceneMetaSchema.parse(raw.meta), project.aspectRatio), params = parameterDefinitionsSchema.parse(raw.params);
+      resolveParams(params, project.params ?? {});
+      return { meta, params, width: meta.width, height: meta.height };
+    } catch (error) {
+      const detail = cleanError(error).message;
+      throw new Error(errors.length && !detail.includes(errors[0]!) ? `${detail}\n${errors.join('\n')}` : detail);
+    } finally { await context.close().catch(() => {}); }
+  }
+
   async inspect(build: SceneBuild, project: SceneProject) {
     const page = await this.open(build, project, { params: {} });
     try {

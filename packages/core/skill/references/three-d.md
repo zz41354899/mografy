@@ -75,4 +75,9 @@ export function renderFrame(ctx: FrameContext, time: number) {
 - A stage costs a WebGL render plus a copy into the 2D frame on every frame it is drawn. Use one stage per film and reuse it across shots; skip `stage()` entirely while the 3D layer is fully hidden.
 - Size the layer to the area it covers (`width`, `height`, `x`, `y`) instead of the full frame when the object is small.
 - Keep geometry and materials built in `setup`; per frame, only set transforms and uniforms. Large particle fields belong in one `Points` geometry whose positions a shader or one buffer update moves, not in thousands of meshes.
+- **Opening cost** is shader compilation and texture upload, paid once in setup and again whenever the shader set changes:
+  - Never toggle a light's `visible`, add or remove lights, or switch `castShadow` during the film: a different light count recompiles every material, a pause of seconds on the first frame of that shot. Fade a light with `intensity` (0 when off) instead; keep `castShadow` fixed.
+  - End the `build` callback with `await renderer.compileAsync?.(scene, camera)` (make `build` async) so shaders compile in parallel during setup rather than on the first frames.
+  - Create one texture for identical objects and share it; keep repeating textures at the size they are seen (256–512 px for small props). Set `generateMipmaps = false` on canvas textures that are redrawn during the film.
+  - Move objects offstage instead of toggling `visible` when they leave for a few shots, if toggling changes what is compiled.
 - Bloom and glow around 3D objects go through the runtime's `bloom` on the 2D side, or a single post pass; see [performance.md](performance.md). Run `mografy check` after adding the stage and compare the frame cost with and without it.

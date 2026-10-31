@@ -11,6 +11,8 @@ export interface Flags {
   format?: ExportFormat | 'html' | undefined;
   orientation?: 'landscape' | 'portrait';
   resolution?: '720p' | '1080p';
+  /** MP4 video codec for this export; the project's setting otherwise. */
+  codec?: 'h265' | 'h264';
   cancel: boolean;
   updateCheck: boolean;
   /** `mografy add`: replace files that differ from the extra. */
@@ -32,6 +34,7 @@ export function parse(argv: string[]) {
     else if (value === '--video') flags.video = argv[++i];
     else if (value === '--format') { const v = argv[++i]; flags.format = v === 'html' ? 'html' : exportFormatSchema.parse(v); }
     else if (value === '--orientation') { const v = argv[++i]; if (v !== 'landscape' && v !== 'portrait') throw new Error('--orientation must be landscape or portrait'); flags.orientation = v; }
+    else if (value === '--codec') { const v = argv[++i]?.toLowerCase().replace(/^hevc$/, 'h265').replace(/^avc$/, 'h264'); if (v !== 'h265' && v !== 'h264') throw new Error('--codec must be h265 or h264'); flags.codec = v; }
     else if (value === '--resolution') { const v = argv[++i]; if (v !== '720p' && v !== '1080p') throw new Error('--resolution must be 720p or 1080p'); flags.resolution = v; }
     else if (value.startsWith('-') && value !== '-h' && value !== '--help' && value !== '--version') throw new Error(`Unknown option: ${value}`);
     else rest.push(value);

@@ -29,8 +29,9 @@ export function useScenePlayer(stage: RefObject<HTMLDivElement | null>, snapshot
     let cancelled = false;
     const previous = player.version;
     // A project always opens at 0s; live edits to the same project keep the playhead where it is.
-    if (started.current !== dir) { player.pause(); player.seek(0); }
-    void player.load(version, project, values).then(() => {
+    // Opening another project: its saved thumbnail covers the stage until its film is ready.
+    if (started.current !== dir) { player.pause(); player.seek(0); player.showPoster(`/__mografy/projects/thumb?dir=${encodeURIComponent(dir)}`); }
+    void player.load(version, project, values, dir).then(() => {
       if (cancelled) return;
       setError('');
       // A project opens paused; it plays only when asked.
@@ -40,7 +41,7 @@ export function useScenePlayer(stage: RefObject<HTMLDivElement | null>, snapshot
         clearTimeout(messageTimer.current);
         messageTimer.current = setTimeout(() => setMessage(''), 2600);
       }
-    }, error => { if (!cancelled) setError(error instanceof Error ? error.message : String(error)); });
+    }, error => { if (!cancelled) { player.hidePoster(); setError(error instanceof Error ? error.message : String(error)); } });
     return () => { cancelled = true; };
   }, [player, dir, version, spec]);
   useEffect(() => { player?.setParams(values); }, [player, values]);

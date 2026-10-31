@@ -45,6 +45,20 @@ test('quality changes preserve fps and size, and custom keeps manual values', ()
   assert.deepEqual(draft.formats.mp4.size, { width: 720, height: 1280, fit: 'contain' });
 });
 
+test('MP4 codec starts from the project and choosing it keeps the quality preset', () => {
+  let draft = createExportDraft(meta, project.render);
+  assert.equal(draft.formats.mp4.settings.codec, 'h265');
+  draft = exportDraftReducer(draft, { type: 'quality', quality: 'high', base: project.render });
+  draft = exportDraftReducer(draft, { type: 'patch', settings: { codec: 'h264' } });
+  assert.equal(draft.formats.mp4.settings.codec, 'h264');
+  assert.equal(draft.formats.mp4.quality, 'high');
+  assert.equal(exportRequestSchema.safeParse({ format: 'mp4', render: draft.formats.mp4.settings }).success, true);
+  draft = exportDraftReducer(draft, { type: 'patch', settings: { codec: 'h265', crf: 20 } });
+  assert.equal(draft.formats.mp4.quality, 'custom');
+  const h264 = createExportDraft(meta, validateSceneProject({ version: 1, name: 'Old', scene: 'scenes/main.ts', render: { codec: 'h264' } }).render);
+  assert.equal(h264.formats.mp4.settings.codec, 'h264');
+});
+
 test('WebM starts with VP9 quality settings and retains its own orientation and quality', () => {
   let draft = createExportDraft(meta, project.render);
   assert.equal(draft.formats.webm.settings.encoding, 'crf');
