@@ -1,6 +1,6 @@
 ---
 name: mografy
-description: Make, edit, review and export Mografy Canvas animations (projects with mografy.json), plan their storyboards and scores, and compress exported videos with the bundled Python helper; also develop the Mografy repository. Use when a folder has mografy.json, or the user asks for a motion graphic, product demo from screenshots, teaser, logo reveal, explainer, social video, slides or Present mode, or says 做動畫、動態影片、宣傳片、產品示範、分鏡、動態簡報、配樂、匯出 MP4、壓縮影片.
+description: Make, edit, review and export Mografy Canvas animations (projects with mografy.json), plan their storyboards and scores, and compress exported videos with the bundled Python helper; also develop the Mografy repository. Use when a folder has mografy.json, or the user asks for a motion graphic, product demo from screenshots, teaser, logo reveal, explainer, paper theatre (紙劇場、紙偶、定格), social video, slides or Present mode, or says 做動畫、動態影片、宣傳片、產品示範、分鏡、動態簡報、配樂、匯出 MP4、壓縮影片.
 ---
 
 # Mografy
@@ -36,6 +36,7 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 | Camera moves on stills or key art, wipes, atmosphere | [camera-transitions.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) | `mografy add cinema <project>` |
 | Chinese or Japanese copy, vertical text | [cjk-typography.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | `mografy add cjk <project>` |
 | Real 3D: a product that turns, depth, orbiting camera | [three-d.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/three-d.md) | `mografy add three <project>` |
+| Paper theatre, 紙劇場, 紙偶, 定格, a narrated concept explainer (心理學、效應), or a character puppet story | [examples.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) (Paper theatre series) | `mografy add paper-theatre-shadow <folder>` for an explainer, `paper-theatre-moon-rabbit` / `paper-theatre-sea-moon` for a character film: study it, then build your own |
 | Music wanted and no track supplied | [music.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/music.md) | `mografy add music <project>` |
 | Slides, 簡報, Present mode, marking shots | [presentations.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/presentations.md) | The scene's beat table |
 | Aspect ratio, 9:16, export sizes and formats | [output.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | `mografy.json` `aspectRatio` |
