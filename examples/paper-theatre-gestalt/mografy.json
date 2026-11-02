@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "name": "格式塔心理學｜Gestalt Psychology",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 11,
+  "params": {
+    "motion": "stop-motion"
+  },
+  "fonts": [
+    {
+      "family": "Noto Sans CJK TC",
+      "path": "assets/NotoSansCJKtc-Medium-subset-film.otf",
+      "weight": 500
+    },
+    {
+      "family": "Noto Serif CJK TC",
+      "path": "assets/NotoSerifCJKtc-Bold-subset-film.otf",
+      "weight": 700
+    }
+  ],
+  "audio": {
+    "path": "assets/narration.mp3",
+    "bpm": 60,
+    "offset": 0,
+    "beatsPerBar": 4,
+    "gain": 1
+  },
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 1,
+    "mixing": "srgb",
+    "bitrate": "14M",
+    "glow": 0,
+    "grain": 0,
+    "encoding": "crf",
+    "preset": "slow",
+    "crf": 16,
+    "includeAudio": true
+  },
+  "review": {
+    "times": [
+      0.3,
+      2,
+      4.2,
+      5.2,
+      6,
+      8,
+      10.8,
+      13,
+      15.3,
+      17.9,
+      19.3,
+      20.4,
+      21.5,
+      24.4,
+      26.8,
+      29.6,
+      31.8,
+      33.4,
+      34.8,
+      36.4,
+      37.5,
+      38.2,
+      41.2,
+      43,
+      44,
+      45.2,
+      46.6,
+      48.6,
+      50,
+      52,
+      53.1,
+      54.4,
+      56,
+      58.6,
+      60.2,
+      61.5,
+      63,
+      65.4,
+      67,
+      68.5,
+      70.2,
+      72,
+      74,
+      76.4
+    ],
+    "transitions": []
+  }
+}

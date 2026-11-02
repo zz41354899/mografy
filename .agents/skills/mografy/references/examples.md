@@ -28,6 +28,30 @@ The copy is an ordinary project: open it with `mografy dev <folder>`, and edit, 
 | [follow-interaction](https://github.com/zz41354899/mografy/blob/main/examples/follow-interaction/scenes/main.ts) | 8 s loop, 16:9, English UI | One micro-interaction done carefully: a button whose width and label spring between states, a ripple, a confirmation | `state` (spring), the button, the labels, `cursor` |
 | [mografy-brand](https://github.com/zz41354899/mografy/blob/main/examples/mografy-brand/scenes/main.ts) | 8 s, 16:9, logo only | A logo reveal from the official paths: the ribbon drawn by one stroke, the arches rising, the wordmark letter by letter | the three numbered steps in `renderFrame`, `LOGO_PIECES` |
 
+## Paper theatre series
+
+Five narrated Traditional Chinese explainers (74–85 s) set in one desk paper theatre built in Three.js: card puppets and props on strings, one brass lamp whose real shadows carry the idea, stop-motion on 2s with a seeded boil (param `motion`: `stop-motion` or `smooth`), three acts, full-frame 2D inserts, subtitles timed from the narration. Read them when a brief asks for 紙劇場, 紙偶, 定格, a psychology or concept explainer with narration, or a handmade look. Each has its rules in `style.md`, its shots in `storyboards/storyboard.md`, and `storyboards/timing.py` → `cues.json` for the narration timing (bring your own narration take). They have narration instead of music.
+
+| Film | The idea in props | Where to look |
+| --- | --- | --- |
+| [paper-theatre-shadow](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-shadow/scenes/main.ts) | 陰影心理學: one bulb moves and the shadow answers; four trait tokens live in the shadow's head. The first of the series: the theatre, lamp and post grade the others reuse | `world.ts` `buildWorld` (box, proscenium, lamp, desk), `makePost` (depth of field, ACES, grain), `step` (stop-motion), the shot table in `main.ts` |
+| [paper-theatre-gestalt](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-gestalt/scenes/main.ts) | 格式塔心理學: card fragments whose shadows lock into a face from one lamp position only; six laws in an ink-papered Act II | `projPoint` and the lamp positions `L_FACE` / `L_RUBIN` / `L_PRAG` (real 3D projection), the six-law layout |
+| [paper-theatre-aesthetic-usability](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-aesthetic-usability/scenes/main.ts) | 美即好用效應: two cardboard ATMs, 2D interfaces inside the screens, 3D reactions outside; the camera passes through a screen into full-frame 2D | `ui.ts` (`paintScreen`, `skin`, `wire`), `EYE` (the lamp at the viewer's eye) |
+| [paper-theatre-ringelmann](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-ringelmann/scenes/main.ts) | 林格曼效應: one rope, a brass dynamometer, a 3D needle against a 2D target needle; acts change under full-frame 2D, never in a blackout | `dialAngle`, `ROPE_*` / `MINI` (rope and dials), the 2D cover transitions |
+| [paper-theatre-adhd](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-adhd/scenes/main.ts) | 不聽使喚的燈 (ADHD): a spotlight on a brass track against a 2D ring where the puppet wants to look; the gap closes but never quite meets | `TRACK`, `tapePositions`, `bake` / `loadBaked` (texture cache) |
+
+
+Four character films use the same paper theatre language with a printed puppet instead of narration: a flat card on a rod or threads, replacement animation (one card per pose or emotion, flips face → edge → back over three poses), things leave on their mechanism (pulled up on strings, slid into the wings, curtains), cuts on the bar grid of a composed score (`music-src/compose.py`). Read them for 角色, 偶像, 童話 or story briefs.
+
+| Film | Length and look | Where to look |
+| --- | --- | --- |
+| [paper-theatre-moon-rabbit](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-moon-rabbit/scenes/main.ts) | 25 s, 2D paper toy theatre seen from the audience; one paper moon travels the film; param `motion` | `lib.ts` (stacked cardstock theatre, `Puppet`, strings, drapes, footlights), the shot table and `cameraPath` in `main.ts` |
+| [paper-theatre-moon-rabbit-story](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-moon-rabbit-story/scenes/main.ts) | 60 s, same 2D theatre as a story; vertical story cards on strings, light level follows the story | `story.ts` (story cards, the hall ground row), `promo.ts` reused through a time map (`toPromo`) |
+| [paper-theatre-moon-rabbit-opera](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-moon-rabbit-opera/scenes/main.ts) | 60 s, the theatre built in real 3D inside an opera house, cut against flat 2D inserts | `world3d.ts` (`resetWorld`, `setHouse`, drapes, shadows drawn once per frame), `paper.ts` (`dieCut`, `on2`, 2D inserts, `chapterCard`) |
+| [paper-theatre-sea-moon](https://github.com/zz41354899/mografy/blob/main/examples/paper-theatre-sea-moon/scenes/main.ts) | 72 s, full 3D undersea castle; the puppet is a printed card on threads, swapped by emotion; real dissolves | `world.ts` (cards, rim and mask passes), `castle.ts`, `theatre.ts` (pearl shell theatre), `post.ts`, `DISSOLVE` in `main.ts` |
+
+To make a new one: `mografy add paper-theatre-shadow <folder>` (or the closest film), keep the theatre, lamp, post and stop-motion rules, and replace the props, story, copy and narration with the new idea. For a character film start from the closest of the four and bring your own puppet art (one transparent PNG per pose). Re-subset the fonts after any copy change (`extras/cjk/subset-film-fonts.py`).
+
 ## What to take from them
 
 - **Timing.** One table per film. Change a shot's end there and every key, slide and review time follows.

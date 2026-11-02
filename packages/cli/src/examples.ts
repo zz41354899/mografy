@@ -15,6 +15,15 @@ const CURATED: Record<string, string> = {
   'analytics-product': '8 s UI loop: a click switches the week and a dashboard chart and number update, with a gentle push-in',
   'follow-interaction': '8 s UI loop: a cursor clicks Follow, the button springs into Following, a quiet confirmation',
   'mografy-brand': '8 s logo reveal: a teal stroke draws the ribbon, the arches rise, the wordmark follows',
+  'paper-theatre-shadow': '82 s paper theatre explainer (繁中, narrated): one lamp, real 3D shadows, stop-motion on 2s, three acts',
+  'paper-theatre-gestalt': '78 s paper theatre explainer: card fragments whose shadows lock into a face, six laws in an ink act',
+  'paper-theatre-aesthetic-usability': '74 s paper theatre explainer: two cardboard ATMs, 2D screens inside a 3D theatre',
+  'paper-theatre-ringelmann': '75 s paper theatre explainer: one rope, a brass dial, a 3D needle against a 2D target',
+  'paper-theatre-adhd': '85 s paper theatre explainer: a spotlight on a track against the 2D ring the puppet wants to look at',
+  'paper-theatre-moon-rabbit': '25 s 2D paper toy theatre (繁中, music): a moon-rabbit puppet on a rod, strings, drapes, stop-motion on 2s',
+  'paper-theatre-moon-rabbit-story': '60 s 2D paper theatre story: hanging vertical story cards, the puppet flips to full colour on the downbeat',
+  'paper-theatre-moon-rabbit-opera': '60 s 3D opera house × 2D inserts: a paper toy theatre lit in Three.js, kamishibai cards, curtain call',
+  'paper-theatre-sea-moon': '72 s full 3D undersea castle: a paper puppet on threads, cards swapped by emotion, umbrella becomes a jellyfish',
 };
 /** Never copied: the player's caches and earlier exports. */
 const SKIP = new Set(['.mografy', 'renders', 'node_modules', '.DS_Store']);

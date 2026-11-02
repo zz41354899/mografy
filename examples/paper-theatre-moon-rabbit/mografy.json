@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "name": "Lunar Pop Club No.01 — Paper Puppet Theatre",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 2501,
+  "params": {
+    "motion": "stop-motion"
+  },
+  "fonts": [
+    {
+      "family": "LPC Serif TC",
+      "path": "assets/NotoSerifTC-Bold-paper.otf",
+      "weight": 700
+    },
+    {
+      "family": "LPC Numerals",
+      "path": "assets/LPC-Numerals.ttf",
+      "weight": 400
+    },
+    {
+      "family": "Inter Display",
+      "path": "assets/InterDisplay-SemiBold.otf",
+      "weight": 600
+    }
+  ],
+  "audio": {
+    "path": "assets/lunar-pop-club-120bpm.wav",
+    "bpm": 120,
+    "offset": 0,
+    "beatsPerBar": 4,
+    "gain": 1
+  },
+  "render": {
+    "scale": 1,
+    "workers": 4,
+    "fps": 60,
+    "samples": 4,
+    "mixing": "srgb",
+    "bitrate": "12M",
+    "glow": 0,
+    "grain": 0,
+    "codec": "h265",
+    "encoding": "crf",
+    "preset": "slow",
+    "crf": 14,
+    "includeAudio": true
+  },
+  "review": {
+    "times": [
+      0,
+      0.6,
+      2,
+      4.8,
+      5.7,
+      6,
+      6.3,
+      7,
+      7.5,
+      7.7,
+      8,
+      8.3,
+      9.4,
+      9.6,
+      10,
+      10.4,
+      12,
+      14.6,
+      15.6,
+      16,
+      16.4,
+      17.3,
+      17.6,
+      18,
+      18.4,
+      19.4,
+      19.6,
+      20,
+      20.4,
+      21.2,
+      21.6,
+      22,
+      22.4,
+      23.1,
+      24.5
+    ],
+    "transitions": [
+      {
+        "name": "Cards up, washi screen slides in",
+        "start": 5.2,
+        "end": 6.2,
+        "step": 0.0833
+      },
+      {
+        "name": "Shadow hop and landing",
+        "start": 6,
+        "end": 7.4,
+        "step": 0.0833
+      },
+      {
+        "name": "Screen rolls up, moon lowered",
+        "start": 7.6,
+        "end": 8.8,
+        "step": 0.0833
+      },
+      {
+        "name": "Flats out, backdrop flown in, moon over painted moon",
+        "start": 9.6,
+        "end": 11.6,
+        "step": 0.1667
+      },
+      {
+        "name": "Puppet flips to colour",
+        "start": 11.9,
+        "end": 12.4,
+        "step": 0.0833
+      },
+      {
+        "name": "Moon comes forward and flips into card 01",
+        "start": 15,
+        "end": 16.4,
+        "step": 0.0833
+      },
+      {
+        "name": "Card pull 01 to 02",
+        "start": 17.6,
+        "end": 18.4,
+        "step": 0.0833
+      },
+      {
+        "name": "Card pull 02 to 03",
+        "start": 19.6,
+        "end": 20.4,
+        "step": 0.0833
+      },
+      {
+        "name": "Drapes shut and curtain call",
+        "start": 21.3,
+        "end": 22.8,
+        "step": 0.0833
+      }
+    ]
+  }
+}
