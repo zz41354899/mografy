@@ -10,7 +10,7 @@ import { build as esbuild } from 'esbuild';
 import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
-import type { ExportSize, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
+import type { ExportSize, MotionFrames, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
 import type { Cell, HostApi, LoadSpec, SheetSpec } from './host-page.js';
 import type { SceneBuild } from './build.js';
 
@@ -65,7 +65,9 @@ type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow'
  */
 /** Largest frame or sheet a page may upload; Node buffers cannot hold much more. */
 const UPLOAD_LIMIT = 512 * 1024 ** 2;
-export const hostTimeouts = { load: 30_000, trial: 20_000, frame: 120_000 };
+// The trial allows 60 s: headless WebGL is SwiftShader, which compiles each Three.js pipeline on its first draw, so a
+// lit 3D film's first frame alone can take ~20 s (lunar-pop-club-3d: 19 s at t = 0, 0.7 s once warm).
+export const hostTimeouts = { load: 30_000, trial: 60_000, frame: 120_000 };
 const seconds = (ms: number) => `${Math.round(ms / 100) / 10}s`;
 
 export class SceneTimeoutError extends Error {
@@ -303,6 +305,23 @@ export class SceneHost {
     try {
       return await bounded(page.page.evaluate(() => window.mografyHost.cost()), hostTimeouts.trial,
         `Measuring frames did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); });
+    } finally { await page.close(); }
+  }
+
+  /**
+   * Tiny greyscale frames every `step` seconds over the whole film, for `mografy check --motion`. Drawn at
+   * quarter scale: motion, not detail, is what it measures.
+   */
+  async motionFrames(build: SceneBuild, project: SceneProject, step = 1 / 30, width = 128): Promise<MotionFrames> {
+    const page = await this.open(build, project, { params: {}, renderScale: 0.25 });
+    try {
+      const { duration } = page.scene.meta, count = Math.floor(duration / step + 1e-6) + 1;
+      const times = Array.from({ length: count }, (_, i) => Math.min(duration, Number((i * step).toFixed(4))));
+      const parts: Uint8Array[] = [];
+      for (let i = 0; i < count; i += 240) parts.push(new Uint8Array(await page.motion(times.slice(i, i + 240), width)));
+      const data = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+      parts.reduce((offset, p) => { data.set(p, offset); return offset + p.length; }, 0);
+      return { step, size: data.length / count, data };
     } finally { await page.close(); }
   }
 

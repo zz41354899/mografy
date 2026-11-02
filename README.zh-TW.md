@@ -98,7 +98,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 | [分鏡](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | 鏡頭規劃及各代理環境的視覺分鏡 |
 | [動畫原則](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | 將 12 項動畫原則應用於確定性的 Canvas 動態 |
 | [影片架構](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) | 一個世界、一顆鏡頭、一張鏡頭表：連貫規則、共用幾何交接、以程式碼產生分鏡 |
-| [效能](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | 各種 Canvas 操作的成本、座標與單位，以及 `mografy check` 如何量測每格 |
+| [效能](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | 掉幀與動作卡的分別、各種 Canvas 操作的成本、座標與單位，以及 `mografy check` 如何量測兩者 |
 | [動態設計](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/motion-design.md) | 視覺概念、編排、連貫、節奏、預設品味與設計審閱 |
 | [輸出](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | 畫面比例、9:16 直式、匯出尺寸與格式 |
 | [參考影片](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) | `examples/` 裡的完整影片、各自示範什麼，以及如何複製一部來用 |
@@ -273,6 +273,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 | --- | --- |
 | `mografy dev [project]` | 開啟既有專案的播放器 |
 | `mografy check [project]` | 編譯並試算圖 |
+| `mografy check --motion [project]` | 同時找出跳格、急起步與急停 |
 | `mografy review [project] [--video file.mp4]` | 產生審閱圖片及選用的影片比較 |
 | `mografy export [project] --format mp4\|webm\|lottie\|svga` | 匯出動畫 |
 | `mografy update [--check]` | 更新目前的原始碼安裝，或檢查是否有新版本 |

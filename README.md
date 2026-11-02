@@ -100,7 +100,7 @@ Its English references cover:
 | [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
 | [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
 | [Film architecture](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) | One world, one camera and one shot table: continuity rules, shared-geometry handoffs, storyboard as code |
-| [Performance](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | What each Canvas operation costs, coordinates and units, and how `mografy check` measures frames |
+| [Performance](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | Slow frames versus choppy motion, what each Canvas operation costs, coordinates and units, and how `mografy check` measures both |
 | [Motion design](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/motion-design.md) | Visual concepts, choreography, continuity, rhythm, default taste, and design review |
 | [Output](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | Aspect ratios, 9:16 portrait work, export sizes and formats |
 | [Reference films](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) | The finished films in `examples/`, what each one teaches, and how to copy one |
@@ -275,6 +275,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | --- | --- |
 | `mografy dev [project]` | Open the player for an existing project |
 | `mografy check [project]` | Compile and trial-render |
+| `mografy check --motion [project]` | Also find jumps, hard starts and hard stops |
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
 | `mografy export [project] --format mp4\|webm\|lottie\|svga` | Export the animation |
 | `mografy update [--check]` | Update this source installation, or check for a newer revision |

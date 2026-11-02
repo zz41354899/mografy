@@ -1,6 +1,34 @@
-# Performance: keep every frame cheap
+# Performance: cheap frames and smooth motion
 
-A Mografy scene draws every frame from scratch, so its cost is paid on every frame of the preview and on every sample of an export. The player stays smooth when frames take well under 33 ms at 1920 × 1080; `mografy check` measures the scene and warns above 100 ms, when one frame sets more than eight filters on the frame context, and when re-drawn frames create canvases. Fix those warnings before delivery.
+"It stutters" (卡, 卡卡的, 不順) means one of two different problems. Find out which before changing anything:
+
+| Problem | What you see | How to find it | Fix with |
+| --- | --- | --- | --- |
+| **Slow frames** | The preview drops frames; the same film exported to MP4 plays smoothly | `mografy check`: frame cost, filters per frame, canvases per frame | The cost tables below |
+| **Choppy motion** | The exported MP4 also looks rough: something jumps, starts at full speed or stops dead | `mografy check --motion`: jumps, hard starts and hard stops with their times | **Smooth motion** below, [film-architecture.md](film-architecture.md) and [taste.md](taste.md) |
+
+Most stutter reports on finished films turn out to be choppy motion, not slow frames. Run both checks before delivery.
+
+## Checklist
+
+Slow frames:
+
+- [ ] `mografy check` shows no frame-cost warning: median well under 33 ms at 1920 × 1080 on a desktop, nothing over 100 ms, at most 8 filters per frame, no canvases created per frame.
+- [ ] No `ctx.filter` around a group of draws; groups go through `blurLayer`, type through `blurText` / `blurWords`, light through `bloom`.
+- [ ] Every `layer`, `blurLayer` and `bloom` smaller than about half the frame has `bounds`.
+- [ ] Everything that does not change is made once in `setup`: paths, text layout, UI card textures (cached per visual state), sprites, backgrounds, noise tiles.
+- [ ] No `getImageData` per frame; grain is a small tile drawn as a pattern, not a pixel loop.
+- [ ] One Three.js stage at most, skipped while hidden.
+
+Choppy motion:
+
+- [ ] `mografy check --motion` reports no jump, hard start or hard stop you did not intend.
+- [ ] Each followed object is one track across a handoff: where one shot's version ends, the next one's starts, at the same position, size and colour.
+- [ ] Moves through several poses are one `keys` curve, not separately eased segments.
+- [ ] Entrances use `springs.*` / `spring()` over their whole duration; no entrance moves on its first frame more than on its second.
+- [ ] Fades end at 0, never at a small alpha that then disappears; base colours switch before a wipe finishes covering them.
+- [ ] The camera does not reverse direction every second or two, and holds still during clicks and reading.
+- [ ] A move across more than half the frame takes at least 0.6 s, an exit at least 0.4 s ([taste.md](taste.md)).
 
 ## What costs what on a 2D canvas
 
@@ -16,6 +44,8 @@ A Mografy scene draws every frame from scratch, so its cost is paid on every fra
 | `new Path2D(svgString)`, parsing, `measureText` of fixed copy each frame | Repeated parsing and layout | Build paths, glyph widths and layouts once in `setup` (or as module constants) and read them per frame. |
 | Thousands of separate `fill()` calls | Per-call overhead | Batch shapes of one style into one path; draw particles as a pre-rendered sprite with `drawImage`. |
 | A Three.js stage | A WebGL render plus a GPU → CPU copy into the 2D frame on CPU canvases | One stage per film; skip `stage()` while the 3D layer is invisible; keep its size to the area it covers. |
+| Re-drawing a static UI card (rows, icons, text) every frame | Dozens of fills and glyph runs per card per frame | Draw each card state once into a cached texture and `drawImage` it; a flat card is one draw. |
+| Per-pixel grain or noise each frame | A full-frame loop | A small noise tile as a pattern, offset by `Math.round(time * 30)`, at low alpha. |
 | `imageSmoothingQuality = 'high'` when scaling a soft buffer up | High-quality resampling of the whole frame | `'low'` for blurred or glow buffers (the layer helpers already do this). |
 
 ## Opening and switching speed
@@ -40,9 +70,29 @@ Size every offscreen buffer from the film frame (1920 × 1080 logical × output 
 
 Inside a `layer`, `blurLayer` or `bloom` callback, draw with the context the callback receives. `blurWords`, `riseWords`, `text` and `surface` accept it as their first argument.
 
+## Smooth motion
+
+`mografy check --motion` draws the whole film at 30 frames per second at quarter size and compares each frame with the next. It reports:
+
+| Report | What it usually is | Fix |
+| --- | --- | --- |
+| **Jump**: one frame changes far more than the frames around it | Two tracks that do not meet at a handoff (a dot that ends at one place while the ring starts at another); a colour or element that switches in one frame; a hard cut | Make the followed object one track; animate the switch; keep a cut only when it is a deliberate break (a new act, a drop in the music) |
+| **Hard start**: motion leaves a still frame at full speed | An entrance with no ease-in; an element that appears already moving; a spring whose first frame jumps | `springs.out` / `spring()`; start the move from rest; let a camera move begin up to 0.5 s before the action |
+| **Hard stop**: motion halts at full speed | Separately eased segments chained together; a fade that stops at 0.1 and then vanishes; a spring cut off before it settles; content removed while it is still moving | One `keys` curve through the poses; fade to 0; let springs finish; overlap exits with the next entrance |
+
+Each line lists times: render those frames (`review.times`, or `review.transitions` around them) and look before changing anything. The detector cannot tell a deliberate cut from a mistake, so a cut it reports can stay. It measures change on screen, so a slow move of a large bright shape and a fast move of a small one can read the same; trust the frames, not the number.
+
+Other causes of choppy motion it cannot see: a spring that settles in a third of its duration (the object shoots off, then sits; use the runtime springs), a camera that reverses its zoom every 1.5 s, a ring or caret that hops from letter to letter instead of gliding on a continuous position.
+
+## Canvas gotchas
+
+- `ctx.filter` blur lengths are in destination (device) pixels: scale them by the transform you draw with, not by the buffer's own scale.
+- An opaque full-size `fillRect` on a pooled `OffscreenCanvas` can be dropped by Chromium; cap such a fill's alpha at 0.996.
+- When a wipe or flood changes the base colour, switch the colour slightly before the wipe reaches 1, or one frame flashes the old colour.
+
 ## Measuring
 
-1. Run `mografy check [project]`. It prints `Frame cost at W×H (CPU canvas, N frames): median … ms, slowest … ms at …s` and the warnings.
+1. Run `mografy check [project]`. It prints `Frame cost at W×H (CPU canvas, N frames): median … ms, slowest … ms at …s` and the warnings. Add `--motion` to scan the motion as well; it draws every frame at quarter size (about 15 s for a 60 s film on a cloud CPU).
 2. For the slowest times, find the cause by switching parts off: comment out a layer, a blur or a particle system and check again. The cost is almost always one of the rows above.
 3. When the preview is slow but `mografy check` is fine, check the player: `MOGRAFY_HMR=0 mografy dev` serves the production build of the player instead of the development one.
 

@@ -9,7 +9,7 @@ Read this before a storyboard and again before delivery. These are Mografy's def
 - **One action per shot**, 2.5–4 s per shot for UI and explanation, longer for a reading hold. Two actions at once split attention and neither reads.
 - **Length changes come from holds.** To hit a length, shorten or lengthen still holds; never speed up an action, because a rushed action looks like a glitch. If the copy cannot be read in the requested length, cut copy or say so; do not speed up the whole film.
 - **Camera and cursor.** Start a camera move up to 0.5 s before the action it serves; never move the camera during a click or a reading hold. Give a cursor up to 1.1 s per move on a gentle arc and let it rest on the control before clicking. The eye needs to arrive before the event.
-- **Smooth, not fast.** A move across more than half the frame takes at least 0.6 s, and an exit at least 0.4 s; ease through every key instead of stopping and starting again. A whip that crosses the frame in a few frames reads as a stutter on most screens, even when every frame renders on time.
+- **Smooth, not fast.** A move across more than half the frame takes at least 0.6 s, and an exit at least 0.4 s; ease through every key instead of stopping and starting again. A whip that crosses the frame in a few frames reads as a stutter on most screens, even when every frame renders on time. `mografy check --motion` finds the hard starts, hard stops and jumps ([performance.md](performance.md)).
 - **Overlap cuts.** Start the incoming action 0.2–0.5 s before the outgoing exit ends, so no frame is empty.
 
 ## Type and layout: legible at the size it is watched

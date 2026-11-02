@@ -3,8 +3,8 @@
 import { EventEmitter } from 'node:events';
 import { mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, validateSceneProject } from '@mografy/core';
-import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Snapshot, ServerEvent } from '@mografy/core';
+import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, smoothness, validateSceneProject } from '@mografy/core';
+import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Smoothness, Snapshot, ServerEvent } from '@mografy/core';
 import { buildScene, renderReview, SceneHost } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
 import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
@@ -233,6 +233,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   /** Time frames of the current version in Chromium, for `mografy check`. Advisory: never fails a check. */
   measure() {
     return this.run(async () => { const { project, build } = this.current(); return this.host.measure(build, project); });
+  }
+
+  /** Frame-to-frame change over the whole film, for `mografy check --motion` (see smoothness in core). */
+  motion(): Promise<Smoothness> {
+    return this.run(async () => { const { project, build } = this.current(); return smoothness(await this.host.motionFrames(build, project)); });
   }
 
   /** Submitted sources are compiled and trial-rendered first; only then written to disk. */

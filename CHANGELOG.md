@@ -13,6 +13,13 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-11-01
+
+### Added
+
+- **`mografy check --motion`** finds choppy motion that frame cost cannot see. It draws the whole film at 30 fps at quarter size, compares each frame with the next and lists the times of jumps (one frame changes far more than its neighbours: a pop, two tracks that do not meet, a hard cut), hard starts (motion leaves a still frame at full speed) and hard stops (motion halts at full speed: chained eases, a fade that ends above 0). A deliberate cut may stay. About 15 s for a 60 s film on a cloud CPU.
+- **The Skill's performance reference** now separates slow frames from choppy motion, with a checklist for each, the causes and fixes of each kind of choppy moment, more costly patterns (re-drawing static UI cards, per-pixel grain) and three Canvas gotchas. The Skill runs `mografy check --motion` before delivery.
+
 ## 2026-10-31
 
 ### Changed

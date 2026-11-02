@@ -84,6 +84,7 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
     case 'POST /review': return json(response, 200, await project.review());
     case 'POST /deck': return json(response, 200, await project.exportDeck());
     case 'POST /check': return json(response, 200, await project.check());
+    case 'POST /check/motion': return json(response, 200, await project.motion());
   }
   throw new ApiError(404, 'NOT_FOUND', `Unknown endpoint: ${route}`);
 }

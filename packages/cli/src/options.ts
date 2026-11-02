@@ -17,10 +17,12 @@ export interface Flags {
   updateCheck: boolean;
   /** `mografy add`: replace files that differ from the extra. */
   force: boolean;
+  /** `mografy check`: also scan every frame for jumps, hard starts and hard stops. */
+  motion: boolean;
 }
 
 export function parse(argv: string[]) {
-  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false, force: false };
+  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false, force: false, motion: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i]!;
@@ -29,6 +31,7 @@ export function parse(argv: string[]) {
     else if (value === '--cancel') flags.cancel = true;
     else if (value === '--check') flags.updateCheck = true;
     else if (value === '--force') flags.force = true;
+    else if (value === '--motion') flags.motion = true;
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];

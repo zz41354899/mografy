@@ -430,3 +430,5 @@ export { sceneRuntimeKey } from './scene-inputs.js';
 export { GUIDE, SKILL, SKILL_REFERENCES, sharedSkillFiles, obsoleteStoryboardFiles, projectGuide, isLegacyAgentFile } from './guide.js';
 export { autoShots, storyboardShots, pictureShotEnds, settledStop } from './auto-shots.js';
 export type { AutoShots, AutoShotSource, MotionFrames } from './auto-shots.js';
+export { frameDiffs, smoothness, smoothnessReport, MOTION_LIMITS } from './smoothness.js';
+export type { Smoothness, MotionEvent, MotionEventKind } from './smoothness.js';

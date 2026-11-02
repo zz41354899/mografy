@@ -84,7 +84,7 @@ The scene defines `params`; `mografy.json` stores only user overrides. When a sc
 
 Headless Chromium renders d/2, 0, d, d/4, and d/2 again. Both d/2 pixel hashes must match; otherwise `renderFrame` depends on previous calls and publication is rejected. `Math.random`, `Date.now`, and `performance.now` throw inside `renderFrame`.
 
-Work inside Chromium is bounded because `page.evaluate` has no timeout of its own. `hostTimeouts` in `render/src/host.ts` limits page load plus scene setup to 30 s, the trial to 20 s, and each frame, still, sheet or thumbnail call to 120 s. On a timeout the host closes that page's browser context, which stops the renderer, and the caller receives a scene error naming the likely cause. The project queue continues, the last working version stays published, and `ProjectFrames` replaces a closed cached page on its next use. The player applies the same 30 s limit to setup so a stalled load cannot block later versions.
+Work inside Chromium is bounded because `page.evaluate` has no timeout of its own. `hostTimeouts` in `render/src/host.ts` limits page load plus scene setup to 30 s, the trial (and frame-cost and asset passes) to 60 s, since software WebGL compiles a 3D film's shaders on its first frames, and each frame, still, sheet or thumbnail call to 120 s. On a timeout the host closes that page's browser context, which stops the renderer, and the caller receives a scene error naming the likely cause. The project queue continues, the last working version stays published, and `ProjectFrames` replaces a closed cached page on its next use. The player applies the same 30 s limit to setup so a stalled load cannot block later versions.
 
 ## File watching
 

@@ -7,8 +7,8 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'nod
 import { fileURLToPath } from 'node:url';
 import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
-import { deckSlides, frameCostReport, shotIssues, tempoIssues } from '@mografy/core';
-import type { FrameCost, Snapshot } from '@mografy/core';
+import { deckSlides, frameCostReport, shotIssues, smoothnessReport, tempoIssues } from '@mografy/core';
+import type { FrameCost, Smoothness, Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
@@ -41,6 +41,7 @@ function helpText(color: boolean) {
     ]),
     section('Review and export', [
       row('mografy check <project>', 'Compile and trial-render in Chromium'),
+      row('mografy check --motion <project>', 'Also find jumps, hard starts and hard stops'),
       row('mografy review <project>', 'Create visual-review sheets in renders/'),
       row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
     ]),
@@ -210,7 +211,7 @@ async function dev(dir: string, flags: Flags) {
   }
 }
 
-async function checkProject(dir: string) {
+async function checkProject(dir: string, motion = false) {
   await requireProject(dir);
   console.log(`Checking ${displayPath(dir)}`);
   // Every film keeps its design decisions in style.md, so later sessions keep its look (the Skill writes it).
@@ -247,10 +248,24 @@ async function checkProject(dir: string) {
     const response = await fetch(new URL('/__mografy/check', running.url), {
       method: 'POST', headers: { 'x-mografy-project': encodeURIComponent(await realpath(resolve(dir))) },
     });
-    if (response.status !== 409) return passed(await responseJson<Snapshot>(response));
+    if (response.status !== 409) {
+      passed(await responseJson<Snapshot>(response));
+      if (motion) printMotion(await responseJson<Smoothness>(await fetch(new URL('/__mografy/check/motion', running.url), {
+        method: 'POST', headers: { 'x-mografy-project': encodeURIComponent(await realpath(resolve(dir))) },
+      })));
+      return;
+    }
   }
   const project = await Project.open(dir);
-  try { passed({ ...project.snapshot(), cost: await project.measure().catch(() => undefined) }); } finally { await project.close(); }
+  try {
+    passed({ ...project.snapshot(), cost: await project.measure().catch(() => undefined) });
+    if (motion) printMotion(await project.motion());
+  } finally { await project.close(); }
+}
+
+function printMotion(result: Smoothness) {
+  const { summary, warnings } = smoothnessReport(result);
+  console.log(`${warnings.length ? '!' : '✓'} ${summary}${warnings.map(w => `\n! ${w}`).join('')}`);
 }
 
 function printReview(result: ReviewResult) {
@@ -302,6 +317,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
   if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
   if (flags.force && command !== 'add') throw new Error('--force is only supported by mografy add.');
+  if (flags.motion && command !== 'check') throw new Error('--motion is only supported by mografy check.');
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
     return updateInstallation(workspaceRoot, flags.updateCheck);
@@ -351,7 +367,7 @@ export async function main(argv = process.argv.slice(2)) {
       await createProject(dir);
       console.log(`Created project: ${displayPath(dir)}\nRun \`mografy dev ${displayPath(dir)}\` to open it, then describe the animation to Claude or Codex.`);
       return;
-    case 'check': return checkProject(dir);
+    case 'check': return checkProject(dir, flags.motion);
     case 'review': return reviewProject(dir, flags.video);
     case 'export':
     case 'render': return flags.format === 'html' && !flags.cancel ? exportDeckProject(dir) : exportProject(dir, flags);

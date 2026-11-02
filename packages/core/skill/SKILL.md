@@ -40,7 +40,7 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 | Slides, 簡報, Present mode, marking shots | [presentations.md](references/presentations.md) | The scene's beat table |
 | Aspect ratio, 9:16, export sizes and formats | [output.md](references/output.md) | `mografy.json` `aspectRatio` |
 | Exported file too large to share | [video-compression.md](references/video-compression.md) | `scripts/compress-video.py` |
-| Slow preview, or `mografy check` warns about frame cost | [performance.md](references/performance.md) | The slowest time `mografy check` prints |
+| Slow or choppy playback (卡, 不順, 掉幀), or `mografy check` warns about frame cost or motion | [performance.md](references/performance.md) | `mografy check --motion`: the slowest frames and the choppy moments it prints |
 | Logo sting or short intro; borrowing a built-in motif | [intro.md](references/intro.md), [built-in-components.md](references/built-in-components.md) | The component's source file |
 | Changing Mografy itself | [project.md](references/project.md) | The current checkout |
 
@@ -55,7 +55,7 @@ Each step names its output. Skip steps the request does not need, and say which 
 3. **Storyboard.** Read [storyboard.md](references/storyboard.md) and [animation-principles.md](references/animation-principles.md). First write the film's idea in one sentence: one visual thing that travels through every shot and causes each change (a thread of light that fills each cup in turn, a line that becomes every card's edge). A row of separate cards with crossfades is not an idea; a film without one looks like a template. Then fix the design system (type roles, palette, the layout repeated shots share) as tokens, following [taste.md](references/taste.md), and record it with the film's idea in `style.md`. Output: `style.md`, the shot table in `storyboards/storyboard.md` and a visual board (image generation in Codex, an Artifact or `storyboards/storyboard.html` in Claude). **Stop** here when the user asked only for a storyboard; when they asked for the film, continue without an approval step.
 4. **Build.** One world, one camera, one beat table ([film-architecture.md](references/film-architecture.md)). Take motion from `@mografy/runtime` and parts from the extras and templates above. Output: `scenes/`, `mografy.json` with `review.times` and `review.transitions` from the beat table.
 5. **Music** (only when wanted). Output: `music-src/music.json`, `assets/music.mp3`, `audio` in `mografy.json`.
-6. **Check and review.** Run `mografy check [project]` and fix every warning; run `mografy review [project]` and look at every PNG, including each transition strip. Walk **Before delivery**. Output: the review PNGs and a short note of what you checked.
+6. **Check and review.** Run `mografy check --motion [project]` and fix every warning (a deliberate cut it reports may stay); run `mografy review [project]` and look at every PNG, including each transition strip. Walk **Before delivery**. Output: the review PNGs and a short note of what you checked.
 7. **Export** only when asked: `mografy export [project] --format mp4|webm|lottie|svga` (settings in [output.md](references/output.md)). Output: a file in `renders/`.
 
 To iterate on a weak range, render it frame by frame, name the problem with a time, fix it and review the same range again. To change the length, take time from holds, never from actions.
@@ -76,6 +76,7 @@ Every film, from a 5 s bumper to a 2 min story, meets these; each can be checked
 ## Before delivery
 
 - [ ] `mografy check` passes with no warnings (frame cost under 100 ms, at most 8 filters per frame, no per-frame canvases).
+- [ ] `mografy check --motion` reports no jump, hard start or hard stop except deliberate cuts.
 - [ ] No text overlaps other text or UI, and copy stays inside the safe margins in [taste.md](references/taste.md).
 - [ ] Every caption and result meets the hold times in [taste.md](references/taste.md).
 - [ ] Every transition strip shows the handoff object in every frame, with no jump and no empty frame.
