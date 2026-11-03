@@ -36,10 +36,19 @@ export class FrameAccumulator {
   }
   /** Scratch image reused by finishFrame, so a long export does not allocate a full float frame per frame. */
   image?: Float32Array;
+  /** Glow scratch buffers, reused by finishFrame. */
+  glow?: GlowBuffers;
   reset() { this.sum.fill(0); this.count = 0; }
 }
 
-export interface PostSettings { glow: number; grain: number; seed: number; frame: number }
+export interface PostSettings { glow: number; grain: number; seed: number; frame: number; dither?: boolean | undefined }
+
+/** 8 × 8 Bayer matrix, thresholds in (-0.5, 0.5) of one 8-bit step. */
+const BAYER = (() => {
+  const m = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+    3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21];
+  return Float32Array.from(m, v => ((v + 0.5) / 64 - 0.5) / 255);
+})();
 
 function boxBlur(src: Float32Array, tmp: Float32Array, w: number, h: number, r: number) {
   const size = 2 * r + 1;
@@ -63,9 +72,13 @@ function boxBlur(src: Float32Array, tmp: Float32Array, w: number, h: number, r: 
 }
 
 /** Per-pixel bright-pass preserves thin strokes and saturated colours before downsampling. */
-function addGlow(image: Float32Array, w: number, h: number, strength: number, linear: boolean) {
-  const f = 4, qw = Math.ceil(w / f), qh = Math.ceil(h / f);
-  const bright = new Float32Array(qw * qh * 3), tmp = new Float32Array(qw * qh * 3);
+interface GlowBuffers { bright: Float32Array; halo: Float32Array; tmp: Float32Array }
+function addGlow(image: Float32Array, w: number, h: number, strength: number, linear: boolean, buffers?: { glow?: GlowBuffers }) {
+  const f = 4, qw = Math.ceil(w / f), qh = Math.ceil(h / f), n = qw * qh * 3;
+  // Quarter-size buffers are kept on the accumulator, so a long export does not allocate three per frame.
+  const own = buffers?.glow?.bright.length === n ? buffers.glow : { bright: new Float32Array(n), halo: new Float32Array(n), tmp: new Float32Array(n) };
+  if (buffers) buffers.glow = own;
+  const { bright, tmp } = own;
   for (let qy = 0; qy < qh; qy++) for (let qx = 0; qx < qw; qx++) {
     let r = 0, g = 0, b = 0, n = 0;
     for (let y = qy * f; y < Math.min(h, qy * f + f); y++) for (let x = qx * f; x < Math.min(w, qx * f + f); x++) {
@@ -77,7 +90,7 @@ function addGlow(image: Float32Array, w: number, h: number, strength: number, li
     const o = (qy * qw + qx) * 3; bright[o] = r / n; bright[o + 1] = g / n; bright[o + 2] = b / n;
   }
   // A concentrated bloom keeps fine details visible; a wider halo softens the falloff.
-  const halo = new Float32Array(bright);
+  const halo = own.halo; halo.set(bright);
   const coreRadius = Math.max(1, Math.round(qh * 0.006));
   const haloRadius = Math.max(1, Math.round(qh * 0.025));
   for (let pass = 0; pass < 3; pass++) {
@@ -114,12 +127,14 @@ export function finishFrame(acc: FrameAccumulator, settings: PostSettings): Uint
   const sum = acc.sum, count = acc.count;
   for (let i = 0; i < image.length; i++) image[i] = sum[i]! / count;
   const linear = acc.space === 'linear';
-  if (settings.glow > 0) addGlow(image, w, h, settings.glow, linear);
+  if (settings.glow > 0) addGlow(image, w, h, settings.glow, linear, acc);
   const out = new Uint8ClampedArray(w * h * 4);
-  const amount = settings.grain * 2, seed = settings.seed >>> 0, frame = settings.frame;
+  const amount = settings.grain * 2, seed = settings.seed >>> 0, frame = settings.frame, dither = !!settings.dither;
   const level = (v: number, n: number) => Math.round(Math.min(1, Math.max(0, v + n)) * 255);
   for (let y = 0, p = 0; y < h; y++) for (let x = 0; x < w; x++, p++) {
-    const n = amount ? (grainNoise(x, y, frame, seed) - 0.5) * amount : 0, i = p * 3, o = p * 4;
+    // Ordered dither spreads the rounding of soft gradients over neighbouring pixels instead of 8-bit steps.
+    const d = dither ? BAYER[(y & 7) * 8 + (x & 7)]! : 0;
+    const n = (amount ? (grainNoise(x, y, frame, seed) - 0.5) * amount : 0) + d, i = p * 3, o = p * 4;
     if (linear) {
       out[o] = level(encode(image[i]!), n); out[o + 1] = level(encode(image[i + 1]!), n); out[o + 2] = level(encode(image[i + 2]!), n);
     } else {
@@ -140,19 +155,62 @@ function accumulatorFor(canvas: HTMLCanvasElement, space: MixingSpace) {
   return acc;
 }
 
-export type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>;
+export type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>
+  & Partial<Pick<RenderSettings, 'adaptiveSamples' | 'shutter' | 'sampleWindow' | 'dither'>>;
+
+/** The sample times of output frame k under these settings. */
+export const outputSampleTimes = (k: number, settings: OutputSettings) => sampleTimes(k, settings.fps, settings.samples, settings.shutter, settings.sampleWindow);
+
+/** One drawn sample and how many of the frame's equal-weight samples it stands for. */
+export interface SampleRun { data: Uint8ClampedArray; repeat: number }
 /**
- * Render output frame k exactly as the video pipeline does: S centered samples,
- * mixed with equal weight, then glow and grain. Browser only (reads the canvas).
+ * Adaptive sampling mixes only the first and last sample when the change between them fits in a box this many pixels
+ * across, as a share of the frame's shorter side: a small, slow change. A fast object, however small, sweeps a larger
+ * box, so it keeps every sample.
+ */
+export const ADAPTIVE_EXTENT = 0.004;
+/** Bounding box [x, y, w, h] of the pixels whose RGB differs between two RGBA frames; w = 0 when none do. */
+export function changedBox(a: Uint8ClampedArray, b: Uint8ClampedArray, width: number): [number, number, number, number] {
+  const x = new Uint32Array(a.buffer, a.byteOffset, a.length >> 2), y = new Uint32Array(b.buffer, b.byteOffset, b.length >> 2), height = x.length / width;
+  let top = -1, bottom = -1, left = width, right = -1;
+  // Little-endian RGBA: the low three bytes are RGB. Frames are opaque, so alpha never decides.
+  for (let row = 0; row < height; row++) {
+    const start = row * width;
+    let l = -1;
+    for (let i = 0; i < width; i++) if (((x[start + i]! ^ y[start + i]!) & 0xffffff) !== 0) { l = i; break; }
+    if (l < 0) continue;
+    if (top < 0) top = row;
+    bottom = row;
+    if (l < left) left = l;
+    for (let i = width - 1; i > right; i--) if (((x[start + i]! ^ y[start + i]!) & 0xffffff) !== 0) { right = i; break; }
+  }
+  return top < 0 ? [0, 0, 0, 0] : [left, top, right - left + 1, bottom - top + 1];
+}
+/**
+ * The samples of one output frame, in time order. The first and last are drawn first: when they are identical the
+ * frame is still, and that one picture stands for every sample (the middle ones are not drawn, and the mix is the
+ * same as mixing S copies). With `adaptive`, a frame whose change fits in a box ADAPTIVE_EXTENT of the shorter side
+ * across mixes only the first and last sample. `read` draws time t and returns a fresh RGBA array.
+ */
+export function frameSamples(times: readonly number[], read: (t: number) => Uint8ClampedArray, width: number, adaptive = false): SampleRun[] {
+  if (times.length === 1) return [{ data: read(times[0]!), repeat: 1 }];
+  const first = read(times[0]!), last = read(times.at(-1)!);
+  const [, , w, h] = changedBox(first, last, width);
+  if (w === 0) return [{ data: first, repeat: times.length }];
+  const limit = Math.max(2, Math.round(Math.min(width, first.length / 4 / width) * ADAPTIVE_EXTENT));
+  if (adaptive && w <= limit && h <= limit) return [{ data: first, repeat: 1 }, { data: last, repeat: 1 }];
+  return [{ data: first, repeat: 1 }, ...times.slice(1, -1).map(t => ({ data: read(t), repeat: 1 })), { data: last, repeat: 1 }];
+}
+/**
+ * Render output frame k exactly as the video pipeline does: S samples (see frameSamples), mixed with equal weight,
+ * then glow, grain and dither. Browser only (reads the canvas).
  */
 export function renderOutputFrame(runtime: SceneRuntime, canvas: HTMLCanvasElement, k: number, settings: OutputSettings, seed: number, params?: Parameters<SceneRuntime['render']>[1]) {
   const frames = outputFrameCount(runtime.meta.duration, settings.fps);
   if (!Number.isInteger(k) || k < 0 || k >= frames) throw new Error(`Output frame outside scene: ${k}`);
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   const acc = accumulatorFor(canvas, settings.mixing);
-  for (const t of sampleTimes(k, settings.fps, settings.samples)) {
-    runtime.render(Math.min(t, runtime.meta.duration), params);
-    acc.add(ctx.getImageData(0, 0, canvas.width, canvas.height).data);
-  }
-  return finishFrame(acc, { glow: settings.glow, grain: settings.grain, seed, frame: k });
+  const read = (t: number) => { runtime.render(Math.min(t, runtime.meta.duration), params); return ctx.getImageData(0, 0, canvas.width, canvas.height).data; };
+  for (const run of frameSamples(outputSampleTimes(k, settings), read, canvas.width, settings.adaptiveSamples)) for (let r = 0; r < run.repeat; r++) acc.add(run.data);
+  return finishFrame(acc, { glow: settings.glow, grain: settings.grain, seed, frame: k, dither: settings.dither });
 }

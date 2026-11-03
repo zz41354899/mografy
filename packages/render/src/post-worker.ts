@@ -4,7 +4,7 @@ import { FrameAccumulator, finishFrame } from '@mografy/runtime';
 import type { MixingSpace, PostSettings } from '@mografy/runtime';
 
 export type PostMessage =
-  | { type: 'add'; width: number; height: number; space: MixingSpace; data: ArrayBuffer }
+  | { type: 'add'; width: number; height: number; space: MixingSpace; data: ArrayBuffer; repeat?: number }
   | { type: 'finish'; settings: PostSettings };
 
 let acc: FrameAccumulator | undefined;
@@ -19,7 +19,8 @@ scope.onmessage = ({ data: message }) => {
     try {
       const { width, height, space } = message;
       if (!acc || acc.width !== width || acc.height !== height || acc.space !== space) acc = new FrameAccumulator(width, height, space);
-      acc.add(new Uint8Array(message.data));
+      const sample = new Uint8Array(message.data);
+      for (let r = 0; r < (message.repeat ?? 1); r++) acc.add(sample);
     } catch (error) { failure ??= text(error); }
     return;
   }

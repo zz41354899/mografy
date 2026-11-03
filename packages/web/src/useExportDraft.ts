@@ -1,5 +1,5 @@
 import { useReducer } from 'react';
-import type { AspectRatio, ExportFormat, ExportSize, RenderSettings, Snapshot } from '@mografy/core';
+import type { AspectRatio, ExportFormat, ExportPreset, ExportSize, RenderSettings, Snapshot } from '@mografy/core';
 import { createExportDraft, exportDraftReducer } from './export-draft.js';
 import type { ExportQuality } from './export-draft.js';
 
@@ -9,6 +9,7 @@ export function useExportDraft(snapshot: Snapshot) {
     format: draft.format, ...draft.formats[draft.format],
     setFormat: (format: ExportFormat) => dispatch({ type: 'format', format }),
     patch: (settings: Partial<RenderSettings>) => dispatch({ type: 'patch', settings }),
+    setPreset: (preset: Exclude<ExportPreset, 'master'>) => dispatch({ type: 'preset', preset }),
     setQuality: (quality: ExportQuality) => dispatch({ type: 'quality', quality, base: snapshot.project!.render }),
     setOrientation: (ratio: AspectRatio) => dispatch({ type: 'orientation', ratio }),
     setSize: (size: Pick<ExportSize, 'width' | 'height'>) => dispatch({ type: 'size', size }),

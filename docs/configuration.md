@@ -28,5 +28,27 @@ Each installation keeps its own recent-project and active-player state under `~/
 | `MOGRAFY_HOME` | Project library directory |
 | `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
 | `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
-| `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH |
-| `MOGRAFY_CANVAS` | `cpu` (default) or `gpu`: canvas backing for headless rendering and export. `cpu` reads frames back cheaply and gives identical pixels on every machine; `gpu` uses acceleration where available, for comparing speed, and its edges may differ slightly |
+| `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH. Point it at a build with your GPU's encoders (NVENC, Quick Sync, AMF, VA-API) if the bundled one lacks them; the `fast` preset uses whichever works |
+| `MOGRAFY_CANVAS` | `cpu` (default) or `gpu`: canvas backing for headless rendering, checks and review. Video exports follow `render.canvas` instead (the `fast` preset sets `gpu`). `cpu` gives identical pixels on every machine; `gpu` uses Metal on macOS and Direct3D 11 on Windows, and its edges may differ slightly |
+
+## Export settings
+
+Video export settings live under `render` in `mografy.json`; the Export dialog and `mografy export --preset` override them for one export without saving.
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `codec` | `h265` | MP4 codec: `h265` (10-bit) or `h264` |
+| `encoding` | `crf` | `crf` constant quality, `two-pass` target `bitrate`, or `hardware` (the GPU encoder, software fallback) |
+| `crf`, `preset`, `bitrate` | `18`, `medium`, `12M` | Software encoder quality and speed; MP4 values are on the H.264 scale |
+| `hardwareQuality` | `65` | Hardware encoder quality, 1–100 |
+| `canvas` | `cpu` | Where export frames are drawn: `cpu` or `gpu` (macOS and Windows; elsewhere `cpu`) |
+| `workers` | `auto` | Parallel capture segments, or a number from 1 to 8 |
+| `samples`, `mixing` | `4`, `srgb` | Motion samples per frame and the space they mix in |
+| `shutter` | `360` | Shutter angle in degrees; `180` gives shorter, film-like motion blur |
+| `sampleWindow` | `after` | `centred` places each frame's samples around its own time, in step with the audio |
+| `adaptiveSamples` | `false` | Mix only two samples where a frame barely changes |
+| `dither` | `false` | Ordered dither before 8-bit rounding, against banding |
+| `glow`, `grain` | `0.12`, `0.008` | Output effects |
+| `includeAudio` | `true` | Add the project's audio (48 kHz) |
+
+`shutter`, `sampleWindow`, `adaptiveSamples` and `dither` change the picture, so they are off or at their old values unless a project or export turns them on. Exports work in the project's `.mografy/tmp/`, which the project's `.gitignore` already excludes.

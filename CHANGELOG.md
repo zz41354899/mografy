@@ -13,6 +13,54 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-11-02
+
+Video export rebuilt for speed, quality and Windows. See [After updating](#after-updating) for what to do next.
+
+### Added
+
+- **Export presets** — pick what the file is for instead of codec settings. Encoder row in the Export dialog, or `mografy export <project> --preset …`:
+
+  | Preset | Output | Use it for |
+  | --- | --- | --- |
+  | `share` | MP4, H.264 | Any browser, Windows PCs, chat apps, social uploads |
+  | `high` (default) | MP4, H.265 10-bit | The smallest file at the same look; Apple devices, Chrome and Edge |
+  | `fast` | MP4, hardware H.265 10-bit | The quickest export, drawn and encoded on the graphics card |
+  | `master` | MOV, ProRes 422 HQ | Editing in Final Cut, Premiere or DaVinci Resolve |
+
+- **MOV (ProRes) format** — `--format mov`, or MOV in the Export dialog. 10-bit 4:2:2 with uncompressed 48 kHz audio; large files.
+- **Hardware encoding on every platform** — VideoToolbox on macOS; NVIDIA NVENC, Intel Quick Sync and AMD AMF on Windows; NVENC, VA-API and Quick Sync on Linux. Mografy tries each with a tiny test encode and uses the first that works; without one it encodes in software and says so. The finished export shows the encoder that wrote it, in the dialog and the terminal. VideoToolbox is measured; the Windows and Linux encoders are new and their quality setting is a first calibration, so please report how `fast` looks and how long it takes on your graphics card.
+- **GPU-drawn frames on Windows** (Direct3D 11), as on macOS (Metal). Elsewhere frames are drawn on the CPU.
+- **Advanced settings** — shutter angle (360° by default; 180° gives shorter, film-like motion blur), dither gradients (hides banding in soft gradients and glows), hardware quality (1–100), and Auto parallel workers. In `mografy.json`, `render.sampleWindow: "centred"` also places each frame's motion samples around its own time, in step with the audio. All settings are listed in [Configuration](docs/configuration.md#export-settings).
+- **`scripts/bench-export.ts`** — times exports and scores them (size, SSIM, VMAF) against a lossless reference. Results for this release are in [docs/STATUS.md](docs/STATUS.md).
+
+### Changed
+
+- **Faster exports** — constant quality is now the default and is encoded while frames are drawn, with no lossless intermediate file; still frames are drawn once instead of once per motion sample; only the part of each frame that changed leaves the browser. The 12-second intro at 1080p60 went from 26.2 s to 21.5 s (H.265) and from 21.9 s to 17.7 s (H.264) at the same quality, and takes 14.9 s with `fast`. Scenes with heavy glow gain less in software; use `fast` there.
+- **H.265 is 10-bit** (Main 10): smoother gradients at the same size.
+- **Audio is 48 kHz**, the rate video platforms and editors expect.
+- **Adaptive samples** (off by default) now judge how far a change spreads, so a small, fast object keeps its full motion blur instead of turning into two copies.
+- **Colour conversion** uses exact rounding and full chroma, so thin coloured text keeps cleaner edges.
+- **Two-pass target bitrate** moved to Advanced settings. It is slower than before for H.265 because H.265 is now 10-bit.
+
+### Fixed
+
+- **Windows exports** — FFmpeg now receives only file names relative to its work folder, so drive letters (`C:`), spaces, apostrophes and backslashes in a project's path can no longer break an export. Finished files that a virus scanner holds for a moment are retried instead of failing.
+- **Odd video sizes** are refused before the export starts instead of failing in the encoder.
+- Exports work in the project's `.mografy/tmp/` instead of the system temp folder, so the finished video moves into `renders/` without a copy, and two-pass checks free disk space first.
+
+### Unchanged
+
+- **Existing films look the same.** Shutter 360°, sample timing, dither off and adaptive samples off are the defaults, so frames are drawn exactly as before. Settings saved in a project's `mografy.json` (for example `"encoding": "two-pass"` or `"workers": 2`) are kept; only projects that never set them get the new defaults (constant quality, Auto workers).
+- WebM, Lottie and SVGA exports, the 60 fps video limit, and every CLI flag that existed before (`--codec h264` still works).
+
+### After updating
+
+1. Update: `mografy update` updates the checkout, rebuilds it and restarts the active player. In an older installation without `update`, stop the player, run `git pull --ff-only` and `pnpm install`, then reopen with `mografy dev`.
+2. If you started `mografy dev` yourself, stop it and start it again so the player uses the new export.
+3. Optional: choose a preset in the Export dialog, or try one from the terminal with `mografy export <project> --preset fast`. A project that saved `"encoding": "two-pass"` or a fixed `"workers"` keeps them; pick a preset or change them in `mografy.json` to use the new defaults.
+4. Windows with an NVIDIA, Intel or AMD graphics card: keep the graphics driver current. If `fast` reports that it encoded in software, set `MOGRAFY_FFMPEG` to an FFmpeg build that includes your card's encoder.
+
 ## 2026-11-01
 
 ### Added

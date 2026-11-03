@@ -56,7 +56,19 @@ export function canvasBacking(): CanvasBacking {
   if (value === 'gpu') return 'gpu';
   throw new Error(`MOGRAFY_CANVAS must be cpu or gpu, not ${process.env.MOGRAFY_CANVAS}`);
 }
-type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'>;
+/**
+ * Headless Chromium falls back to SwiftShader (software rendering) unless told which GPU backend to use: ANGLE on
+ * Metal on macOS, ANGLE on Direct3D 11 on Windows. Only GPU pages get it: with a real GPU, pooled OffscreenCanvas
+ * buffers are accelerated too, and their first frame after load can differ from later ones, which breaks the
+ * same-time-same-picture check and every CPU export. CPU pages therefore run in a separate SwiftShader browser.
+ */
+export function gpuArgs(gpu: boolean, platform: NodeJS.Platform = process.platform) {
+  if (!gpu) return [];
+  return platform === 'darwin' ? ['--use-angle=metal'] : platform === 'win32' ? ['--use-angle=d3d11'] : [];
+}
+/** Whether a GPU canvas reaches a real GPU here; elsewhere 'gpu' would still be SwiftShader, so exports use 'cpu'. */
+export const gpuCanvasAvailable = (platform: NodeJS.Platform = process.platform) => platform === 'darwin' || platform === 'win32';
+type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow' | 'grain'> & Partial<Pick<RenderSettings, 'adaptiveSamples' | 'shutter' | 'sampleWindow' | 'dither'>>;
 
 /**
  * Upper bounds for work inside Chromium, in milliseconds. `page.evaluate` has no timeout of its own,
@@ -108,6 +120,24 @@ export class HostPage {
    * the page draw it while frame k is still being mixed; the next call then only waits for its finish.
    */
   output(k: number, settings: OutputSettings, next?: number) { return this.receive(token => this.page.evaluate(([k, s, token, next]) => window.mografyHost.output(k, s, token, next), [k, settings, token, next] as const)); }
+  private held: { k: number; data: Buffer } | undefined;
+  /**
+   * Like `output`, but only the changed rectangle crosses from the page: this page keeps the previous frame and
+   * patches it. The returned buffer is reused by the next call, so write it out before asking for another frame.
+   */
+  async outputFrame(k: number, settings: OutputSettings, next?: number) {
+    const base = this.held?.k ?? null;
+    const body = await this.receive(token => this.page.evaluate(([k, s, token, next, base]) => window.mografyHost.outputDelta(k, s, token, next, base), [k, settings, token, next, base] as const));
+    const [x, y, w, h] = [0, 4, 8, 12].map(o => body.readUInt32LE(o)) as [number, number, number, number];
+    const { width, height } = this.scene;
+    if (!this.held || base === null || (x === 0 && y === 0 && w === width && h === height)) {
+      if (w !== width || h !== height) throw new Error(`Frame ${k}: the page sent a partial frame without a base`);
+      this.held = { k, data: this.held?.data.length === width * height * 4 ? this.held.data : Buffer.alloc(width * height * 4) };
+    }
+    for (let row = 0; row < h; row++) body.copy(this.held.data, ((y + row) * width + x) * 4, 16 + row * w * 4, 16 + (row + 1) * w * 4);
+    this.held.k = k;
+    return this.held.data;
+  }
   png(cell: Cell, settings: OutputSettings) { return this.receive(token => this.page.evaluate(([c, s, token]) => window.mografyHost.png(c, s, token), [cell, settings, token] as const)); }
   /** Greyscale frames `width` wide at each time, concatenated (see host-page motion). */
   motion(times: number[], width: number) { return this.receive(token => this.page.evaluate(([t, w, token]) => window.mografyHost.motion(t, w, token), [times, width, token] as const)); }
@@ -130,7 +160,7 @@ function cleanError(error: unknown) {
 export class SceneHost {
   private builds = new Map<string, string>();
   private waiters = new Map<string, { resolve(data: Buffer): void; reject(error: Error): void }>();
-  private browser: Promise<Browser> | undefined;
+  private browsers: Partial<Record<CanvasBacking, Promise<Browser>>> = {};
   private constructor(readonly projectDir: string, private server: Server, readonly origin: string) {}
 
   static async start(projectDir: string) {
@@ -195,9 +225,10 @@ export class SceneHost {
    * Playwright's bundled Chromium first (`pnpm exec playwright install chromium`);
    * if it is not installed, fall back to the system Google Chrome.
    */
-  private launch() {
-    if (this.browser) return this.browser;
-    const args = ['--force-color-profile=srgb', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'];
+  private launch(backing: CanvasBacking) {
+    const running = this.browsers[backing];
+    if (running) return running;
+    const args = ['--force-color-profile=srgb', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', ...gpuArgs(backing === 'gpu')];
     const channel = process.env.PLAYWRIGHT_CHANNEL;
     const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args }).catch(async error => {
       if (channel || !/Executable doesn't exist|install/i.test(String(error))) throw error;
@@ -205,26 +236,26 @@ export class SceneHost {
         throw new Error('No Chromium found. Run `pnpm exec playwright install chromium`, or install Google Chrome.');
       });
     });
-    this.browser = launching;
+    this.browsers[backing] = launching;
     // A crashed or closed Chromium must not be reused: forget it so the next page launches a fresh one.
-    const forget = () => { if (this.browser === launching) this.browser = undefined; };
+    const forget = () => { if (this.browsers[backing] === launching) delete this.browsers[backing]; };
     launching.then(browser => browser.once('disconnected', forget), forget);
     return launching;
   }
 
   /** A live browser context; relaunches Chromium once if the cached browser has died. */
-  private async context(): Promise<BrowserContext> {
+  private async context(backing: CanvasBacking): Promise<BrowserContext> {
     const options = { viewport: { width: 640, height: 360 }, deviceScaleFactor: 1 };
     for (let attempt = 0; ; attempt++) {
-      const browser = await this.launch();
+      const browser = await this.launch(backing);
       if (!browser.isConnected()) {
         if (attempt > 0) throw new Error('Chromium closed unexpectedly and could not be restarted.');
-        this.browser = undefined; continue;
+        delete this.browsers[backing]; continue;
       }
       try { return await browser.newContext(options); }
       catch (error) {
         if (attempt > 0 || !/closed|disconnected|crash/i.test(String(error))) throw error;
-        this.browser = undefined;
+        delete this.browsers[backing];
         await browser.close().catch(() => {});
       }
     }
@@ -233,7 +264,8 @@ export class SceneHost {
   /** Each page gets its own browser context, so parallel segments run in separate renderer processes. */
   async open(build: SceneBuild, project: SceneProject, options: OpenOptions = {}) {
     const sceneUrl = this.register(build);
-    const context = await this.context();
+    const canvas = options.canvas ?? canvasBacking();
+    const context = await this.context(canvas);
     const page = await context.newPage();
     const errors: string[] = [], assets = new Set<string>();
     page.on('pageerror', error => errors.push(error.message));
@@ -250,7 +282,7 @@ export class SceneHost {
         fonts: project.fonts, audio: project.audio,
         outputSize: options.outputSize,
         aspectRatio: project.aspectRatio,
-        canvas: options.canvas ?? canvasBacking(),
+        canvas,
       };
       const scene = await bounded(page.evaluate(s => window.mografyHost.load(s), spec), hostTimeouts.load,
         `Scene setup did not finish within ${seconds(hostTimeouts.load)}. Check setup() for an await that never resolves (image, font or fetch) or a loop that never ends.`,
@@ -271,7 +303,7 @@ export class SceneHost {
    */
   async describe(build: SceneBuild, project: SceneProject): Promise<LoadedScene> {
     const sceneUrl = this.register(build);
-    const context = await this.context();
+    const context = await this.context('cpu');
     const page = await context.newPage();
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -338,9 +370,9 @@ export class SceneHost {
   async close() {
     for (const waiter of this.waiters.values()) waiter.reject(new Error('Host closed'));
     this.waiters.clear();
-    const browser = await this.browser?.catch(() => undefined);
-    this.browser = undefined;
-    await browser?.close().catch(() => {});
+    const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
+    this.browsers = {};
+    await Promise.all(browsers.map(b => b?.close().catch(() => {})));
     await new Promise<void>(done => this.server.close(() => done()));
   }
 }

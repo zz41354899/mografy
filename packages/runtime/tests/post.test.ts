@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FrameAccumulator, finishFrame, grainNoise } from '../src/post.js';
+import { FrameAccumulator, changedBox, finishFrame, frameSamples, grainNoise } from '../src/post.js';
 
 const solid = (w: number, h: number, v: number) => { const a = new Uint8ClampedArray(w * h * 4); for (let i = 0; i < a.length; i += 4) a.set([v, v, v, 255], i); return a; };
 const none = { glow: 0, grain: 0, seed: 1, frame: 0 };
@@ -62,4 +62,40 @@ test('glow preserves one-pixel highlights and saturated colours, with a visible 
     if (colour[0]! < colour[channel]!) assert.ok(strong[near]! > strong[(62 * w + 64) * 4]!, 'bloom retains the highlight colour');
     assert.deepEqual(finishFrame(acc, none), plain, 'zero glow is unchanged');
   }
+});
+
+/** A w × h black frame with a white square of `size` px at x. */
+const dot = (w: number, h: number, x: number, size: number) => {
+  const a = solid(w, h, 0);
+  for (let y = 0; y < size; y++) for (let i = 0; i < size; i++) a.set([255, 255, 255, 255], ((y + 10) * w + x + i) * 4);
+  return a;
+};
+
+test('static frames draw one sample; adaptive sampling keeps every sample for a small fast object', () => {
+  const w = 640, h = 360, times = [0, 1, 2, 3];
+  let drawn: number[] = [];
+  const still = frameSamples(times, t => { drawn.push(t); return solid(w, h, 50); }, w, true);
+  assert.deepEqual(still.map(r => r.repeat), [4]); assert.deepEqual(drawn, [0, 3], 'only the first and last are drawn');
+  // An 8 px dot crossing 60 px within the frame: few pixels change, but they spread far, so all samples stay.
+  const fast = frameSamples(times, t => dot(w, h, 100 + t * 20, 8), w, true);
+  assert.equal(fast.length, 4, 'every sample mixed: a continuous trail, not two copies');
+  assert.deepEqual(changedBox(dot(w, h, 100, 8), dot(w, h, 160, 8), w), [100, 10, 68, 8]);
+  // A one-pixel shimmer in place is small and slow: two samples are enough.
+  const flicker = frameSamples(times, t => { const a = solid(w, h, 0); a[(20 * w + 20) * 4] = t === 3 ? 9 : 0; return a; }, w, true);
+  assert.deepEqual(flicker.map(r => r.repeat), [1, 1]);
+  assert.equal(frameSamples(times, t => dot(w, h, 100 + t, 8), w, false).length, 4, 'without adaptive every moving frame keeps every sample');
+});
+
+test('dither breaks 8-bit steps in a soft gradient, deterministically, without shifting the average', () => {
+  const w = 256, h = 8, acc = new FrameAccumulator(w, h);
+  // Every pixel averages to 100.5: undithered it rounds to one flat level, dithered it mixes 100 and 101.
+  const a = solid(w, h, 100), b = solid(w, h, 101);
+  acc.add(a); acc.add(b);
+  const plain = finishFrame(acc, none), dithered = finishFrame(acc, { ...none, dither: true });
+  assert.deepEqual(finishFrame(acc, { ...none, dither: true }), dithered);
+  const mean = (out: Uint8ClampedArray) => { let s = 0; for (let p = 0; p < w * h; p++) s += out[p * 4]!; return s / (w * h); };
+  assert.ok(Math.abs(mean(dithered) - 100.5) < 0.05, `average kept: ${mean(dithered)}`);
+  const levels = (out: Uint8ClampedArray) => new Set(Array.from({ length: w * h }, (_, p) => out[p * 4]));
+  assert.equal(levels(plain).size, 1, 'undithered: one flat level');
+  assert.deepEqual([...levels(dithered)].sort(), [100, 101], 'dithered: the two neighbouring levels mix');
 });

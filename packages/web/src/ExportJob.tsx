@@ -54,7 +54,8 @@ export function ExportJob({ job, preview, session, onClose, onRetry, onEdit, sta
         <ExportProgressBar percentage={percentage} indeterminate={indeterminate} />
         <div className="export-job-detail"><span>{job.done.toLocaleString()} / {job.total.toLocaleString()} frames</span><time title="Elapsed time">{clock(elapsed)}</time></div>
       </> : ready ? <p className="export-job-file" title={filename}>{filename}</p> : null}
-      {ready && unplayable ? <p className="export-job-note" role="status">This browser cannot play the video here. The file is fine: open it in QuickTime, a phone or a video player, or export with Codec H.264 for this browser.</p> : null}
+      {ready && unplayable ? <p className="export-job-note" role="status">This browser cannot play the video here. The file is fine: open it in QuickTime, a phone or a video player, or export with the Share (H.264) encoder for this browser.</p> : null}
+      {ready && (job.encoder || job.note) ? <p className="export-job-note" role="status">{[job.encoder ? `Encoder: ${job.encoder}.` : '', job.note ?? ''].filter(Boolean).join(' ')}</p> : null}
       {job.error || error || requestError ? <p className="export-job-error" role="alert">{requestError || error || job.error}</p> : null}
       {running && session.connection !== 'connected' ? <p className="export-job-error" role="status">Reconnecting…</p> : null}
       <div className="export-job-footer">

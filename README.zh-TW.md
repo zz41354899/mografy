@@ -205,13 +205,26 @@ Scene 檢查器分為 Subtitles（字幕）、Colors（顏色）與 Controls（�
 ```sh
 mografy export ./projects/my-animation --format mp4
 mografy export ./projects/my-animation --format mp4 --codec h264
+mografy export ./projects/my-animation --preset fast
+mografy export ./projects/my-animation --preset master
 mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
 
-MP4 預設使用 H.265（HEVC）視訊與 AAC 音訊。在 3D 紙張材質片與 2D 動態片的實測中，同樣 CRF 下 H.265 畫質與 H.264 相當，檔案只有 50–58%，編碼時間也一樣（編碼速度選 Slow 時使用 x265 的 medium，速度與 x264 的 slow 相當）。檔案標記為 `hvc1`，可在 QuickTime、Safari、iOS 與 Android、Chrome、Edge 播放，也能直接上傳 YouTube、Instagram、TikTok。Firefox 與部分 Windows 電腦要有硬體支援或安裝「HEVC 視訊延伸模組」才能播放，所以要放在網站 `<video>` 或寄給不確定用什麼播放的人時，請在匯出視窗選 **Codec → H.264**、加上 `--codec h264`，或在 `mografy.json` 的 `render` 設定 `"codec": "h264"`。兩種編碼的 MP4 CRF 與位元率都以 H.264 為準。WebM 使用 VP9 視訊與 128 kbps 的 Opus 音訊，預設採用 CRF 32 固定品質，而非 MP4 的目標位元率。兩者都支援音訊、動態取樣、光暈、顆粒與編碼控制。完成的檔案會寫入 `renders/`。
+四種匯出預設涵蓋大多數需求（匯出視窗的 Encoder，或 CLI 的 `--preset`）：
+
+| 預設 | 輸出 | 適用 |
+| --- | --- | --- |
+| `share`（分享） | MP4，H.264 8-bit | 所有瀏覽器、Windows 電腦、聊天軟體與社群上傳 |
+| `high`（高畫質，預設） | MP4，H.265 10-bit | 同樣畫質下檔案最小；Apple 裝置，以及有硬體解碼的 Chrome、Edge |
+| `fast`（快速高畫質） | MP4，硬體 H.265 10-bit，GPU 繪製 | 快速匯出：macOS 用 VideoToolbox，Windows 用 NVIDIA NVENC、Intel Quick Sync 或 AMD AMF；其他情況自動改用軟體編碼 |
+| `master`（母帶） | MOV，ProRes 422 HQ 10-bit，PCM 音訊 | 在 Final Cut、Premiere 或 DaVinci Resolve 中剪輯 |
+
+固定品質會在擷取影格的同時編碼，不必另外等待編碼；雙次編碼的目標位元率在進階設定中。音訊為 48 kHz。進階設定也提供快門角度（預設 360°，180° 為電影感）與柔和漸層的有序抖動。macOS、Windows 與 Linux 的匯出方式相同；完成時會顯示寫出檔案的編碼器。
+
+MP4 預設使用 10-bit H.265（HEVC）視訊與 48 kHz AAC 音訊。在 3D 紙張材質片與 2D 動態片的實測中，同樣 CRF 下 H.265 畫質與 H.264 相當，檔案只有 50–58%，編碼時間也一樣（編碼速度選 Slow 時使用 x265 的 medium，速度與 x264 的 slow 相當）。檔案標記為 `hvc1`，可在 QuickTime、Safari、iOS 與 Android、Chrome、Edge 播放，也能直接上傳 YouTube、Instagram、TikTok。Firefox 與部分 Windows 電腦要有硬體支援或安裝「HEVC 視訊延伸模組」才能播放，所以要放在網站 `<video>` 或寄給不確定用什麼播放的人時，請在匯出視窗選 **Encoder → Share · H.264**、加上 `--preset share`（或 `--codec h264`），或在 `mografy.json` 的 `render` 設定 `"codec": "h264"`。兩種編碼的 MP4 CRF 與位元率都以 H.264 為準。WebM 使用 VP9 視訊與 128 kbps 的 Opus 音訊，預設採用 CRF 32 固定品質，而非 MP4 的目標位元率。兩者都支援音訊、動態取樣、光暈、顆粒與編碼控制。完成的檔案會寫入 `renders/`。
 
 WebM 品質預設：
 
@@ -275,7 +288,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 | `mografy check [project]` | 編譯並試算圖 |
 | `mografy check --motion [project]` | 同時找出跳格、急起步與急停 |
 | `mografy review [project] [--video file.mp4]` | 產生審閱圖片及選用的影片比較 |
-| `mografy export [project] --format mp4\|webm\|lottie\|svga` | 匯出動畫 |
+| `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` 或 `--preset share\|high\|fast\|master` | 匯出動畫 |
 | `mografy update [--check]` | 更新目前的原始碼安裝，或檢查是否有新版本 |
 | `mografy stop [project]` | 停止專案的播放器伺服器 |
 | `mografy --help` | 顯示指令與支援的選項 |

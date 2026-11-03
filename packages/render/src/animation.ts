@@ -2,9 +2,10 @@
 // Canvas scenes cannot be losslessly inferred as editable vector animation.
 import { createHash } from 'node:crypto';
 import { deflate } from 'node:zlib';
+import { availableParallelism } from 'node:os';
 import { promisify } from 'node:util';
 import protobuf from 'protobufjs/minimal.js';
-import { outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
+import { exportWorkers, outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
 import type { ExportFormat, ExportSize, SceneProject } from '@mografy/core';
 import type { SceneBuild } from './build.js';
 import { SceneHost } from './host.js';
@@ -16,7 +17,7 @@ const MAX_ASSET_BYTES = 64 * 1024 * 1024;
 const MAX_SVGA_FRAME_ENTRIES = 200_000;
 export interface AnimationJob {
   project: SceneProject; build: SceneBuild; host: SceneHost;
-  format: Exclude<ExportFormat, 'mp4' | 'webm'>;
+  format: Exclude<ExportFormat, 'mp4' | 'webm' | 'mov'>;
   signal?: AbortSignal;
   size?: ExportSize | undefined;
   onProgress?: (done: number, total: number, stage: 'capture' | 'package') => void;
@@ -84,7 +85,7 @@ export async function renderAnimation(job: AnimationJob): Promise<AnimationResul
   validateAnimationSize(width, height, frames);
   const captured = new Array<Buffer>(frames);
   let bytes = 0, done = 0, failure: unknown;
-  await Promise.allSettled(segmentFrames(frames, settings.workers).map(async segment => {
+  await Promise.allSettled(segmentFrames(frames, exportWorkers({ ...settings, canvas: 'cpu' }, availableParallelism())).map(async segment => {
     const page = await job.host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
     try {
       for (let k = segment.start; k < segment.end; k++) {

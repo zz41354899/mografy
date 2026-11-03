@@ -217,7 +217,7 @@ for (const [codec, encoding] of [['h265', 'two-pass'], ['h265', 'crf'], ['h264',
     assert.equal(result.audio, true);
     const info = spawnSync(ffmpegPath(), ['-hide_banner', '-i', output], { encoding: 'utf8' }).stderr;
     // hvc1 (not hev1) is the tag QuickTime, Safari and iOS require for HEVC in MP4
-    assert.match(info, codec === 'h265' ? /Video: hevc \(Main\) \(hvc1/ : /Video: h264/);
+    assert.match(info, codec === 'h265' ? /Video: hevc \(Main 10\) \(hvc1.*yuv420p10le/ : /Video: h264/);
     assert.match(info, /Audio: aac/);
     const frames = await ffmpegOutput(['-i', output, '-map', '0:v:0', '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1']);
     assert.equal(frames.length, 8 * 96 * 54 * 4);

@@ -207,13 +207,26 @@ Export from the player or CLI:
 ```sh
 mografy export ./projects/my-animation --format mp4
 mografy export ./projects/my-animation --format mp4 --codec h264
+mografy export ./projects/my-animation --preset fast
+mografy export ./projects/my-animation --preset master
 mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
 ```
 
-MP4 uses H.265 (HEVC) video and AAC audio by default. In tests on a 3D paper-texture film and a 2D motion film, H.265 at the same CRF matched H.264's quality at 50–58 % of the file size and took the same time to encode (Encoder speed Slow uses x265's medium preset, which is as fast as x264's slow). The file is tagged `hvc1`, so it plays in QuickTime, Safari, iOS and Android, Chrome and Edge, and uploads to YouTube, Instagram and TikTok. Firefox and some Windows PCs play HEVC only with hardware support or the HEVC Video Extensions, so for a website `<video>` or files sent to unknown players choose **Codec → H.264** in the Export dialog, pass `--codec h264`, or set `"codec": "h264"` under `render` in `mografy.json`. MP4 CRF and bitrate are on the H.264 scale for both codecs. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
+Four export presets cover most needs (Encoder in the Export dialog, `--preset` on the CLI):
+
+| Preset | Output | Use it for |
+| --- | --- | --- |
+| `share` | MP4, H.264 8-bit | Any browser, Windows PCs, chat apps and social uploads |
+| `high` (default) | MP4, H.265 10-bit | Smallest file at the same look; Apple devices, Chrome and Edge with hardware decoding |
+| `fast` | MP4, hardware H.265 10-bit, GPU-drawn | Quick exports: VideoToolbox on macOS, NVIDIA NVENC, Intel Quick Sync or AMD AMF on Windows; software fallback elsewhere |
+| `master` | MOV, ProRes 422 HQ 10-bit, PCM audio | Editing in Final Cut, Premiere or DaVinci Resolve |
+
+Constant quality encodes while frames are captured, so there is no separate encoding wait; two-pass target bitrate is under Advanced settings. Audio is 48 kHz. Advanced settings also offer the shutter angle (360° by default, 180° for a film look) and ordered dithering for soft gradients. Exports work the same on macOS, Windows and Linux; the finished file names the encoder that wrote it.
+
+MP4 uses 10-bit H.265 (HEVC) video and 48 kHz AAC audio by default. In tests on a 3D paper-texture film and a 2D motion film, H.265 at the same CRF matched H.264's quality at 50–58 % of the file size and took the same time to encode (Encoder speed Slow uses x265's medium preset, which is as fast as x264's slow). The file is tagged `hvc1`, so it plays in QuickTime, Safari, iOS and Android, Chrome and Edge, and uploads to YouTube, Instagram and TikTok. Firefox and some Windows PCs play HEVC only with hardware support or the HEVC Video Extensions, so for a website `<video>` or files sent to unknown players choose **Encoder → Share · H.264** in the Export dialog, pass `--preset share` (or `--codec h264`), or set `"codec": "h264"` under `render` in `mografy.json`. MP4 CRF and bitrate are on the H.264 scale for both codecs. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
 
 WebM quality presets:
 
@@ -277,7 +290,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | `mografy check [project]` | Compile and trial-render |
 | `mografy check --motion [project]` | Also find jumps, hard starts and hard stops |
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
-| `mografy export [project] --format mp4\|webm\|lottie\|svga` | Export the animation |
+| `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` or `--preset share\|high\|fast\|master` | Export the animation |
 | `mografy update [--check]` | Update this source installation, or check for a newer revision |
 | `mografy stop [project]` | Stop the project's player server |
 | `mografy --help` | Show commands and supported options |

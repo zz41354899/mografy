@@ -1,7 +1,7 @@
 // Runs inside headless Chromium. Loads one compiled scene build and serves frames to Node.
 // Frame bytes go back by POST to the host server, never through JSON or PNG.
-import { outputFrameCount, sampleTimes } from '@mografy/core';
-import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
+import { outputFrameCount } from '@mografy/core';
+import { changedBox, createSceneRuntime, frameSamples, outputSampleTimes, renderOutputFrame } from '@mografy/runtime';
 import type { SceneModule, SceneRuntime, OutputSettings } from '@mografy/runtime';
 import type { BeatGrid, ExportSize, FrameCost, ParameterValues, SceneProject } from '@mografy/core';
 
@@ -20,6 +20,8 @@ let canvas: HTMLCanvasElement | undefined;
 let runtime: SceneRuntime | undefined;
 let spec: LoadSpec | undefined;
 let pipeline: OutputPipeline | undefined;
+/** The last frame `outputDelta` sent, which the next delta is taken against. */
+let previous: { k: number; data: Uint8ClampedArray } | undefined;
 
 async function upload(token: string, data: BlobPart) {
   // A Blob body streams to the host without Chromium exposing it as request post data: about ten times
@@ -68,12 +70,11 @@ class OutputPipeline {
     const ctx = canvas.getContext('2d')!, i = k % 2, worker = this.workers[i]!;
     const { width, height } = canvas, space = settings.mixing;
     const done = new Promise<ArrayBuffer>((resolve, reject) => this.replies[i]!.push({ resolve, reject }));
-    for (const t of sampleTimes(k, settings.fps, settings.samples)) {
-      runtime.render(Math.min(t, runtime.meta.duration));
-      const data = ctx.getImageData(0, 0, width, height).data.buffer;
-      worker.postMessage({ type: 'add', width, height, space, data }, [data]);
+    const read = (t: number) => { runtime.render(Math.min(t, runtime.meta.duration)); return ctx.getImageData(0, 0, width, height).data; };
+    for (const { data, repeat } of frameSamples(outputSampleTimes(k, settings), read, width, settings.adaptiveSamples)) {
+      worker.postMessage({ type: 'add', width, height, space, data: data.buffer, repeat }, [data.buffer]);
     }
-    worker.postMessage({ type: 'finish', settings: { glow: settings.glow, grain: settings.grain, seed: spec.seed, frame: k } });
+    worker.postMessage({ type: 'finish', settings: { glow: settings.glow, grain: settings.grain, seed: spec.seed, frame: k, dither: settings.dither } });
     return done;
   }
   /** Frame k's finished RGBA. With `next`, also draws frame `next` before waiting, so its mixing overlaps. */
@@ -99,7 +100,7 @@ const host = {
     return JSON.parse(JSON.stringify({ meta: scene.meta, params: scene.params ?? {} })) as { meta: unknown; params: unknown };
   },
   async load(next: LoadSpec) {
-    runtime?.dispose(); canvas?.remove(); pipeline?.dispose(); pipeline = undefined;
+    runtime?.dispose(); canvas?.remove(); pipeline?.dispose(); pipeline = undefined; previous = undefined;
     spec = next;
     const scene = await import(/* @vite-ignore */ next.sceneUrl) as SceneModule;
     canvas = document.createElement('canvas'); document.body.append(canvas);
@@ -155,6 +156,21 @@ const host = {
   async output(k: number, settings: OutputSettings, token: string, next?: number) {
     pipeline ??= new OutputPipeline();
     await upload(token, await pipeline.frame(k, settings, next));
+  },
+  /**
+   * Output frame k as a change from frame `base`, which the caller already holds: a 16-byte header (x, y, width,
+   * height of the changed rectangle, all 0 when nothing changed) and that rectangle's RGBA rows. Without a matching
+   * base the rectangle is the whole frame. Most frames move in a small part of the picture, so far less is uploaded.
+   */
+  async outputDelta(k: number, settings: OutputSettings, token: string, next: number | undefined, base: number | null) {
+    pipeline ??= new OutputPipeline();
+    const frame = new Uint8ClampedArray(await pipeline.frame(k, settings, next)), { width } = need().canvas;
+    const rect = base !== null && previous?.k === base ? changedBox(previous.data, frame, width) : [0, 0, width, frame.length / 4 / width] as const;
+    const [x, y, w, h] = rect, body = new Uint8Array(16 + w * h * 4);
+    new Uint32Array(body.buffer, 0, 4).set(rect);
+    for (let row = 0; row < h; row++) body.set(frame.subarray(((y + row) * width + x) * 4, ((y + row) * width + x + w) * 4), 16 + row * w * 4);
+    previous = { k, data: frame };
+    await upload(token, body);
   },
   async png(cell: Cell, settings: OutputSettings, token: string) {
     const image = cell.kind === 'raw' ? rawPixels(cell.t) : outputPixels(cell.k, settings);

@@ -1,12 +1,18 @@
-// Video output: parallel segment capture → FFV1 segments → lossless concat → H.265 (or H.264)/AAC MP4 or VP9/Opus WebM.
-import { access, copyFile, mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+// Video output: parallel segment capture, then either encoded segments joined by stream copy (streamed plans)
+// or lossless FFV1 segments read back through the concat demuxer and encoded twice (two-pass).
+// FFmpeg runs in the work folder and every file it names there is relative: no drive letters, backslashes or
+// spaces reach option strings, the concat list or filter graphs on Windows.
+import { access, copyFile, mkdir, mkdtemp, rename, rm, statfs, writeFile } from 'node:fs/promises';
+import { availableParallelism } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
-import { hevcQuality, outputFrameCount, segmentFrames, validateExportFrameRate } from '@mografy/core';
+import { exportWorkers, outputFrameCount, sampleTimes, segmentFrames, validateExportFrameRate } from '@mografy/core';
 import type { ExportSize, SceneProject, VideoFormat } from '@mografy/core';
 import type { SceneBuild } from './build.js';
+import { LOSSLESS, concatList, planCodec, segmentArgs } from './codecs.js';
+import type { CodecPlan } from './codecs.js';
 import { runFfmpeg, startFfmpeg } from './ffmpeg.js';
-import { SceneHost } from './host.js';
+import { SceneHost, gpuCanvasAvailable } from './host.js';
+import type { CanvasBacking } from './host.js';
 
 export interface VideoJob {
   format?: VideoFormat;
@@ -22,22 +28,34 @@ export interface VideoJob {
   signal?: AbortSignal;
   size?: ExportSize | undefined;
 }
-export interface VideoResult { output: string; frames: number; fps: number; duration: number; width: number; height: number; version: string; segments: number; audio: boolean }
+export interface VideoResult {
+  output: string; frames: number; fps: number; duration: number; width: number; height: number; version: string; segments: number; audio: boolean;
+  /** The encoder that wrote the video, e.g. `libx265` or `hevc_nvenc`. */
+  encoder: string;
+  /** Where frames were drawn (a GPU request falls back to the CPU where no GPU backend is set up). */
+  canvas: CanvasBacking;
+  /** Why the encoder differs from the one asked for, if it does. */
+  note?: string | undefined;
+  /** Seconds spent capturing (including streamed encoding), encoding a master, and adding audio. */
+  timings: { capture: number; encode: number; mux: number };
+}
 
 const nullDevice = process.platform === 'win32' ? 'NUL' : '/dev/null';
 
 async function exists(path: string) { return access(path).then(() => true, () => false); }
 
-/** Capture output frames [start, end) into one lossless FFV1 segment. */
-async function captureSegment(host: SceneHost, job: VideoJob, start: number, end: number, file: string, onFrame: () => void) {
+/** Capture output frames [start, end) into one segment file, encoded with `video` arguments. */
+async function captureSegment(host: SceneHost, job: VideoJob, plan: CodecPlan, canvas: CanvasBacking, start: number, end: number, video: string[], work: string, file: string, onFrame: () => void) {
   const { project } = job, settings = project.render;
-  const page = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
+  const page = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size, canvas });
   const { width, height } = page.scene;
-  const ffmpeg = startFfmpeg(['-f', 'rawvideo', '-pixel_format', 'rgba', '-video_size', `${width}x${height}`, '-framerate', String(settings.fps), '-i', 'pipe:0', '-c:v', 'ffv1', '-level', '3', '-g', '1', '-pix_fmt', 'bgr0', '-y', file], true);
+  const ffmpeg = startFfmpeg(segmentArgs(width, height, settings.fps, plan, video, file), true, undefined, work);
   try {
+    // A GPU page's first draw after load can differ from later ones (shader and buffer warm-up): draw once, unused.
+    if (canvas === 'gpu') await page.rawHash(sampleTimes(start, settings.fps, 1)[0]!);
     for (let k = start; k < end; k++) {
       if (job.signal?.aborted) throw new Error('Render cancelled');
-      const rgba = await page.output(k, settings, k + 1 < end ? k + 1 : undefined);
+      const rgba = await page.outputFrame(k, settings, k + 1 < end ? k + 1 : undefined);
       if (rgba.length !== width * height * 4) throw new Error(`Frame ${k}: expected ${width * height * 4} bytes, got ${rgba.length}`);
       await ffmpeg.write(rgba);
       onFrame();
@@ -45,83 +63,101 @@ async function captureSegment(host: SceneHost, job: VideoJob, start: number, end
     await ffmpeg.end();
   } catch (error) { ffmpeg.kill(); await ffmpeg.done.catch(() => {}); throw error; }
   finally { await page.close(); }
-  return { width, height };
+}
+
+/** Refuse a two-pass master that would not fit: FFV1 of motion graphics is rarely above a byte per pixel. */
+async function checkSpace(work: string, frames: number, width: number, height: number) {
+  const need = frames * width * height;
+  const info = await statfs(work).catch(() => undefined);
+  if (info && info.bavail * info.bsize < need)
+    throw new Error(`Not enough disk space for the two-pass master: about ${Math.ceil(need / 1024 ** 3)} GB needed, ${Math.floor(info.bavail * info.bsize / 1024 ** 3)} GB free. Use constant quality, or free some space.`);
+}
+
+/**
+ * Move the finished file into place; across volumes, copy. On Windows a virus scanner or the search indexer can hold
+ * a just-written file for a moment, so EPERM, EACCES and EBUSY are retried briefly before failing.
+ */
+async function place(partial: string, output: string) {
+  await mkdir(dirname(output), { recursive: true });
+  for (let attempt = 0; ; attempt++) {
+    try { return await rename(partial, output); }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? '';
+      if (code === 'EXDEV') return copyFile(partial, output);
+      if (process.platform === 'win32' && attempt < 9 && ['EPERM', 'EACCES', 'EBUSY'].includes(code)) { await new Promise(done => setTimeout(done, 50 * (attempt + 1))); continue; }
+      if (['EPERM', 'EACCES', 'EBUSY'].includes(code)) throw new Error(`Could not write ${output}: it may be open in another program. Close it and export again.`);
+      throw error;
+    }
+  }
 }
 
 export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const project = structuredClone(job.project), settings = project.render;
-  const format = job.format ?? 'mp4', webm = format === 'webm';
+  const format = job.format ?? 'mp4';
   validateExportFrameRate(format, settings.fps);
   const output = resolve(job.output);
   if (extname(output).toLowerCase() !== `.${format}`) throw new Error(`Output must end with .${format}`);
   if (!job.overwrite && await exists(output)) throw new Error(`Output already exists: ${output}`);
+  const plan = await planCodec(format, settings);
+  const audioPath = project.audio && settings.includeAudio ? resolve(job.projectDir, project.audio.path) : undefined;
+  if (audioPath && !await exists(audioPath)) throw new Error(`Audio not found: ${project.audio!.path}`);
+  const canvas: CanvasBacking = settings.canvas === 'gpu' && gpuCanvasAvailable() ? 'gpu' : 'cpu';
   const ownHost = !job.host, host = job.host ?? await SceneHost.start(job.projectDir);
-  const work = await mkdtemp(join(tmpdir(), 'mografy-render-'));
+  // Work beside the project, on the same volume as renders/: the result moves into place without a copy.
+  const temp = join(resolve(job.projectDir), '.mografy', 'tmp');
+  await mkdir(temp, { recursive: true });
+  const work = await mkdtemp(join(temp, 'render-'));
   try {
     // Read meta once to plan the segments.
-    const probe = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size });
+    const probe = await host.open(job.build, project, { renderScale: settings.scale, outputSize: job.size, canvas });
     const { meta } = probe.scene, { width, height } = probe.scene;
     await probe.close();
-    if (width % 2 || height % 2) throw new Error(`Video yuv420p needs even dimensions; got ${width}×${height} (meta × render.scale)`);
-    const frames = outputFrameCount(meta.duration, settings.fps);
-    const segments = segmentFrames(frames, settings.workers);
+    if (width % 2 || height % 2) throw new Error(`Video needs even dimensions; got ${width}×${height} (meta × render.scale)`);
+    const frames = outputFrameCount(meta.duration, settings.fps), length = frames / settings.fps;
+    if (plan.mode === 'master') await checkSpace(work, frames, width, height);
+    const segments = segmentFrames(frames, exportWorkers({ ...settings, canvas }, availableParallelism()));
     let done = 0;
     const tick = () => job.onProgress?.(++done, frames, 'capture');
-    const files = segments.map((_, i) => join(work, `segment-${String(i).padStart(2, '0')}.mkv`));
+    const extension = plan.mode === 'stream' ? plan.extension : 'mkv';
+    const names = segments.map((_, i) => `segment-${String(i).padStart(2, '0')}.${extension}`);
+    const video = plan.mode === 'stream' ? plan.video() : LOSSLESS;
     const controller = new AbortController();
     const signal = job.signal ? AbortSignal.any([job.signal, controller.signal]) : controller.signal;
+    const began = performance.now();
     const captures = await Promise.allSettled(segments.map(async (s, i) => {
-      try { return await captureSegment(host, { ...job, project, signal }, s.start, s.end, files[i]!, tick); }
+      try { await captureSegment(host, { ...job, project, signal }, plan, canvas, s.start, s.end, video, work, names[i]!, tick); }
       catch (error) { controller.abort(); throw error; }
     }));
     const failed = captures.find(r => r.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
     if (job.signal?.aborted) throw new Error('Render cancelled');
+    const captured = performance.now();
 
-    // Lossless master: stream copy, no re-encode.
-    const list = join(work, 'segments.txt');
-    await writeFile(list, files.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n') + '\n');
-    const master = join(work, 'master.mkv');
-    await runFfmpeg(['-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-y', master], job.signal);
-
-    // Two-pass target bitrate from the same master; audio joins on pass 2 only.
     job.onProgress?.(frames, frames, 'encode');
-    const length = frames / settings.fps;
-    const twoPass = settings.encoding === 'two-pass', hevc = !webm && settings.codec === 'h265';
-    // crf and bitrate are on the H.264 scale; H.265 gets the values that keep the same look (HEVC_EQUIVALENT).
-    const quality = hevc ? hevcQuality(settings) : { crf: settings.crf, bitrate: settings.bitrate };
-    // libx265 ignores -pass / -passlogfile, so its passes go through -x265-params; the stats file is named relative
-    // to the work folder (FFmpeg runs there), because the option list is colon-separated.
-    const codec = (pass?: 1 | 2) => webm
-      ? ['-c:v', 'libvpx-vp9', '-deadline', 'good', '-cpu-used', String({ ultrafast: 8, veryfast: 6, fast: 4, medium: 2, slow: 1 }[settings.preset]), '-row-mt', '1',
-        ...(twoPass ? ['-b:v', quality.bitrate] : ['-b:v', '0', '-crf', String(quality.crf)]), '-passlogfile', join(work, 'vp9'), ...(pass ? ['-pass', String(pass)] : [])]
-      : hevc
-        // x265 `medium` takes about as long as x264 `slow` and already compresses better; x265 `slow` took 2.4× as long
-        // for a slightly larger, marginally sharper file, so `slow` encodes with `medium`.
-        ? ['-c:v', 'libx265', '-preset', settings.preset === 'slow' ? 'medium' : settings.preset, ...(twoPass ? ['-b:v', quality.bitrate] : ['-crf', String(quality.crf)]),
-          '-x265-params', ['log-level=error', ...(pass ? [`pass=${pass}`, 'stats=x265.log'] : [])].join(':'), '-tag:v', 'hvc1']
-        : ['-c:v', 'libx264', '-preset', settings.preset, ...(twoPass ? ['-b:v', quality.bitrate] : ['-crf', String(quality.crf)]), '-passlogfile', join(work, 'x264'), ...(pass ? ['-pass', String(pass)] : [])];
-    const video = (pass?: 1 | 2) => [...codec(pass), '-pix_fmt', 'yuv420p',
-      '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
-      '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
-      '-r', String(settings.fps)];
-    if (twoPass) await runFfmpeg(['-i', master, '-an', ...video(1), '-f', webm ? 'null' : 'mp4', '-y', nullDevice], job.signal, work);
-    const audio = project.audio && settings.includeAudio ? resolve(job.projectDir, project.audio.path) : undefined;
-    if (audio && !await exists(audio)) throw new Error(`Audio not found: ${project.audio!.path}`);
-    const partial = join(work, `out.${format}`);
-    await runFfmpeg([
-      '-i', master, ...(audio ? ['-i', audio] : []),
-      '-map', '0:v:0', ...(audio ? ['-map', '1:a:0', '-af', `volume=${project.audio!.gain},apad,atrim=0:${length}`, '-c:a', webm ? 'libopus' : 'aac', '-b:a', webm ? '128k' : '192k'] : ['-an']),
-      ...video(twoPass ? 2 : undefined), '-t', String(length), ...(webm ? [] : ['-movflags', '+faststart']), '-y', partial,
-    ], job.signal, work);
-    await mkdir(dirname(output), { recursive: true });
-    await rename(partial, output).catch(async error => {
-      if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
-      await copyFile(partial, output);
-    });
-    return { output, frames, fps: settings.fps, duration: length, width, height, version: job.build.version, segments: segments.length, audio: !!audio };
+    await writeFile(join(work, 'segments.txt'), concatList(names));
+    const joined = ['-f', 'concat', '-safe', '0', '-i', 'segments.txt'];
+    const audio = audioPath
+      ? ['-i', audioPath, '-map', '0:v:0', '-map', '1:a:0', '-af', `volume=${project.audio!.gain},apad,atrim=0:${length}`, ...plan.audio]
+      : ['-an'];
+    const container = plan.extension === 'webm' ? [] : ['-movflags', '+faststart'];
+    const partial = `out.${format}`;
+    if (plan.mode === 'stream') {
+      await runFfmpeg([...joined, ...audio, '-c:v', 'copy', ...(plan.extension === 'mp4' ? ['-tag:v', plan.encoder.includes('264') ? 'avc1' : 'hvc1'] : []), '-t', String(length), ...container, '-y', partial], job.signal, work);
+    } else {
+      await runFfmpeg([...joined, '-an', ...plan.video(1), '-r', String(settings.fps), '-f', plan.extension === 'webm' ? 'webm' : 'mp4', '-y', nullDevice], job.signal, work);
+      await runFfmpeg([...joined, ...audio, ...plan.video(2), '-r', String(settings.fps), '-t', String(length), ...container, '-y', partial], job.signal, work);
+    }
+    // Streamed plans encode while capturing, so their encode time is 0; two-pass encodes (and adds audio) here.
+    const finished = performance.now(), encoded = plan.mode === 'stream' ? captured : finished;
+    await place(join(work, partial), output);
+    return {
+      output, frames, fps: settings.fps, duration: length, width, height, version: job.build.version, segments: segments.length, audio: !!audioPath,
+      encoder: plan.encoder, canvas, note: plan.note,
+      timings: { capture: (captured - began) / 1000, encode: (encoded - captured) / 1000, mux: (finished - encoded) / 1000 },
+    };
   } finally {
     await rm(work, { recursive: true, force: true });
     if (ownHost) await host.close();
   }
 }
+

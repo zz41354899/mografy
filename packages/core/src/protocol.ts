@@ -30,6 +30,8 @@ export interface RenderStatus {
   /** The job is still cleaning up and cannot be replaced yet. */
   cancelling?: boolean | undefined;
   startedAt: string; finishedAt?: string | undefined;
+  /** Video exports: the encoder that wrote the file (e.g. `libx265`, `hevc_nvenc`) and why it differs from the request. */
+  encoder?: string | undefined; note?: string | undefined;
 }
 export interface PlayerState { playhead: number }
 export interface Snapshot {

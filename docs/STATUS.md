@@ -1,6 +1,27 @@
 # Development status
 
-Updated: 2026-10-31
+Updated: 2026-11-02
+
+## Export pipeline refactor (2026-11-02)
+
+- Ported the Pro export core: `render/src/codecs.ts` plans each export; constant quality streams into each capture segment (no FFV1 master); still frames draw one sample; only changed rectangles cross from the page; separate CPU (SwiftShader) and GPU browsers. Added presets (`share`, `high`, `fast`, `master`), MOV/ProRes, hardware encoders for macOS, Windows and Linux with probe-and-fallback, shutter angle, centred sample window (opt-in), ordered dither (opt-in), motion-extent adaptive samples, 48 kHz audio, `workers: auto`, project-local temp files and Windows-safe FFmpeg arguments.
+- Defaults keep existing films' pixels: shutter 360°, `sampleWindow: after`, `dither: false`, `adaptiveSamples: false`, canvas `cpu`. New: `encoding` defaults to `crf` (was `two-pass`), H.265 is Main 10, `workers` is `auto`.
+- Benchmark (`scripts/bench-export.ts`, Apple Silicon 10 cores, 1920 × 1080, 60 fps, 4 samples, CRF 18 on the H.264 scale; seconds, MB, VMAF against a lossless reference). Before: 2 workers, FFV1 master; after: auto workers, streamed.
+
+| Film | Case | Before s | After s | Before MB | After MB | VMAF before → after |
+| --- | --- | --- | --- | --- | --- | --- |
+| mografy-intro (12 s) | x265 CRF | 26.2 | **21.5** | 1.09 | 1.12 | 94.50 → 94.62 |
+| | x264 CRF | 21.9 | **17.7** | 0.89 | 0.90 | 94.29 → 94.25 |
+| | x265 two-pass 12M | 40.0 | 42.8 | 4.43 | 4.12 | 95.04 → 95.14 |
+| | hardware (VideoToolbox, GPU) | — | **14.9** | — | 1.87 | 94.73 |
+| | ProRes HQ | — | 20.5 | — | 86.4 | 95.20 |
+| mografy-brand (8 s, glow 0.12, grain 0.008) | x265 CRF | 25.6 | 26.2 | 0.30 | 0.28 | 91.99 → 92.05 |
+| | x264 CRF | 23.3 | **21.9** | 1.17 | 0.75 | 92.08 → 92.20 |
+| | x265 two-pass 12M | 53.3 | 81.5 | 6.83 | 6.72 | 92.53 → 92.64 |
+| | hardware (VideoToolbox, GPU) | — | **20.2** (18.0 with 3 workers) | — | 0.84 | 91.14 |
+
+- Reading: light scenes gain most (no master, fewer draws). On the glow-heavy film the post-processing and x265 compete for CPU, so streamed x265 only breaks even; the hardware preset is the fast path there. Two-pass is slower because H.265 is now 10-bit; it is an advanced option. Brand's x264 file came out 36 % smaller at the same VMAF; the cause was not isolated.
+- Needs real Windows / NVIDIA / Intel / AMD hardware: NVENC, Quick Sync and AMF arguments and the quality mapping (`hardwareQp`), ANGLE Direct3D 11 GPU pages, `prores_ks` speed, rename retries under antivirus. Unit tests run the argument builders with Windows paths; there is no Windows CI in this repository.
 
 ## H.265 MP4 export (2026-10-31)
 

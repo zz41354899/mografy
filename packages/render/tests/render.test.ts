@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { validateSceneProject } from '@mografy/core';
-import { buildScene, SceneHost, hostTimeouts, renderVideo, renderReview, ffmpegOutput, runFfmpeg } from '../src/index.js';
+import { buildScene, SceneHost, hostTimeouts, renderVideo, renderReview, ffmpegOutput, ffmpegPath, runFfmpeg } from '../src/index.js';
 
 const template = resolve(fileURLToPath(import.meta.url), '../../../server/template');
 let dir: string, host: SceneHost;
@@ -84,7 +84,7 @@ test('host: recovers when Chromium crashes or is closed', async () => {
   const p = await project(), build = await buildScene(dir, p);
   await host.inspect(build, p);
   // Simulate a crash: close the shared browser behind the host's back.
-  const browser = await (host as unknown as { browser: Promise<import('playwright').Browser> }).browser;
+  const browser = await (host as unknown as { browsers: { cpu: Promise<import('playwright').Browser> } }).browsers.cpu;
   await browser.close();
   const scene = await host.inspect(build, p);
   assert.equal(scene.meta.duration, 8);
@@ -206,4 +206,67 @@ test('video + review: frame count, duration, audio, PSNR', { timeout: 300_000 },
   assert.equal(review.comparisons.length, 4);
   for (const c of review.comparisons) assert.ok(c.psnr > 30, `frame ${c.frame} PSNR ${c.psnr}`);
   console.log('PSNR', review.comparisons.map(c => `#${c.frame}:${c.psnr}`).join(' '));
+});
+
+test('host: dirty-rectangle frames patch to exactly the full output frames', async () => {
+  const p = await project(), build = await buildScene(dir, p);
+  const settings = { ...p.render, samples: 2, glow: 0.1, grain: 0 };
+  const delta = await host.open(build, p, { renderScale: 0.25 }), full = await host.open(build, p, { renderScale: 0.25 });
+  try {
+    for (const k of [0, 1, 2, 40, 41, 239]) assert.ok((await delta.outputFrame(k, settings, k + 1 < 240 ? k + 1 : undefined)).equals(await full.output(k, settings)), `frame ${k}`);
+  } finally { await delta.close(); await full.close(); }
+});
+
+/** The stream line FFmpeg prints for a file's video and audio, e.g. `hevc (Main 10) (hvc1 …), yuv420p10le(tv, bt709…)`. */
+async function streams(file: string) {
+  const { spawn } = await import('node:child_process');
+  const text = await new Promise<string>(done => {
+    const child = spawn(ffmpegPath(), ['-hide_banner', '-i', file], { stdio: ['ignore', 'ignore', 'pipe'] });
+    let out = ''; child.stderr.on('data', (c: Buffer) => { out += c; }); child.once('close', () => done(out));
+  });
+  return { video: /Video: (.*)/.exec(text)?.[1] ?? '', audio: /Audio: (.*)/.exec(text)?.[1] ?? '' };
+}
+const psnr = (a: Buffer, b: Buffer) => { let e = 0; for (let i = 0; i < a.length; i++) e += (a[i]! - b[i]!) ** 2; return 10 * Math.log10(255 ** 2 / Math.max(1e-9, e / a.length)); };
+
+test('video codecs: tagged H.265 10-bit, H.264, two-pass, hardware and ProRes; segments join without a seam', { timeout: 600_000 }, async () => {
+  const p = await project();
+  p.render = { ...p.render, scale: 0.25, fps: 10, samples: 1, workers: 3, glow: 0, grain: 0 };
+  p.audio = { path: 'assets/beep.wav', bpm: 120, offset: 0, beatsPerBar: 4, gain: 0.5 };
+  await ffmpegOutput(['-f', 'lavfi', '-i', 'sine=frequency=440:duration=5', '-c:a', 'pcm_s16le', '-ar', '44100', '-f', 'wav', '-y', join(dir, 'assets/beep.wav')]);
+  const build = await buildScene(dir, p), frames = 80, size = 480 * 270;
+  const decode = (file: string) => ffmpegOutput(['-i', file, '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1']);
+  const cases = [
+    { name: 'h265', format: 'mp4', render: {}, encoder: /^libx265$/, video: /hevc \(Main 10\) \(hvc1.*yuv420p10le\(tv, bt709/ },
+    { name: 'h264', format: 'mp4', render: { codec: 'h264' }, encoder: /^libx264$/, video: /h264 \(High\) \(avc1.*yuv420p\(tv, bt709/ },
+    { name: 'two-pass', format: 'mp4', render: { encoding: 'two-pass', bitrate: '2M' }, encoder: /^libx265$/, video: /hevc \(Main 10\) \(hvc1/ },
+    { name: 'hardware', format: 'mp4', render: { encoding: 'hardware', canvas: 'gpu' }, encoder: /videotoolbox|nvenc|qsv|amf|vaapi|libx265/, video: /hevc \(Main 10\) \(hvc1.*bt709/ },
+    { name: 'prores', format: 'mov', render: {}, encoder: /^prores/, video: /prores \(HQ\).*yuv422p10le\((tv, )?bt709/ },
+  ] as const;
+  for (const c of cases) {
+    const output = join(dir, `renders/${c.name}.${c.format}`);
+    const result = await renderVideo({ format: c.format, projectDir: dir, project: { ...p, render: { ...p.render, ...c.render } }, build, output, host, overwrite: true });
+    assert.match(result.encoder, c.encoder, c.name);
+    assert.equal(result.segments, 3);
+    const info = await streams(output);
+    assert.match(info.video, c.video, `${c.name}: ${info.video}`);
+    assert.match(info.audio, c.format === 'mov' ? /pcm_s16le.*48000 Hz/ : /aac.*48000 Hz/, `${c.name}: ${info.audio}`);
+    const decoded = await decode(output);
+    assert.equal(decoded.length, frames * size, `${c.name}: exactly ${frames} frames`);
+    const pcm = await ffmpegOutput(['-i', output, '-vn', '-f', 's16le', '-ac', '1', '-ar', '8000', 'pipe:1']);
+    assert.ok(Math.abs(pcm.length / 2 / 8000 - 8) < 0.05, `${c.name}: audio as long as the video, got ${pcm.length / 16000}s`);
+    if (c.name !== 'h265') continue;
+    // Seams: at each segment boundary the decoded frame is the right one (closest to its own reference frame, not a
+    // neighbour's) and as clean as the frames around it.
+    const page = await host.open(build, p, { renderScale: 0.25 });
+    try {
+      for (const k of [25, 26, 27, 52, 53, 54]) {
+        const gray = async (n: number) => decode(await (async () => {
+          const png = join(dir, `.seam-${n}.png`); await writeFile(png, await page.png({ kind: 'output', k: n, label: '' }, p.render)); return png;
+        })());
+        const own = await gray(k), got = decoded.subarray(k * size, (k + 1) * size);
+        assert.ok(psnr(got, own) > 35, `frame ${k}: ${psnr(got, own).toFixed(1)} dB`);
+        for (const n of [k - 1, k + 1]) { const other = await gray(n); if (!other.equals(own)) assert.ok(psnr(got, own) >= psnr(got, other), `frame ${k} is not frame ${n}`); }
+      }
+    } finally { await page.close(); }
+  }
 });

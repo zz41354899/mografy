@@ -92,6 +92,11 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       return createSceneRuntime(element, { ...scene, meta: layout }, { ...options, aspectRatio: undefined, outputSize: { ...size, fit: 'contain' } });
     }
     const factor = size.fit === 'cover' ? Math.max(size.width / meta.width, size.height / meta.height) : Math.min(size.width / meta.width, size.height / meta.height);
+    // The scene at this scale fills the output exactly (same shape, any resolution): draw straight into it. Copying a
+    // full frame through a second canvas cost more than drawing most scenes, and its resampling softened every edge.
+    const fills = (w: number, out: number) => Math.abs(w * factor - out) < 1e-6;
+    if (factor <= 4 && fills(meta.width, size.width) && fills(meta.height, size.height))
+      return createSceneRuntime(element, { ...scene, meta }, { ...options, aspectRatio: undefined, outputSize: undefined, renderScale: factor });
     const source = doc.createElement('canvas');
     const runtime = await createSceneRuntime(source, { ...scene, meta }, { ...options, aspectRatio: undefined, outputSize: undefined, renderScale: Math.min(4, factor) });
     element.width = size.width; element.height = size.height;

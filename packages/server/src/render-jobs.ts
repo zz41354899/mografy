@@ -1,7 +1,6 @@
 // Export lifecycle; Project supplies the only persistent write operation.
 import { createReadStream } from 'node:fs';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import { exportRequestSchema, isVideoFormat, WEBM_DEFAULTS, outputFrameCount, validateExportFrameRate, validateSceneProject } from '@mografy/core';
 import type { ExportRequest, RenderStatus, SceneInfo, SceneProject } from '@mografy/core';
@@ -53,10 +52,13 @@ export class RenderJobs {
     };
     this.task = (async () => {
       if (isVideoFormat(format)) {
-        const temp = await mkdtemp(join(tmpdir(), 'mografy-export-'));
+        // Beside the project, so the finished video is on the same volume as renders/.
+        await mkdir(join(this.dir, '.mografy', 'tmp'), { recursive: true });
+        const temp = await mkdtemp(join(this.dir, '.mografy', 'tmp', 'export-'));
         try {
           const result = await renderVideo({ projectDir: this.dir, project: snapshot, build, format, output: join(temp, `output.${format}`), host: this.host, size: request.size, signal: controller.signal, onProgress });
           if (controller.signal.aborted) throw new Error('Render cancelled');
+          Object.assign(status, { encoder: result.encoder, note: result.note });
           await this.write(file, createReadStream(result.output), controller.signal);
         } finally { await rm(temp, { recursive: true, force: true }); }
       } else {

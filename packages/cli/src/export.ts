@@ -1,4 +1,4 @@
-import { EXPORT_SIZES, isVideoFormat, MP4_PORTRAIT_SIZES } from '@mografy/core';
+import { EXPORT_PRESETS, EXPORT_SIZES, isVideoFormat, MP4_PORTRAIT_SIZES } from '@mografy/core';
 import type { RenderStatus } from '@mografy/core';
 import { findServer } from '@mografy/server';
 import { responseJson } from './api.js';
@@ -39,12 +39,14 @@ export async function exportProject(dir: string, flags: Flags) {
   if (flags.cancel) return cancelExport(dir);
   await requireProject(dir);
   if (flags.format === 'html') throw new Error('Presentation files are written by `mografy export --format html`.');
-  const format = flags.format ?? 'mp4';
-  if ((flags.orientation || flags.resolution) && !isVideoFormat(format)) throw new Error('--orientation and --resolution are MP4/WebM options');
-  if (flags.codec && format !== 'mp4') throw new Error('--codec is an MP4 option (WebM is always VP9)');
-  const preset = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
-  const size = flags.orientation || flags.resolution ? { width: preset.width, height: preset.height, fit: 'contain' as const } : undefined;
-  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}), ...(flags.codec ? { render: { codec: flags.codec } } : {}) };
+  const preset = flags.preset ? EXPORT_PRESETS[flags.preset] : undefined;
+  if (preset && flags.format && flags.format !== preset.format) throw new Error(`--preset ${flags.preset} exports ${preset.format.toUpperCase()}; leave out --format or choose another preset`);
+  const format = preset?.format ?? flags.format ?? 'mp4';
+  if ((flags.orientation || flags.resolution) && !isVideoFormat(format)) throw new Error('--orientation and --resolution are MP4, WebM and MOV options');
+  if (flags.codec && format !== 'mp4') throw new Error('--codec is an MP4 option (WebM is always VP9, MOV always ProRes)');
+  const sized = (flags.orientation === 'portrait' ? MP4_PORTRAIT_SIZES : EXPORT_SIZES.mp4)[flags.resolution === '1080p' ? 1 : 0]!;
+  const size = flags.orientation || flags.resolution ? { width: sized.width, height: sized.height, fit: 'contain' as const } : undefined;
+  const request = { format, ...(size ? { size } : {}), ...(flags.output ? { output: exportOutput(flags.output) } : {}), ...(preset || flags.codec ? { render: { ...preset?.render, ...(flags.codec ? { codec: flags.codec } : {}) } } : {}) };
   const connection = await openExportConnection(dir);
   try {
     const status = await connection.start(request);
@@ -74,7 +76,8 @@ export async function exportProject(dir: string, flags: Flags) {
         }
         if (latest.state === 'done') {
           report.finish(latest);
-          console.log(`✓ ${formatName(format)} export complete: ${displayPath(latest.output)}`);
+          console.log(`✓ ${formatName(format)} export complete: ${displayPath(latest.output)}${latest.encoder ? ` (${latest.encoder})` : ''}`);
+          if (latest.note) console.log(`  ${latest.note}`);
           return;
         }
         await delay(200);

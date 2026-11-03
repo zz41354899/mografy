@@ -13,6 +13,54 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-11-02
+
+影片匯出重新打造，提升速度、畫質與 Windows 支援。更新後要做的事，見[升級後要做的事](#升級後要做的事)。
+
+### 新增
+
+- **匯出預設**——依檔案用途選擇，不必再自己調編碼設定。匯出視窗的 Encoder 欄，或 `mografy export <專案> --preset …`：
+
+  | 預設 | 輸出 | 適用 |
+  | --- | --- | --- |
+  | `share`（分享） | MP4，H.264 | 所有瀏覽器、Windows 電腦、聊天軟體、社群上傳 |
+  | `high`（高畫質，預設） | MP4，H.265 10-bit | 同樣畫質下檔案最小；Apple 裝置、Chrome、Edge |
+  | `fast`（快速高畫質） | MP4，硬體 H.265 10-bit | 最快的匯出，由顯示卡繪製與編碼 |
+  | `master`（母帶） | MOV，ProRes 422 HQ | 在 Final Cut、Premiere 或 DaVinci Resolve 中剪輯 |
+
+- **MOV（ProRes）格式**——`--format mov`，或在匯出視窗選 MOV。10-bit 4:2:2，附無壓縮 48 kHz 音訊；檔案很大。
+- **各平台的硬體編碼**——macOS 用 VideoToolbox；Windows 用 NVIDIA NVENC、Intel Quick Sync、AMD AMF；Linux 用 NVENC、VA-API、Quick Sync。Mografy 會先用極小的試編碼逐一確認，採用第一個能用的；都不能用時改用軟體編碼並註明。完成時，匯出視窗與終端機都會顯示實際使用的編碼器。VideoToolbox 已實測；Windows 與 Linux 的編碼器是新加入的，品質設定是初步校準，歡迎回報 `fast` 在你的顯示卡上的畫質與耗時。
+- **Windows 也能用 GPU 繪製影格**（Direct3D 11），與 macOS（Metal）相同。其他平台以 CPU 繪製。
+- **進階設定**——快門角度（預設 360°；180° 的動態模糊較短，有電影感）、漸層抖動（消除柔和漸層與光暈中的色階）、硬體品質（1–100），以及 Auto 平行數。在 `mografy.json` 設定 `render.sampleWindow: "centred"`，還能讓每格的動態取樣以該格自己的時間為中心，與音訊同步。所有設定見[設定說明](docs/configuration.md#export-settings)。
+- **`scripts/bench-export.ts`**——量測匯出時間，並與無損參考比較檔案大小、SSIM、VMAF。本次結果見 [docs/STATUS.md](docs/STATUS.md)。
+
+### 變更
+
+- **匯出更快**——預設改為固定品質，並在繪製影格的同時編碼，不再先寫無損中間檔；靜止影格只畫一次，不再每個動態取樣各畫一次；每格只有變動的部分會離開瀏覽器。12 秒的 intro 在 1080p60 下，H.265 從 26.2 秒降到 21.5 秒、H.264 從 21.9 秒降到 17.7 秒，畫質相同；用 `fast` 只要 14.9 秒。光暈很重的場景用軟體編碼時提升較少，建議改用 `fast`。
+- **H.265 改為 10-bit**（Main 10）：同樣檔案大小下漸層更平滑。
+- **音訊改為 48 kHz**，這是影音平台與剪輯軟體預期的取樣率。
+- **自適應取樣**（預設關閉）改看變動擴散的範圍，小而快的物件會保留完整的動態模糊，不會變成兩個殘影。
+- **色彩轉換**改用精確捨入與完整色度，細的彩色文字邊緣更乾淨。
+- **雙次編碼的目標位元率**移到進階設定。因為 H.265 改為 10-bit，這個模式會比以前慢。
+
+### 修正
+
+- **Windows 匯出**——傳給 FFmpeg 的只剩相對於工作資料夾的檔名，專案路徑中的磁碟代號（`C:`）、空白、撇號與反斜線不會再讓匯出失敗。完成的檔案若被防毒軟體暫時鎖住，會自動重試而不是失敗。
+- **奇數尺寸的影片**會在開始匯出前就被擋下，不再到編碼時才失敗。
+- 匯出改在專案的 `.mografy/tmp/` 進行，不再使用系統暫存資料夾，完成的影片可直接移進 `renders/` 不必複製；雙次編碼會先檢查剩餘磁碟空間。
+
+### 不變
+
+- **既有作品的畫面不變。** 預設維持快門 360°、原本的取樣時間、不抖動、不使用自適應取樣，影格的繪製結果與以前完全相同。專案 `mografy.json` 中已儲存的設定（例如 `"encoding": "two-pass"` 或 `"workers": 2`）會保留；只有從未設定過的專案才會套用新預設（固定品質、Auto 平行數）。
+- WebM、Lottie、SVGA 匯出、影片 60 fps 上限，以及所有既有的 CLI 參數（`--codec h264` 仍可使用）。
+
+### 升級後要做的事
+
+1. 更新：`mografy update` 會更新 checkout、重新建置，並重新啟動使用中的播放器。沒有 `update` 的舊安裝，請先停止播放器，執行 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
+2. 如果 `mografy dev` 是你自己啟動的，請停止後再啟動一次，播放器才會使用新的匯出。
+3. 選用：在匯出視窗選一個預設，或在終端機試試 `mografy export <專案> --preset fast`。已在專案中儲存 `"encoding": "two-pass"` 或固定 `"workers"` 的專案會保留原設定；要使用新預設，請選擇預設，或修改 `mografy.json`。
+4. 使用 NVIDIA、Intel 或 AMD 顯示卡的 Windows：請保持顯示卡驅動程式為最新。如果 `fast` 顯示改用軟體編碼，請將 `MOGRAFY_FFMPEG` 指向包含該顯示卡編碼器的 FFmpeg。
+
 ## 2026-11-01
 
 ### 新增

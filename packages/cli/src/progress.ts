@@ -3,7 +3,7 @@ import type { ExportFormat, RenderStatus } from '@mografy/core';
 import type { RunningServer } from '@mografy/server';
 import { displayPath } from './paths.js';
 
-export const formatName = (format: ExportFormat) => isVideoFormat(format) ? (format === 'webm' ? 'WebM' : 'MP4') : format === 'lottie' ? 'Lottie' : 'SVGA';
+export const formatName = (format: ExportFormat) => isVideoFormat(format) ? (format === 'webm' ? 'WebM' : format === 'mov' ? 'MOV' : 'MP4') : format === 'lottie' ? 'Lottie' : 'SVGA';
 
 export function progressReporter(format: ExportFormat) {
   let lastStage = '', lastBucket = -1, captureComplete = false;
@@ -58,7 +58,7 @@ export function monitorDevExports(server: RunningServer) {
     if (status.cancelling && !cancelling) { report?.stop(); console.log('Cancelling export…'); cancelling = true; }
     if (status.state === 'running') return;
     complete = status.id;
-    if (status.state === 'done') { report?.finish(status); console.log(`✓ ${formatName(status.format)} export complete: ${displayPath(status.output)}`); }
+    if (status.state === 'done') { report?.finish(status); console.log(`✓ ${formatName(status.format)} export complete: ${displayPath(status.output)}${status.encoder ? ` (${status.encoder})` : ''}`); if (status.note) console.log(`  ${status.note}`); }
     else if (status.state === 'cancelled') { report?.stop(); console.log('Export cancelled.'); }
     else { report?.stop(); console.error(`Export failed: ${status.error ?? 'Unknown error'}`); }
   };

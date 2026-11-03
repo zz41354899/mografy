@@ -84,11 +84,11 @@ test('export dialog: four usable formats, keyboard choices, advanced controls an
         await mkdir(resolve('../../artifacts/webm-export'), { recursive: true });
         await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-desktop.png') });
         await page.setViewportSize({ width: 390, height: 844 });
-        assert.equal(await modal.evaluate(element => element.scrollWidth > element.clientWidth), false, 'four formats fit the mobile dialog');
+        assert.equal(await modal.evaluate(element => element.scrollWidth > element.clientWidth), false, 'five formats fit the mobile dialog');
         await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-mobile.png') });
         await page.setViewportSize({ width: 1280, height: 800 });
       }
-      await encoding.click(); await encoding.press('End'); await encoding.press('Enter');
+      assert.equal(await encoding.innerText(), 'Constant quality · one-pass', 'constant quality is the default');
       await modal.getByRole('slider',{name:'CRF'}).fill('20');
     } else {
       assert.equal(await encoding.count(),0);
@@ -260,14 +260,16 @@ test('export dialog continues through progress, background work, cancellation, f
   await page.getByRole('button',{name:'Export',exact:true}).click();
   const modal = page.getByRole('dialog',{name:'Export animation'});
   await modal.getByRole('group',{name:'MP4 orientation'}).getByRole('button',{name:'Portrait 9:16'}).click();
-  // H.264 so the finished file plays in this test browser whatever its HEVC support; choosing the codec keeps the Quality preset
-  const codec = modal.getByRole('combobox',{name:'Codec',exact:true}), qualityChoice = modal.getByRole('combobox',{name:'Quality',exact:true});
+  // Share (H.264) so the finished file plays in this test browser whatever its HEVC support; choosing the encoder keeps the Quality preset
+  const encoder = modal.getByRole('combobox',{name:'Encoder',exact:true}), qualityChoice = modal.getByRole('combobox',{name:'Quality',exact:true});
   const presetBefore = await qualityChoice.innerText();
-  await codec.click(); await codec.press('End'); await codec.press('Enter');
-  assert.equal(await codec.innerText(), 'H.264 · plays everywhere');
+  assert.equal(await encoder.innerText(), 'High quality · H.265 10-bit', 'H.265 10-bit is the MP4 default');
+  await encoder.click(); await encoder.press('Home'); await encoder.press('Enter');
+  assert.equal(await encoder.innerText(), 'Share · H.264');
   assert.equal(await qualityChoice.innerText(), presetBefore);
   const quality = modal.getByRole('combobox',{name:'Quality',exact:true});
-  await quality.click(); await quality.press('Home'); await quality.press('Enter');
+  // High (8 samples): Draft now finishes before the test can watch the progress, hide it and cancel it.
+  await quality.click(); await quality.press('End'); await quality.press('Enter');
   await page.screenshot({path:join(qa,'settings.png')});
   const originalManifest = await readFile(join(projectDir,'mografy.json'),'utf8');
   await modal.getByRole('button',{name:'Export MP4',exact:true}).click();

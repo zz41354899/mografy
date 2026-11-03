@@ -72,32 +72,62 @@ export type ParameterValues = Record<string, ParameterValue>;
 export const renderSettingsSchema = z.strictObject({
   /** Device pixels per logical pixel for output capture. */
   scale: z.number().finite().min(0.1).max(4).default(1),
-  /** Parallel capture segments. */
-  workers: z.number().int().min(1).max(8).default(2),
+  /** Parallel capture segments; `auto` picks from the CPU count and canvas (see exportWorkers). */
+  workers: z.union([z.number().int().min(1).max(8), z.literal('auto')]).default('auto'),
   /** Output frame rate. */
   fps: z.number().int().min(1).max(120).default(30),
   /** Equal-weight samples per output frame (4 × 30fps = 120 samples per second). */
   samples: z.number().int().min(1).max(16).default(4),
   mixing: z.enum(['srgb', 'linear']).default('srgb'),
+  /**
+   * Shutter angle in degrees: the share of each frame interval the samples cover. 360 spreads them over the whole
+   * interval (the long-standing look); 180 is the film convention, with shorter trails.
+   */
+  shutter: z.number().finite().min(1).max(360).default(360),
+  /**
+   * Where frame k's samples sit. `after` (the original timing): in the interval after k/fps, so the picture is
+   * centred half a frame after its timestamp. `centred`: around k/fps, in step with the audio. Kept as `after`
+   * by default so existing films render exactly as before.
+   */
+  sampleWindow: z.enum(['after', 'centred']).default('after'),
+  /**
+   * Frames whose first and last samples barely differ mix only those two. Decided by how far the change spreads,
+   * so small fast objects keep every sample. Off by default.
+   */
+  adaptiveSamples: z.boolean().default(false),
+  /**
+   * Where export frames are drawn. 'cpu' is identical on every machine. 'gpu' rasterizes on the graphics card
+   * (Metal on macOS, Direct3D 11 on Windows), with antialiased edges a little different; elsewhere it falls back to 'cpu'.
+   */
+  canvas: z.enum(['cpu', 'gpu']).default('cpu'),
+  /** Ordered dither before the final 8-bit rounding: hides banding in soft gradients. Off by default (exact old output). */
+  dither: z.boolean().default(false),
   bitrate: z.string().regex(/^\d+(\.\d+)?[kM]$/).default('12M'),
   glow: z.number().finite().min(0).max(1).default(0.12),
   grain: z.number().finite().min(0).max(0.1).default(0.008),
   /**
-   * MP4 video codec (WebM is always VP9). H.265 / HEVC keeps the same look in a markedly smaller file and plays in
-   * QuickTime, Safari, Chrome, Edge, phones and social uploads; H.264 also plays in Firefox, older players and
-   * Windows PCs without HEVC support.
+   * MP4 video codec (WebM is always VP9, MOV always ProRes). H.265 / HEVC is written 10-bit and keeps the same look in
+   * a markedly smaller file; it plays in QuickTime, Safari, Chrome and Edge with hardware decoding, phones and social
+   * uploads. H.264 (8-bit) also plays in Firefox, older players and Windows PCs without HEVC support.
    */
   codec: z.enum(['h265', 'h264']).default('h265'),
-  encoding: z.enum(['two-pass', 'crf']).default('two-pass'),
+  /**
+   * `crf`: software constant quality, encoded while frames are captured. `two-pass`: software target bitrate from a
+   * lossless master (slower; for a fixed file size). `hardware`: the GPU's encoder (VideoToolbox, NVENC, Quick Sync,
+   * AMF or VA-API), falling back to software constant quality where none works.
+   */
+  encoding: z.enum(['crf', 'two-pass', 'hardware']).default('crf'),
   preset: z.enum(['ultrafast', 'veryfast', 'fast', 'medium', 'slow']).default('medium'),
   crf: z.number().int().min(0).max(51).default(18),
+  /** Hardware encoder quality, 1–100: higher keeps more detail in a larger file. 65 looks like libx265 CRF 14. */
+  hardwareQuality: z.number().int().min(1).max(100).default(65),
   includeAudio: z.boolean().default(true),
 });
 export type RenderSettings = z.infer<typeof renderSettingsSchema>;
-export const exportFormatSchema = z.enum(['mp4', 'webm', 'lottie', 'svga']);
+export const exportFormatSchema = z.enum(['mp4', 'webm', 'mov', 'lottie', 'svga']);
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
-export type VideoFormat = Extract<ExportFormat, 'mp4' | 'webm'>;
-export const isVideoFormat = (format: ExportFormat): format is VideoFormat => format === 'mp4' || format === 'webm';
+export type VideoFormat = Extract<ExportFormat, 'mp4' | 'webm' | 'mov'>;
+export const isVideoFormat = (format: ExportFormat): format is VideoFormat => format === 'mp4' || format === 'webm' || format === 'mov';
 /**
  * MP4 `crf` and `bitrate` are on the H.264 scale (the numbers existing projects and the quality presets use). Measured
  * on lossless masters of a 3D paper-texture film and a 2D motion film (docs/STATUS.md, 2026-10-31), libx265 at the
@@ -113,7 +143,30 @@ export function hevcQuality(settings: Pick<RenderSettings, 'crf' | 'bitrate'>) {
 }
 /** WebM uses quality-based VP9 by default rather than inheriting the MP4 bitrate target. */
 export const WEBM_DEFAULTS = { encoding: 'crf', crf: 32, preset: 'medium' } as const;
-export const EXPORT_MAX_FPS = { mp4: 60, webm: 60, lottie: 30, svga: 30 } as const;
+/**
+ * Export presets. `share`: H.264 8-bit, plays everywhere. `high`: H.265 10-bit software encode (the MP4 default).
+ * `fast`: the hardware H.265 encoder streamed during capture, GPU-drawn frames. `master`: ProRes 422 HQ in a MOV.
+ */
+export const EXPORT_PRESETS = {
+  share: { format: 'mp4', render: { codec: 'h264', encoding: 'crf', dither: true } },
+  high: { format: 'mp4', render: { codec: 'h265', encoding: 'crf', dither: true } },
+  fast: { format: 'mp4', render: { codec: 'h265', encoding: 'hardware', hardwareQuality: 65, canvas: 'gpu', adaptiveSamples: false, dither: true } },
+  master: { format: 'mov', render: { dither: false } },
+} as const satisfies Record<string, { format: 'mp4' | 'mov'; render: Partial<RenderSettings> }>;
+export type ExportPreset = keyof typeof EXPORT_PRESETS;
+export const exportPresetSchema = z.enum(['share', 'high', 'fast', 'master']);
+/** The MP4 preset these settings match, if any. */
+export function mp4Preset(settings: Pick<RenderSettings, 'codec' | 'encoding'>): Exclude<ExportPreset, 'master'> | undefined {
+  if (settings.encoding === 'hardware') return settings.codec === 'h265' ? 'fast' : undefined;
+  if (settings.encoding !== 'crf') return undefined;
+  return settings.codec === 'h264' ? 'share' : 'high';
+}
+/** Capture segments for an export: the explicit count, or for `auto` one per two cores (CPU canvas, at most 6) or 3 (GPU: the graphics card is shared). */
+export function exportWorkers(settings: Pick<RenderSettings, 'workers' | 'canvas'>, cores: number) {
+  if (settings.workers !== 'auto') return settings.workers;
+  return settings.canvas === 'gpu' ? 3 : Math.max(1, Math.min(6, Math.floor(cores / 2)));
+}
+export const EXPORT_MAX_FPS = { mp4: 60, webm: 60, mov: 60, lottie: 30, svga: 30 } as const;
 export const SVGA_FRAME_RATES = [1, 2, 3, 5, 6, 10, 12, 15, 20, 30] as const;
 export function validateExportFrameRate(format: ExportFormat, fps: number) {
   if (!Number.isInteger(fps) || fps < 1 || fps > EXPORT_MAX_FPS[format])
@@ -126,6 +179,7 @@ export const EXPORT_SIZES = {
   svga: [{ width: 375, height: 375, name: 'Square' }, { width: 375, height: 750, name: 'Portrait' }],
   webm: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
   mp4: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
+  mov: [{ width: 1280, height: 720, name: '720p' }, { width: 1920, height: 1080, name: '1080p' }],
 } as const;
 export const MP4_PORTRAIT_SIZES = EXPORT_SIZES.mp4.map(size => ({ ...size, width: size.height, height: size.width }));
 /** Output viewport only; the scene keeps its logical dimensions. */
@@ -141,6 +195,11 @@ export const renderOverridesSchema = z.strictObject({
   fps: renderSettingsSchema.shape.fps.unwrap().optional(),
   samples: renderSettingsSchema.shape.samples.unwrap().optional(),
   mixing: renderSettingsSchema.shape.mixing.unwrap().optional(),
+  shutter: renderSettingsSchema.shape.shutter.unwrap().optional(),
+  sampleWindow: renderSettingsSchema.shape.sampleWindow.unwrap().optional(),
+  adaptiveSamples: renderSettingsSchema.shape.adaptiveSamples.unwrap().optional(),
+  canvas: renderSettingsSchema.shape.canvas.unwrap().optional(),
+  dither: renderSettingsSchema.shape.dither.unwrap().optional(),
   bitrate: renderSettingsSchema.shape.bitrate.unwrap().optional(),
   glow: renderSettingsSchema.shape.glow.unwrap().optional(),
   grain: renderSettingsSchema.shape.grain.unwrap().optional(),
@@ -148,6 +207,7 @@ export const renderOverridesSchema = z.strictObject({
   encoding: renderSettingsSchema.shape.encoding.unwrap().optional(),
   preset: renderSettingsSchema.shape.preset.unwrap().optional(),
   crf: renderSettingsSchema.shape.crf.unwrap().optional(),
+  hardwareQuality: renderSettingsSchema.shape.hardwareQuality.unwrap().optional(),
   includeAudio: renderSettingsSchema.shape.includeAudio.unwrap().optional(),
 });
 export const exportRequestSchema = z.strictObject({
@@ -156,6 +216,8 @@ export const exportRequestSchema = z.strictObject({
   size: exportSizeSchema.optional(),
   render: renderOverridesSchema.optional(),
 }).superRefine((request, ctx) => {
+  if (request.size && isVideoFormat(request.format) && (request.size.width % 2 || request.size.height % 2))
+    ctx.addIssue({ code: 'custom', path: ['size'], message: 'Video needs even pixel dimensions.' });
   if (request.render?.fps === undefined) return;
   try { validateExportFrameRate(request.format, request.render.fps); }
   catch (error) { ctx.addIssue({ code: 'custom', path: ['render', 'fps'], message: (error as Error).message }); }
@@ -373,10 +435,15 @@ export function reconcileParams(definitions: ParameterDefinitions, values: Param
 
 /** Number of output frames for a duration. */
 export const outputFrameCount = (duration: number, fps: number) => Math.max(1, Math.ceil(duration * fps - 1e-9));
-/** Centered, non-overlapping sample times for output frame k: (S·k + j + 0.5) / (S·fps). */
-export function sampleTimes(k: number, fps: number, samples: number): number[] {
-  const rate = fps * samples;
-  return Array.from({ length: samples }, (_, j) => (samples * k + j + 0.5) / rate);
+/**
+ * Equal-weight sample times for output frame k: S evenly spaced, centred in sub-intervals of a window that covers
+ * `shutter`/360 of the frame interval. With `after` the window is centred on (k + 0.5)/fps (with a 360° shutter,
+ * exactly (S·k + j + 0.5) / (S·fps), the original timing); with `centred` it is centred on k/fps, in step with audio.
+ */
+export function sampleTimes(k: number, fps: number, samples: number, shutter = 360, window: 'after' | 'centred' = 'after'): number[] {
+  const span = Math.min(360, Math.max(0, shutter)) / 360 / fps, centre = (window === 'centred' ? k : k + 0.5) / fps;
+  if (span === 1 / fps && window === 'after') return Array.from({ length: samples }, (_, j) => (samples * k + j + 0.5) / (fps * samples));
+  return Array.from({ length: samples }, (_, j) => Math.max(0, centre + ((j + 0.5) / samples - 0.5) * span));
 }
 /** Split [0, frames) into contiguous ranges on output-frame boundaries. */
 export function segmentFrames(frames: number, workers: number): { start: number; end: number }[] {

@@ -58,11 +58,12 @@ function helpText(color: boolean) {
       row('mografy install-command', 'Put the mografy command on PATH'),
     ]),
     section('Export options', [
-      row('--format <mp4|webm|lottie|svga|html>', 'Output format (default: mp4); html writes a presentation file'),
+      row('--format <mp4|webm|mov|lottie|svga|html>', 'Output format (default: mp4); mov is ProRes; html writes a presentation file'),
+      row('--preset <share|high|fast|master>', 'share: H.264, plays everywhere · high: H.265 10-bit · fast: hardware H.265 · master: ProRes MOV'),
       row('-o, --output <file>', 'File name, or a path inside renders/'),
-      row('--orientation <landscape|portrait>', 'MP4/WebM at 16:9 or 9:16, fitting the whole scene'),
+      row('--orientation <landscape|portrait>', 'MP4/WebM/MOV at 16:9 or 9:16, fitting the whole scene'),
       row('--codec <h265|h264>', 'MP4 video codec (default: h265, about half the size; h264 plays everywhere)'),
-      row('--resolution <720p|1080p>', 'MP4/WebM size (default with orientation: 720p)'),
+      row('--resolution <720p|1080p>', 'MP4/WebM/MOV size (default with orientation: 720p)'),
       row('--cancel', "Cancel the project's current export"),
     ]),
     section('Player and review options', [

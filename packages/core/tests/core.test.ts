@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { sceneRuntimeKey } from '../src/scene-inputs.js';
 import { projectPatchRequestSchema, sheetRequestSchema } from '../src/index.js';
-import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema, hevcQuality, HEVC_EQUIVALENT } from '../src/index.js';
+import { sceneMetaForAspect, SKILL, SKILL_REFERENCES, validateSceneProject, resolveParams, reconcileParams, beatTimes, beatAt, checkSceneSource, sampleTimes, segmentFrames, outputFrameCount, exportRequestSchema, hevcQuality, HEVC_EQUIVALENT, EXPORT_PRESETS, mp4Preset, exportWorkers } from '../src/index.js';
 test('runtime identity includes setup and beat inputs, excluding output settings and audio gain', () => {
  const project = validateSceneProject({ version: 1, name: 'identity', scene: 'scenes/main.ts', audio: { path: 'assets/music.wav', bpm: 60 } });
  const key = sceneRuntimeKey('version', project);
@@ -66,7 +66,7 @@ test('output samples are centered, non-overlapping and segments align to frames'
 });
 test('manifest render defaults are explicit', () => {
  const r = validateSceneProject({ version: 1, name: 'a', scene: 's.ts' }).render;
- assert.deepEqual(r, { scale: 1, workers: 2, fps: 30, samples: 4, mixing: 'srgb', bitrate: '12M', glow: .12, grain: .008, codec: 'h265', encoding: 'two-pass', preset: 'medium', crf: 18, includeAudio: true });
+ assert.deepEqual(r, { scale: 1, workers: 'auto', fps: 30, samples: 4, mixing: 'srgb', shutter: 360, sampleWindow: 'after', adaptiveSamples: false, canvas: 'cpu', dither: false, bitrate: '12M', glow: .12, grain: .008, codec: 'h265', encoding: 'crf', preset: 'medium', crf: 18, hardwareQuality: 65, includeAudio: true });
  assert.throws(() => validateSceneProject({ version: 1, name: 'a', scene: 's.ts', review: { transitions: [{ start: 2, end: 1 }] } }));
 });
 
@@ -126,4 +126,33 @@ test('meta.tempo is optional, takes defaults and is compared with the audio grid
   assert.deepEqual(tempoIssues(meta, { bpm: 120, offset: 0, beatsPerBar: 4 }), []);
   assert.deepEqual(tempoIssues(meta, undefined), []);
   assert.equal(tempoIssues(meta, { bpm: 96, offset: .5, beatsPerBar: 3 }).length, 3);
+});
+test('shutter and sample window: 360° after is the original timing, centred follows the frame time', () => {
+ for (const k of [0, 3, 29]) assert.deepEqual(sampleTimes(k, 30, 4, 360, 'after'), sampleTimes(k, 30, 4));
+ const half = sampleTimes(2, 30, 4, 180).map(t => +(t * 240).toFixed(9));
+ assert.deepEqual(half, [18.5, 19.5, 20.5, 21.5], '180° covers the middle half of the interval, around (k + 0.5)/fps');
+ const centred = sampleTimes(2, 30, 2, 360, 'centred').map(t => +(t * 120).toFixed(9));
+ assert.deepEqual(centred, [7, 9], 'centred on k/fps = 8/120');
+ assert.ok(sampleTimes(0, 30, 4, 360, 'centred').every(t => t >= 0), 'never before the film starts');
+});
+test('export presets map to settings, and auto workers follow the CPU count and canvas', () => {
+ const base = validateSceneProject({ version: 1, name: 'a', scene: 's.ts' }).render;
+ for (const id of ['share', 'high', 'fast'] as const) {
+  const preset = EXPORT_PRESETS[id];
+  assert.equal(mp4Preset({ ...base, ...preset.render }), id);
+  assert.equal(exportRequestSchema.safeParse({ format: preset.format, render: preset.render }).success, true, id);
+ }
+ assert.equal(EXPORT_PRESETS.master.format, 'mov');
+ assert.equal(mp4Preset({ ...base, encoding: 'two-pass' }), undefined);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10), 5);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 32), 6);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 1), 1);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'gpu' }, 16), 3);
+ assert.equal(exportWorkers({ workers: 3, canvas: 'gpu' }, 16), 3);
+});
+test('video export requests refuse odd sizes; animation formats keep theirs', () => {
+ assert.equal(exportRequestSchema.safeParse({ format: 'mp4', size: { width: 1279, height: 720 } }).success, false);
+ assert.equal(exportRequestSchema.safeParse({ format: 'mov', size: { width: 1280, height: 721 } }).success, false);
+ assert.equal(exportRequestSchema.safeParse({ format: 'svga', size: { width: 375, height: 375 } }).success, true);
+ assert.equal(exportRequestSchema.safeParse({ format: 'mov', render: { fps: 60 } }).success, true);
 });
