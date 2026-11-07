@@ -60,7 +60,7 @@ export class RenderJobs {
           if (controller.signal.aborted) throw new Error('Render cancelled');
           Object.assign(status, { encoder: result.encoder, note: result.note });
           await this.write(file, createReadStream(result.output), controller.signal);
-        } finally { await rm(temp, { recursive: true, force: true }); }
+        } finally { await rm(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {}); }
       } else {
         const result = await renderAnimation({ project: snapshot, build, host: this.host, format, size: request.size, signal: controller.signal, onProgress });
         if (controller.signal.aborted) throw new Error('Render cancelled');

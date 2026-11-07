@@ -3,7 +3,7 @@
 // FFmpeg runs in the work folder and every file it names there is relative: no drive letters, backslashes or
 // spaces reach option strings, the concat list or filter graphs on Windows.
 import { access, copyFile, mkdir, mkdtemp, rename, rm, statfs, writeFile } from 'node:fs/promises';
-import { availableParallelism } from 'node:os';
+import { availableParallelism, totalmem } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { exportWorkers, outputFrameCount, sampleTimes, segmentFrames, validateExportFrameRate } from '@mografy/core';
 import type { ExportSize, SceneProject, VideoFormat } from '@mografy/core';
@@ -115,12 +115,14 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
     if (width % 2 || height % 2) throw new Error(`Video needs even dimensions; got ${width}×${height} (meta × render.scale)`);
     const frames = outputFrameCount(meta.duration, settings.fps), length = frames / settings.fps;
     if (plan.mode === 'master') await checkSpace(work, frames, width, height);
-    const segments = segmentFrames(frames, exportWorkers({ ...settings, canvas }, availableParallelism()));
+    const segments = segmentFrames(frames, exportWorkers({ ...settings, canvas }, availableParallelism(), { total: totalmem(), pixels: width * height }));
     let done = 0;
     const tick = () => job.onProgress?.(++done, frames, 'capture');
     const extension = plan.mode === 'stream' ? plan.extension : 'mkv';
     const names = segments.map((_, i) => `segment-${String(i).padStart(2, '0')}.${extension}`);
-    const video = plan.mode === 'stream' ? plan.video() : LOSSLESS;
+    // Each segment's encoder gets its share of the cores instead of sizing itself for the whole machine (less memory).
+    const threads = Math.max(1, Math.round(availableParallelism() / segments.length));
+    const video = plan.mode === 'stream' ? plan.video(undefined, threads) : LOSSLESS;
     const controller = new AbortController();
     const signal = job.signal ? AbortSignal.any([job.signal, controller.signal]) : controller.signal;
     const began = performance.now();
@@ -156,7 +158,8 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
       timings: { capture: (captured - began) / 1000, encode: (encoded - captured) / 1000, mux: (finished - encoded) / 1000 },
     };
   } finally {
-    await rm(work, { recursive: true, force: true });
+    // Windows keeps a just-killed FFmpeg's files locked for a moment; a leftover temp folder must not fail the export.
+    await rm(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }).catch(() => {});
     if (ownHost) await host.close();
   }
 }

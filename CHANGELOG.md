@@ -13,6 +13,29 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-11-07
+
+### Added
+
+- **Batch export** — export many films in one go instead of one by one.
+  - CLI: `mografy export <project> <project>...`, or `mografy export --all [folder]` for every project in a folder (default: your projects folder; folders starting with `_`, such as `_to_delete`, are skipped). Same options for each (`--preset`, `--format`, `--resolution`…). A project that fails is reported and the batch goes on; Ctrl+C cancels the current export, stops the batch and prints a summary.
+  - Player: **Batch** next to **Export** in the top bar (or *Export several projects…* in the export dialog) opens the batch export dialog. Tick films from every project on the computer on the left, choose a format (MP4, WebM, MOV, Lottie, SVGA), the encoder (each project's own, Share, High or Fast), resolution (each project's own, 720p or 1080p by the shorter side, so 16:9 and 9:16 films keep their shape) and frame rate, with *Use less memory* and *Include music* as switches; *You'll get* previews the files. Films export one after another in the background: the dialog shows the frame being captured with a scan line and a strip of captured frames, and the queue beside it. Close the dialog and a card in the bottom-left corner keeps the progress; switching projects does not stop it. Cancel one film or all.
+
+### Improved
+
+- **Export memory** — `workers: auto` now also looks at the computer's memory: the shared Chromium and Node take about 0.9 GB and each capture segment about 1.3 GB at 1080p, and auto plans for at most 40% of the memory (8 GB: 1 segment, 16 GB: 4). Measured on 4 cores: going from 2 to 4 segments added 3 GB without any speed gain.
+- **Use less memory** — `--workers 1` on the CLI, or the *Use less memory* switch in the batch export dialog: one segment per film. Measured: 4.0 GB → 2.4 GB peak, about 20% slower.
+- Each H.265 segment's encoder now gets its share of the cores instead of sizing itself for the whole machine, and looks 10 frames ahead instead of 20: about 250 MB less per segment, the same look (SSIM 0.9999 against the previous export) and a slightly smaller file.
+- A batch shares one Chromium across projects instead of starting one per film.
+- Ctrl+C during a CLI export now cancels cleanly and prints the result, instead of Chromium being killed first.
+
+### Fixed (Windows)
+
+- Ctrl+C in a batch: Windows also sends it to FFmpeg and Chromium, so the current film used to be reported as failed and the batch went on to the next one with a dead Chromium. It is now reported as cancelled and the batch stops.
+- An export no longer fails at the very end when Windows still holds the temporary folder locked (just after FFmpeg exits): removal retries and a leftover folder is ignored.
+- The hardware encoder test gives up after 20 s and falls back to software, instead of hanging the export on a broken graphics driver.
+- FFmpeg runs without opening a console window.
+
 ## 2026-11-02
 
 Video export rebuilt for speed, quality and Windows. See [After updating](#after-updating) for what to do next.

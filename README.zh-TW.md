@@ -211,7 +211,11 @@ mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
+mografy export ./projects/intro ./projects/launch --preset share   # 批次：一部接一部
+mografy export --all                                             # 批次：projects/ 裡的每個專案
 ```
+
+**批次匯出。** 一次列出多個專案，或用 `--all [資料夾]` 匯出資料夾裡的每個專案（預設是你的專案資料夾；`_` 開頭的資料夾會略過）。它們會用同樣的選項一部接一部匯出、共用同一個 Chromium；某部失敗會回報並繼續下一部；按 Ctrl+C 停止整批並列出結果。在播放器中，**Export** 旁的 **Batch** 會開啟批次匯出視窗：勾選影片、選格式、編碼方式、解析度與影格率（*Use less memory* 是開關），影片會放進背景佇列；關掉視窗後角落的小卡會繼續顯示進度，切換專案不會中斷。
 
 四種匯出預設涵蓋大多數需求（匯出視窗的 Encoder，或 CLI 的 `--preset`）：
 

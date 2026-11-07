@@ -12,6 +12,8 @@ import { Projects } from './Projects.js';
 import { exportPanelReducer, INITIAL_EXPORT_PANEL } from './export-state.js';
 import { ExportDialog } from './ExportDialog.js';
 import { ExportProgressToast } from './ExportProgressToast.js';
+import { BatchExportDialog, BatchToast } from './BatchExportDialog.js';
+import { StackIcon } from '@phosphor-icons/react/dist/csr/Stack';
 import { FilmStripIcon } from '@phosphor-icons/react/dist/csr/FilmStrip';
 import { ExportIcon } from '@phosphor-icons/react/dist/csr/Export';
 import { PresentationIcon } from '@phosphor-icons/react/dist/csr/Presentation';
@@ -64,6 +66,9 @@ export function App() {
   const [exportPanel, dispatchExport] = useReducer(exportPanelReducer, INITIAL_EXPORT_PANEL);
   const exportOpen = exportPanel.mode === 'settings' || exportPanel.mode === 'job';
   useEffect(() => { dispatchExport({ type: 'reset' }); }, [projectDir]);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const batchLeft = session.queue.jobs.filter(j => j.state === 'queued' || j.state === 'running').length;
+  const showBatch = () => { scene.player?.pause(); if (exportOpen) dispatchExport({ type: 'close', keepJob: snapshot?.render?.state === 'running' }); setBatchOpen(true); };
   const showExport = (resume: boolean) => { scene.player?.pause(); dispatchExport({ type: resume ? 'resume' : 'settings' }); };
   const meta = snapshot?.scene?.meta, playerError = view.error;
   const connection = { connecting: 'Connecting', connected: 'Live', offline: 'Reconnecting' }[session.connection];
@@ -86,6 +91,7 @@ export function App() {
           <button className="export-primary topbar-export presenting-export" disabled={!snapshot?.scene || present.exporting} onClick={() => void present.exportHtml()} title="Write one HTML file that presents offline, and download it"><ExportIcon size={17} />{present.exporting ? 'Exporting…' : 'Export HTML'}</button>
         </> : <>
         {snapshot?.render && snapshot.render.state !== 'running' ? <button className="last-export" aria-label="View last export" title={snapshot.render.output.split(/[\\/]/).pop()} onClick={() => showExport(true)}><FilmStripIcon size={17} /><span>{snapshot.render.state === 'done' ? 'Last export' : snapshot.render.state === 'failed' ? 'Export failed' : 'Export cancelled'}</span></button> : null}
+        <button className={`topbar-secondary batch-button ${batchLeft ? 'busy' : ''}`} onClick={showBatch} aria-label={batchLeft ? `Batch export, ${batchLeft} to go` : 'Batch export'} title="Export several projects one after another"><StackIcon size={15} />{batchLeft ? `Batch · ${batchLeft} to go` : 'Batch'}</button>
         <button className="export-primary topbar-export" disabled={!snapshot?.scene} aria-label={snapshot?.render?.state === 'running' ? 'View active export' : 'Export'} onClick={() => showExport(snapshot?.render?.state === 'running')}><ExportIcon size={17} />{snapshot?.render?.state === 'running' ? snapshot.render.cancelling ? 'Cancelling…' : 'Exporting…' : 'Export'}</button>
         </>}
       </div>
@@ -118,6 +124,8 @@ export function App() {
         onEffects={effects.onChange} onEffectsPreview={effects.onPreview} />}
     </main>
     {!exportOpen && snapshot?.render?.state === 'running' ? <ExportProgressToast key={snapshot.render.id} job={snapshot.render} session={session} onOpen={() => showExport(true)} /> : null}
-    {exportPanel.mode !== 'closed' && snapshot?.scene && snapshot.project ? <ExportDialog key={`${snapshot.projectDir}:${exportPanel.generation}`} snapshot={snapshot} session={session} open={exportOpen} resume={exportPanel.mode === 'job' || exportPanel.mode === 'hidden'} onClose={keepJob => dispatchExport({ type: 'close', keepJob })} /> : null}
+    {exportPanel.mode !== 'closed' && snapshot?.scene && snapshot.project ? <ExportDialog key={`${snapshot.projectDir}:${exportPanel.generation}`} snapshot={snapshot} session={session} open={exportOpen} resume={exportPanel.mode === 'job' || exportPanel.mode === 'hidden'} onClose={keepJob => dispatchExport({ type: 'close', keepJob })} onBatch={showBatch} /> : null}
+    {!batchOpen ? <BatchToast jobs={session.queue.jobs} onOpen={showBatch} /> : null}
+    {batchOpen ? <BatchExportDialog session={session} current={snapshot?.builtIn ? undefined : projectDir} onClose={() => setBatchOpen(false)} /> : null}
   </div>;
 }

@@ -1,7 +1,7 @@
 // Connection to the Mografy server: snapshots and seek events over WebSocket, writes over HTTP.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { callApi } from './api.js';
-import type { ExportRequest, ProjectPatch, RenderStatus, ServerEvent, Snapshot } from '@mografy/core';
+import type { ExportQueueStatus, ExportRequest, ProjectPatch, QueueRequest, RenderStatus, ServerEvent, Snapshot } from '@mografy/core';
 
 export type Connection = 'connecting' | 'connected' | 'offline';
 export interface Session {
@@ -15,6 +15,11 @@ export interface Session {
   startRender(request?: ExportRequest): Promise<RenderStatus>;
   cancelRender(id?: string): Promise<void>;
   review(): Promise<{ files: string[]; report: string }>;
+  /** Batch export queue, shared by every project in this player. */
+  queue: ExportQueueStatus;
+  enqueue(request: QueueRequest): Promise<void>;
+  cancelQueued(id?: string): Promise<void>;
+  clearQueue(): Promise<void>;
 }
 
 export function useSession(): Session {
@@ -22,6 +27,7 @@ export function useSession(): Session {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [connection, setConnection] = useState<Connection>('connecting');
   const [seek, setSeek] = useState<{ t: number; n: number } | null>(null);
+  const [queue, setQueue] = useState<ExportQueueStatus>({ jobs: [] });
   const sequence = useRef(-1);
   const projectDir = useRef<string | undefined>(undefined);
   const playheadTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -35,6 +41,7 @@ export function useSession(): Session {
       socket.onopen = () => { delay = 400; sequence.current = -1; setConnection('connected'); };
       socket.onmessage = message => {
         const event = JSON.parse(String(message.data)) as ServerEvent;
+        if (event.type === 'queue') { setQueue(event.queue); return; }
         if (event.type === 'seek') { if (event.clientId !== clientId) setSeek(s => ({ t: event.t, n: (s?.n ?? 0) + 1 })); return; }
         // Sequence numbers restart when the player switches to another project.
         if (event.snapshot.projectDir !== projectDir.current) { clearTimeout(playheadTimer.current); projectDir.current = event.snapshot.projectDir; sequence.current = -1; setSeek(null); }
@@ -60,5 +67,10 @@ export function useSession(): Session {
     async cancelRender(id) { await callApi('render/cancel', 'POST', id ? { id } : {}, scopedDir); },
     review: () => callApi('review', 'POST', {}, scopedDir),
   }), [clientId, scopedDir]);
-  return useMemo(() => ({ snapshot, connection, clientId, seek, ...actions }), [snapshot, connection, clientId, seek, actions]);
+  const queueActions = useMemo<Pick<Session, 'enqueue' | 'cancelQueued' | 'clearQueue'>>(() => ({
+    async enqueue(request) { setQueue((await callApi<{ queue: ExportQueueStatus }>('queue', 'POST', request)).queue); },
+    async cancelQueued(id) { setQueue(await callApi<ExportQueueStatus>('queue/cancel', 'POST', id ? { id } : {})); },
+    async clearQueue() { setQueue(await callApi<ExportQueueStatus>('queue/clear', 'POST', {})); },
+  }), []);
+  return useMemo(() => ({ snapshot, connection, clientId, seek, queue, ...actions, ...queueActions }), [snapshot, connection, clientId, seek, queue, actions, queueActions]);
 }

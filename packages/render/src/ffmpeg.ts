@@ -16,7 +16,7 @@ export interface FfmpegProcess { child: ChildProcess; done: Promise<void>; write
 
 /** `cwd` lets encoder options name files relatively (x265 stats paths cannot contain the colon of a Windows drive). */
 export function startFfmpeg(args: string[], input = false, signal?: AbortSignal, cwd?: string): FfmpegProcess {
-  const child = spawn(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args].filter(a => !(input && a === '-nostdin')), { stdio: [input ? 'pipe' : 'ignore', 'ignore', 'pipe'], ...(cwd ? { cwd } : {}) });
+  const child = spawn(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args].filter(a => !(input && a === '-nostdin')), { stdio: [input ? 'pipe' : 'ignore', 'ignore', 'pipe'], windowsHide: true, ...(cwd ? { cwd } : {}) });
   let stderr = '';
   child.stderr!.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-8000); });
   child.stdin?.on('error', () => {});
@@ -46,7 +46,7 @@ export const runFfmpeg = (args: string[], signal?: AbortSignal, cwd?: string) =>
 /** Run FFmpeg and collect stdout (for decoding frames back for comparison). */
 export function ffmpegOutput(args: string[]): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const child = spawn(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(ffmpegPath(), ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     const out: Buffer[] = []; let stderr = '';
     child.stdout!.on('data', (chunk: Buffer) => out.push(chunk));
     child.stderr!.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-8000); });

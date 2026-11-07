@@ -154,22 +154,37 @@ function cleanError(error: unknown) {
 }
 
 /**
- * One localhost server and one Chromium per project.
+ * Chromium processes, by canvas backing. A host owns its own unless it is handed a shared set (batch export: one
+ * Chromium for every project in the batch instead of a launch per project); the owner of a shared set closes it.
+ */
+export class SharedBrowsers {
+  readonly browsers: Partial<Record<CanvasBacking, Promise<Browser>>> = {};
+  async close() {
+    const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
+    for (const key of Object.keys(this.browsers) as CanvasBacking[]) delete this.browsers[key];
+    await Promise.all(browsers.map(b => b?.close().catch(() => {})));
+  }
+}
+
+/**
+ * One localhost server per project, and one Chromium per project unless a SharedBrowsers set is given.
  * Builds are registered by version and served at /scene/<version>.js.
  */
 export class SceneHost {
   private builds = new Map<string, string>();
   private waiters = new Map<string, { resolve(data: Buffer): void; reject(error: Error): void }>();
-  private browsers: Partial<Record<CanvasBacking, Promise<Browser>>> = {};
-  private constructor(readonly projectDir: string, private server: Server, readonly origin: string) {}
+  private browsers: Partial<Record<CanvasBacking, Promise<Browser>>>;
+  private constructor(readonly projectDir: string, private server: Server, readonly origin: string, private shared?: SharedBrowsers) {
+    this.browsers = shared?.browsers ?? {};
+  }
 
-  static async start(projectDir: string) {
+  static async start(projectDir: string, shared?: SharedBrowsers) {
     let host!: SceneHost;
     const server = createServer((request, response) => { void host.handle(request, response); });
     await new Promise<void>((done, fail) => { server.once('error', fail); server.listen(0, '127.0.0.1', done); });
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Host server failed to start');
-    host = new SceneHost(resolve(projectDir), server, `http://127.0.0.1:${address.port}`);
+    host = new SceneHost(resolve(projectDir), server, `http://127.0.0.1:${address.port}`, shared);
     return host;
   }
 
@@ -230,9 +245,12 @@ export class SceneHost {
     if (running) return running;
     const args = ['--force-color-profile=srgb', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', ...gpuArgs(backing === 'gpu')];
     const channel = process.env.PLAYWRIGHT_CHANNEL;
-    const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args }).catch(async error => {
+    // Playwright's own Ctrl+C handling kills Chromium and exits at once, before an export can cancel cleanly (and before
+    // a batch can print its summary). Commands that handle Ctrl+C do so themselves; Chromium still closes on exit.
+    const signals = { handleSIGINT: false, handleSIGTERM: false };
+    const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args, ...signals }).catch(async error => {
       if (channel || !/Executable doesn't exist|install/i.test(String(error))) throw error;
-      return chromium.launch({ channel: 'chrome', args }).catch(() => {
+      return chromium.launch({ channel: 'chrome', args, ...signals }).catch(() => {
         throw new Error('No Chromium found. Run `pnpm exec playwright install chromium`, or install Google Chrome.');
       });
     });
@@ -370,9 +388,11 @@ export class SceneHost {
   async close() {
     for (const waiter of this.waiters.values()) waiter.reject(new Error('Host closed'));
     this.waiters.clear();
-    const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
-    this.browsers = {};
-    await Promise.all(browsers.map(b => b?.close().catch(() => {})));
+    if (!this.shared) {
+      const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
+      this.browsers = {};
+      await Promise.all(browsers.map(b => b?.close().catch(() => {})));
+    }
     await new Promise<void>(done => this.server.close(() => done()));
   }
 }

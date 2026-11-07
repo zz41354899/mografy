@@ -124,3 +124,44 @@ test('server shutdown closes active work and refuses later project switches', as
   await assert.rejects(server.switchProject(next), /Server is closing/);
   assert.equal(await findServer(next), undefined);
 });
+
+test('batch export queue exports projects in turn, keeps going past a failure and survives project switches', async t => {
+  const { dir, url, server, otherProject } = await fixture(t);
+  const next = await otherProject();
+  const broken = join(dir, '..', 'broken');
+  await mkdir(join(broken, 'scenes'), { recursive: true });
+  await writeFile(join(broken, 'scenes/main.ts'), 'export const meta = {};');
+  await writeFile(join(broken, 'mografy.json'), JSON.stringify({ version: 1, name: 'Broken', scene: 'scenes/main.ts' }));
+  const post = (path: string, payload: unknown) => fetch(new URL(`/__mografy/${path}`, url), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+  const added = await post('queue', { dirs: [dir, broken, next], request: { format: 'svga' } });
+  assert.equal(added.status, 200);
+  assert.equal((await added.json() as { added: unknown[] }).added.length, 3);
+  // Switching the player while the queue runs must not stop it.
+  await server.switchProject(next);
+  type Job = { name: string; state: string; output?: string; error?: string };
+  let jobs: Job[] = [];
+  for (let i = 0; i < 300; i++) {
+    jobs = (await (await fetch(new URL('/__mografy/queue', url))).json() as { jobs: Job[] }).jobs;
+    if (!jobs.some(j => j.state === 'queued' || j.state === 'running')) break;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  assert.deepEqual(jobs.map(j => [j.name, j.state]), [['HTTP', 'done'], ['Broken', 'failed'], ['Next', 'done']]);
+  assert.ok((await readFile(jobs[0]!.output!)).length > 0);
+  assert.equal((await post('queue', { dirs: [] })).status, 400);
+  const cleared = await (await post('queue/clear', {})).json() as { jobs: unknown[] };
+  assert.equal(cleared.jobs.length, 0);
+});
+
+test('batch export sizes each film by its own shape and keeps frame rates the format accepts', async () => {
+  const { jobRequest } = await import('../src/export-queue.js');
+  const render = { fps: 60 } as Parameters<typeof jobRequest>[2];
+  const landscape = jobRequest({ format: 'mp4', shortSide: 1080 }, { width: 1920, height: 1080 }, render);
+  assert.deepEqual(landscape.size, { width: 1920, height: 1080, fit: 'contain' });
+  const portrait = jobRequest({ format: 'mp4', shortSide: 720 }, { width: 1080, height: 1920 }, render);
+  assert.deepEqual(portrait.size, { width: 720, height: 1280, fit: 'contain' });
+  assert.equal(jobRequest({ format: 'mp4' }, { width: 1920, height: 1080 }, render).size, undefined, 'no short side keeps the project size');
+  assert.equal(jobRequest({ format: 'lottie' }, { width: 1920, height: 1080 }, render).render?.fps, 30);
+  const svga = jobRequest({ format: 'svga' }, { width: 1080, height: 1920 }, { fps: 24 } as Parameters<typeof jobRequest>[2]);
+  assert.equal(svga.render?.fps, 20);
+  assert.deepEqual(svga.size, { width: 375, height: 750, fit: 'contain' });
+});

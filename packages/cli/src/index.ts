@@ -5,14 +5,14 @@ import { delimiter } from 'node:path';
 import { homedir, platform } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, rememberProject, startServer } from '@mografy/server';
+import { AlreadyRunning, Project, createProject, defaultProject, ensureAgentFiles, findActive, findServer, isProject, libraryDir, rememberProject, startServer } from '@mografy/server';
 import type { ReviewResult } from '@mografy/render';
 import { deckSlides, frameCostReport, shotIssues, smoothnessReport, tempoIssues } from '@mografy/core';
 import type { FrameCost, Smoothness, Snapshot } from '@mografy/core';
 import { responseJson } from './api.js';
 import { displayPath, requireProject } from './paths.js';
 import { monitorDevExports } from './progress.js';
-import { exportProject } from './export.js';
+import { exportBatch, exportProject, projectsIn } from './export.js';
 import { launcherScript, trustCheckout, windowsLauncherScript } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { refreshSkill } from './skills.js';
@@ -44,6 +44,8 @@ function helpText(color: boolean) {
       row('mografy check --motion <project>', 'Also find jumps, hard starts and hard stops'),
       row('mografy review <project>', 'Create visual-review sheets in renders/'),
       row('mografy export <project>', 'Export MP4, WebM, Lottie or SVGA'),
+      row('mografy export <project> <project>...', 'Batch export: each project in turn, same options'),
+      row('mografy export --all [folder]', 'Batch export every project in the folder (default: projects folder)'),
     ]),
     section('Add', [
       row('mografy add', 'List the reference films, helpers and templates you can add'),
@@ -64,6 +66,7 @@ function helpText(color: boolean) {
       row('--orientation <landscape|portrait>', 'MP4/WebM/MOV at 16:9 or 9:16, fitting the whole scene'),
       row('--codec <h265|h264>', 'MP4 video codec (default: h265, about half the size; h264 plays everywhere)'),
       row('--resolution <720p|1080p>', 'MP4/WebM/MOV size (default with orientation: 720p)'),
+      row('--workers <1-8|auto>', 'Frames drawn in parallel; 1 uses the least memory (about 1.3 GB each at 1080p)'),
       row('--cancel', "Cancel the project's current export"),
     ]),
     section('Player and review options', [
@@ -319,6 +322,15 @@ export async function main(argv = process.argv.slice(2)) {
   if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
   if (flags.force && command !== 'add') throw new Error('--force is only supported by mografy add.');
   if (flags.motion && command !== 'check') throw new Error('--motion is only supported by mografy check.');
+  if (flags.all && command !== 'export' && command !== 'render') throw new Error('--all is only supported by mografy export.');
+  // Batch export: several projects, or --all for every project in a folder (default: the projects folder).
+  if ((command === 'export' || command === 'render') && (flags.all || rest.length > 1)) {
+    if (flags.all && rest.length > 1) throw new Error('Usage: mografy export --all [folder]');
+    const dirs = flags.all
+      ? await projectsIn(rest[0] ? resolve(rest[0]) : libraryDir())
+      : await Promise.all(rest.map(resolveProjectArg));
+    return exportBatch(dirs, flags);
+  }
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
     return updateInstallation(workspaceRoot, flags.updateCheck);

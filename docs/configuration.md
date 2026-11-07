@@ -42,7 +42,7 @@ Video export settings live under `render` in `mografy.json`; the Export dialog a
 | `crf`, `preset`, `bitrate` | `18`, `medium`, `12M` | Software encoder quality and speed; MP4 values are on the H.264 scale |
 | `hardwareQuality` | `65` | Hardware encoder quality, 1–100 |
 | `canvas` | `cpu` | Where export frames are drawn: `cpu` or `gpu` (macOS and Windows; elsewhere `cpu`) |
-| `workers` | `auto` | Parallel capture segments, or a number from 1 to 8 |
+| `workers` | `auto` | Parallel capture segments, or a number from 1 to 8. `auto`: one per two CPU cores (at most 6), within 40% of the computer's memory (0.9 GB shared plus about 1.3 GB per segment at 1080p). `1` uses the least memory; `mografy export --workers 1` sets it for one export |
 | `samples`, `mixing` | `4`, `srgb` | Motion samples per frame and the space they mix in |
 | `shutter` | `360` | Shutter angle in degrees; `180` gives shorter, film-like motion blur |
 | `sampleWindow` | `after` | `centred` places each frame's samples around its own time, in step with the audio |

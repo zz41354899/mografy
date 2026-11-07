@@ -51,8 +51,20 @@ export interface Snapshot {
   /** One of the bundled component projects, which cannot be presented. */
   builtIn?: boolean;
 }
+/** One project in the player's batch export queue. */
+export interface QueueJob {
+  id: string; dir: string; name: string;
+  state: 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+  format: ExportFormat;
+  stage?: 'capture' | 'encode' | 'package' | 'done' | undefined;
+  done: number; total: number;
+  output?: string | undefined; error?: string | undefined;
+  startedAt?: string | undefined; finishedAt?: string | undefined;
+}
+export interface ExportQueueStatus { jobs: QueueJob[] }
 export type ServerEvent =
   | { type: 'snapshot'; reason: string; clientId?: string | undefined; snapshot: Snapshot }
+  | { type: 'queue'; queue: ExportQueueStatus }
   | { type: 'seek'; t: number; clientId?: string | undefined };
 export interface ApiErrorBody { error: { code: string; message: string } }
 export interface ProjectSummary {

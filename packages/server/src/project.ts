@@ -6,6 +6,7 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, smoothness, validateSceneProject } from '@mografy/core';
 import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Smoothness, Snapshot, ServerEvent } from '@mografy/core';
 import { buildScene, renderReview, SceneHost } from '@mografy/render';
+import type { SharedBrowsers } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
 import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
 import { ShotGuesser } from './project-shots.js';
@@ -72,10 +73,11 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       () => this.publish('shots'));
   }
 
-  static async open(projectDir: string) {
+  /** `browsers`: Chromium shared with other projects (batch export); the caller closes it. */
+  static async open(projectDir: string, browsers?: SharedBrowsers) {
     const dir = await realpath(resolve(projectDir));
     await mkdir(join(dir, '.mografy', 'builds'), { recursive: true });
-    const project = new Project(dir, await SceneHost.start(dir));
+    const project = new Project(dir, await SceneHost.start(dir, browsers));
     const saved = await readJson<{ playhead?: unknown }>(join(dir, '.mografy', 'state.json'));
     if (typeof saved?.playhead === 'number' && Number.isFinite(saved.playhead)) project.state.playhead = Math.max(0, saved.playhead);
     await project.rebuild('startup');

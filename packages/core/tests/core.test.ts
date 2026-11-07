@@ -149,6 +149,15 @@ test('export presets map to settings, and auto workers follow the CPU count and 
  assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 1), 1);
  assert.equal(exportWorkers({ workers: 'auto', canvas: 'gpu' }, 16), 3);
  assert.equal(exportWorkers({ workers: 3, canvas: 'gpu' }, 16), 3);
+ // Memory caps auto (8 GB at 1080p: 1 segment; 16 GB: 4; 32 GB: 5 by cores; 4K needs four times as much), never explicit counts.
+ const GB = 2 ** 30, hd = 1920 * 1080;
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10, { total: 8 * GB, pixels: hd }), 1);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10, { total: 16 * GB, pixels: hd }), 4);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10, { total: 32 * GB, pixels: hd }), 5);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10, { total: 16 * GB, pixels: 4 * hd }), 1);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'cpu' }, 10, { total: 2 * GB, pixels: hd }), 1);
+ assert.equal(exportWorkers({ workers: 'auto', canvas: 'gpu' }, 16, { total: 10 * GB, pixels: hd }), 2);
+ assert.equal(exportWorkers({ workers: 4, canvas: 'cpu' }, 16, { total: 4 * GB, pixels: hd }), 4);
 });
 test('video export requests refuse odd sizes; animation formats keep theirs', () => {
  assert.equal(exportRequestSchema.safeParse({ format: 'mp4', size: { width: 1279, height: 720 } }).success, false);

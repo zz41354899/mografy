@@ -21,10 +21,14 @@ export interface Flags {
   force: boolean;
   /** `mografy check`: also scan every frame for jumps, hard starts and hard stops. */
   motion: boolean;
+  /** `mografy export --all [folder]`: every project in the folder (default: the projects folder). */
+  all: boolean;
+  /** Parallel capture segments for this export (fewer use less memory); the project's setting otherwise. */
+  workers?: number | 'auto' | undefined;
 }
 
 export function parse(argv: string[]) {
-  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false, force: false, motion: false };
+  const flags: Flags = { open: true, yes: false, cancel: false, updateCheck: false, force: false, motion: false, all: false };
   const rest: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const value = argv[i]!;
@@ -34,6 +38,8 @@ export function parse(argv: string[]) {
     else if (value === '--check') flags.updateCheck = true;
     else if (value === '--force') flags.force = true;
     else if (value === '--motion') flags.motion = true;
+    else if (value === '--all') flags.all = true;
+    else if (value === '--workers') { const v = argv[++i]; const n = Number(v); if (v === 'auto') flags.workers = 'auto'; else if (Number.isInteger(n) && n >= 1 && n <= 8) flags.workers = n; else throw new Error('--workers must be auto or 1–8'); }
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];

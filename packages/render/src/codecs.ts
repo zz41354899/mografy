@@ -24,8 +24,11 @@ export interface CodecPlan {
   extension: 'mp4' | 'webm' | 'mov';
   /** Arguments before `-i` (hardware device setup). */
   input: string[];
-  /** Encoder arguments after `-i`, including the conversion filter; `pass` gives two-pass arguments. */
-  video(pass?: 1 | 2): string[];
+  /**
+   * Encoder arguments after `-i`, including the conversion filter; `pass` gives two-pass arguments. `threads` is the
+   * share of the CPU one encoder may use when several capture segments encode at once (libx265 only).
+   */
+  video(pass?: 1 | 2, threads?: number): string[];
   /** Fallback note when the requested encoder was unavailable. */
   note?: string | undefined;
   audio: string[];
@@ -42,6 +45,16 @@ const AAC = ['-c:a', 'aac', '-b:a', '192k', '-ar', '48000'];
  */
 export const hardwareQp = (quality: number) => Math.min(51, Math.max(1, Math.round((100 - quality) * 0.4)));
 
+/**
+ * libx265 sizes its thread pool and frame threads from every core on the machine, so N segments encoding at once start
+ * N full pools that fight over the CPU (and each frame thread holds its own reconstructed frames in memory). One
+ * segment's share: a pool of `threads`, frame threads as x265 itself picks them for that many cores.
+ */
+export const x265Threads = (threads: number) => [`pools=${threads}`, `frame-threads=${threads >= 8 ? 3 : threads >= 4 ? 2 : 1}`,
+  // Half of the medium preset's 20-frame lookahead: about 150 MB less per 1080p encoder, the same look (SSIM 0.99939 →
+  // 0.99935 on mografy-intro) and a slightly smaller file.
+  'rc-lookahead=10'];
+
 function software(settings: RenderSettings, twoPass: boolean): CodecPlan {
   const hevc = settings.codec === 'h265';
   // crf and bitrate are on the H.264 scale; H.265 gets the values that keep the same look (HEVC_EQUIVALENT).
@@ -53,10 +66,10 @@ function software(settings: RenderSettings, twoPass: boolean): CodecPlan {
     encoder: 'libx265', mode: twoPass ? 'master' : 'stream', extension: 'mp4', input: [],
     // x265 `medium` takes about as long as x264 `slow` and already compresses better; x265 `slow` took 2.4× as long
     // for a slightly larger, marginally sharper file, so `slow` encodes with `medium`.
-    video: pass => ['-c:v', 'libx265', '-preset', settings.preset === 'slow' ? 'medium' : settings.preset, ...rate, '-profile:v', 'main10',
+    video: (pass, threads) => ['-c:v', 'libx265', '-preset', settings.preset === 'slow' ? 'medium' : settings.preset, ...rate, '-profile:v', 'main10',
       // libx265 ignores -pass / -passlogfile, so its passes go through -x265-params with a stats file named relative to
       // the work folder: the option list is colon-separated, so a Windows drive letter would split it.
-      '-x265-params', ['log-level=error', ...(pass ? [`pass=${pass}`, 'stats=x265.log'] : [])].join(':'),
+      '-x265-params', ['log-level=error', ...(pass ? [`pass=${pass}`, 'stats=x265.log'] : []), ...(threads ? x265Threads(threads) : [])].join(':'),
       '-vf', convert('yuv420p10le'), '-tag:v', 'hvc1', ...BT709],
     audio: AAC,
   };
@@ -119,7 +132,8 @@ export function encoderWorks(args: string[], input: string[] = [], filter = 'for
   let probe = available.get(key);
   if (!probe) {
     // 256 × 144: above every hardware encoder's minimum frame size.
-    probe = runFfmpeg([...input, '-f', 'lavfi', '-i', 'testsrc2=size=256x144:rate=30', '-frames:v', '3', '-vf', filter, ...args, '-f', 'null', '-'])
+    // A broken graphics driver can hang the encoder instead of failing it: give up after 20 s and use software.
+    probe = runFfmpeg([...input, '-f', 'lavfi', '-i', 'testsrc2=size=256x144:rate=30', '-frames:v', '3', '-vf', filter, ...args, '-f', 'null', '-'], AbortSignal.timeout(20_000))
       .then(() => true, () => false);
     available.set(key, probe);
   }

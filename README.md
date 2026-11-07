@@ -213,7 +213,11 @@ mografy export ./projects/my-animation --format webm
 mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
 mografy export ./projects/my-animation --format lottie -o preview.lottie.json
 mografy export ./projects/my-animation --format svga -o preview.svga
+mografy export ./projects/intro ./projects/launch --preset share   # batch: one after another
+mografy export --all                                             # batch: every project in projects/
 ```
+
+**Batch export.** Name several projects, or `--all [folder]` for every project in a folder (default: your projects folder; folders starting with `_` are skipped). They export one after another with the same options, share one Chromium, and a project that fails is reported while the rest go on; Ctrl+C stops the batch and prints a summary. In the player, **Batch** next to **Export** opens the batch export dialog: tick films, choose format, encoder, resolution and frame rate (*Use less memory* is a switch), and they queue in the background; a card in the corner follows the queue while the dialog is closed, and switching projects does not stop it.
 
 Four export presets cover most needs (Encoder in the Export dialog, `--preset` on the CLI):
 

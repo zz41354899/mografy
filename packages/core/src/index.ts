@@ -161,10 +161,24 @@ export function mp4Preset(settings: Pick<RenderSettings, 'codec' | 'encoding'>):
   if (settings.encoding !== 'crf') return undefined;
   return settings.codec === 'h264' ? 'share' : 'high';
 }
-/** Capture segments for an export: the explicit count, or for `auto` one per two cores (CPU canvas, at most 6) or 3 (GPU: the graphics card is shared). */
-export function exportWorkers(settings: Pick<RenderSettings, 'workers' | 'canvas'>, cores: number) {
+/** Measured memory one 1080p capture segment holds at its peak (its Chromium page plus its encoder), in bytes. */
+export const SEGMENT_MEMORY_1080P = 1.3 * 2 ** 30;
+/** Measured memory every export holds whatever its segments: Chromium's browser process and Node. */
+export const EXPORT_BASE_MEMORY = 0.9 * 2 ** 30;
+/** Share of the computer's memory an `auto` export may plan for, leaving the rest to the system, the player and other apps. */
+export const EXPORT_MEMORY_SHARE = 0.4;
+/**
+ * Capture segments for an export: the explicit count, or for `auto` one per two cores (CPU canvas, at most 6) or 3
+ * (GPU: the graphics card is shared), and never more than 40% of the computer's memory holds. Each extra segment costs
+ * about 1.3 GB at 1080p; past one per two cores it adds memory without adding speed (the CPU is already full).
+ * `auto` budgets 40% of memory: the shared Chromium and Node (0.9 GB) plus 1.3 GB per 1080p segment.
+ */
+export function exportWorkers(settings: Pick<RenderSettings, 'workers' | 'canvas'>, cores: number, memory?: { total: number; pixels: number }) {
   if (settings.workers !== 'auto') return settings.workers;
-  return settings.canvas === 'gpu' ? 3 : Math.max(1, Math.min(6, Math.floor(cores / 2)));
+  const byCores = settings.canvas === 'gpu' ? 3 : Math.max(1, Math.min(6, Math.floor(cores / 2)));
+  if (!memory) return byCores;
+  const perSegment = SEGMENT_MEMORY_1080P * Math.max(0.25, memory.pixels / (1920 * 1080));
+  return Math.max(1, Math.min(byCores, Math.floor((memory.total * EXPORT_MEMORY_SHARE - EXPORT_BASE_MEMORY) / perSegment)));
 }
 export const EXPORT_MAX_FPS = { mp4: 60, webm: 60, mov: 60, lottie: 30, svga: 30 } as const;
 export const SVGA_FRAME_RATES = [1, 2, 3, 5, 6, 10, 12, 15, 20, 30] as const;
@@ -377,6 +391,19 @@ export const projectPatchRequestSchema = z.strictObject({ patch: projectPatchSch
 /** Distinguish a malformed HTTP envelope (400) from invalid project settings (422). */
 export const projectPatchEnvelopeSchema = z.strictObject({ patch: z.record(z.string(), z.unknown()), revision: z.string().optional(), clientId });
 export const openProjectRequestSchema = z.strictObject({ dir: z.string().min(1) });
+/** Batch export from the player: projects to export one after another, each with the same request (no file name). */
+export const queueRequestSchema = z.strictObject({
+  dirs: z.array(z.string().min(1)).min(1).max(200),
+  request: z.strictObject({
+    format: exportFormatSchema.default('mp4'),
+    size: exportSizeSchema.optional(),
+    /** Video only: scale each film so its shorter side has this many pixels, keeping its own aspect ratio (landscape and portrait films can share one batch). */
+    shortSide: z.union([z.literal(720), z.literal(1080), z.literal(1440), z.literal(2160)]).optional(),
+    render: renderOverridesSchema.optional(),
+  }).default({ format: 'mp4' }),
+});
+export type QueueRequest = z.input<typeof queueRequestSchema>;
+export const queueCancelSchema = z.strictObject({ id: z.string().min(1).optional() });
 export const newProjectRequestSchema = z.strictObject({ name: z.string().trim().min(1).max(80), aspectRatio: aspectRatioSchema.optional() });
 export const sourceRequestSchema = z.strictObject({ files: z.record(z.string(), z.string().max(1_000_000)).refine(files => Object.keys(files).length > 0, 'No files submitted') });
 export const playheadRequestSchema = z.strictObject({ playhead: time, clientId });

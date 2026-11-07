@@ -1,4 +1,5 @@
 import type { ExportRequest, RenderStatus } from '@mografy/core';
+import type { SharedBrowsers } from '@mografy/render';
 import { findServer, Project } from '@mografy/server';
 import { responseJson } from './api.js';
 
@@ -10,7 +11,7 @@ interface ExportConnection {
 }
 
 /** Keeps command progress and cancellation independent of how a project is hosted. */
-export async function openExportConnection(dir: string): Promise<ExportConnection> {
+export async function openExportConnection(dir: string, browsers?: SharedBrowsers): Promise<ExportConnection> {
   const server = await findServer(dir);
   if (server) {
     const post = <T>(path: string, payload: unknown) => fetch(new URL(`/__mografy/${path}`, server.url), {
@@ -23,7 +24,7 @@ export async function openExportConnection(dir: string): Promise<ExportConnectio
       close: async () => {},
     };
   }
-  const project = await Project.open(dir);
+  const project = await Project.open(dir, browsers);
   return {
     start: async request => project.startRender(request),
     current: async () => project.snapshot().render,

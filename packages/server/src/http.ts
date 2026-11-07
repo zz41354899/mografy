@@ -13,6 +13,9 @@ import { ProjectSession } from './project-session.js';
 import { handleProjectRequest } from './project-routes.js';
 import { handleWorkspaceRequest } from './workspace-routes.js';
 import { ensureComponentProjects } from './components.js';
+import { ExportQueue } from './export-queue.js';
+import { body } from './http-io.js';
+import { queueCancelSchema, queueRequestSchema } from '@mografy/core';
 
 const webDist = () => join(dirname(fileURLToPath(import.meta.resolve('@mografy/web/package.json'))), 'dist');
 
@@ -45,10 +48,14 @@ export async function startServer(projectDir: string, options: StartOptions = {}
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 4096 });
   const send = (socket: WebSocket, event: ServerEvent) => { if (socket.readyState === WebSocket.OPEN && socket.bufferedAmount < 4 << 20) socket.send(JSON.stringify(event)); };
   session.on('event', event => { for (const socket of sockets.clients) send(socket, event); });
+  // Batch export: one queue for the whole player, independent of which project is open.
+  const queue = new ExportQueue();
+  queue.on('change', status => { for (const socket of sockets.clients) send(socket, { type: 'queue', queue: status }); });
   sockets.on('connection', socket => {
     socket.on('error', () => {});
     socket.on('message', () => socket.close(1008, 'Use the HTTP API'));
     send(socket, { type: 'snapshot', reason: 'initial', snapshot: session.project.snapshot() });
+    send(socket, { type: 'queue', queue: queue.status() });
   });
   let stopping = false, player: PlayerDevServer | null = null;
 
@@ -70,10 +77,16 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     }
     const route = `${method} ${path.replace(/^\/__mografy/, '')}`;
     if (route === 'POST /shutdown') {
-      if (url.searchParams.get('onlyIfIdle') === '1' && session.project.snapshot().render?.state === 'running') throw new ApiError(409, 'EXPORT_RUNNING', 'Wait for the export to finish before updating.');
+      if (url.searchParams.get('onlyIfIdle') === '1' && (session.project.snapshot().render?.state === 'running' || queue.busy)) throw new ApiError(409, 'EXPORT_RUNNING', 'Wait for the export to finish before updating.');
       stopping = true;
       response.once('finish', () => { void close(); });
       json(response, 200, { ok: true }); return;
+    }
+    switch (route) {
+      case 'GET /queue': return json(response, 200, queue.status());
+      case 'POST /queue': return json(response, 200, await queue.add(await body(request, queueRequestSchema)));
+      case 'POST /queue/cancel': return json(response, 200, queue.cancel((await body(request, queueCancelSchema)).id));
+      case 'POST /queue/clear': return json(response, 200, queue.clear());
     }
     if (path === '/__mografy/health' || path.startsWith('/__mografy/projects')) return handleWorkspaceRequest(session, request, response, url, route);
     return handleProjectRequest(session.project, request, response, url, route);
@@ -99,7 +112,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     for (const socket of sockets.clients) socket.terminate();
     const stopped = new Promise<void>(done => server.close(() => done()));
     server.closeAllConnections();
-    try { await Promise.all([session.close(), player?.close()]); } finally { await stopped; sockets.close(); }
+    try { await Promise.all([queue.close(), session.close(), player?.close()]); } finally { await stopped; sockets.close(); }
   })();
   try {
     if (options.hmr !== false && process.env.MOGRAFY_HMR !== '0') player = await playerDevServer(server);
