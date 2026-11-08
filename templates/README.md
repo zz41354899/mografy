@@ -4,7 +4,7 @@ Free, ready-made templates for product demo videos, all in English. Portrait tem
 white printed page with tall Anton headlines and one orange accent, for Threads, Reels and Shorts. Landscape templates
 (16:9, ids ending in `-wide`) share the look of the Mografy montage film, night grounds, spectrum light and
 kinetic type, for landing pages, YouTube and decks. Browse them at
-[mografy.app/docs/templates](https://www.mografy.app/en/docs/templates).
+[mografy.app/library/templates](https://www.mografy.app/en/library/templates).
 
 ```sh
 mografy add hook-impact three-steps cta-endcard projects/my-film

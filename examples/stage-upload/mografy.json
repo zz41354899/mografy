@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "name": "Stage · Upload diagram",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 8,
+  "params": {
+    "look": "dark"
+  },
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Regular.otf",
+      "weight": 400
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Medium.otf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-SemiBold.otf",
+      "weight": 600
+    }
+  ],
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 2,
+    "mixing": "srgb",
+    "shutter": 360,
+    "sampleWindow": "after",
+    "adaptiveSamples": false,
+    "canvas": "cpu",
+    "dither": false,
+    "bitrate": "8M",
+    "glow": 0,
+    "grain": 0,
+    "codec": "h265",
+    "encoding": "crf",
+    "preset": "medium",
+    "crf": 20,
+    "hardwareQuality": 65,
+    "includeAudio": false
+  },
+  "review": {
+    "times": [
+      0,
+      1.6,
+      2.9,
+      4.1,
+      5.6,
+      7.38
+    ],
+    "transitions": [
+      {
+        "name": "Three hops",
+        "start": 0.6,
+        "end": 4.4,
+        "step": 0.4
+      },
+      {
+        "name": "Fade and seam",
+        "start": 5.8,
+        "end": 7.4,
+        "step": 0.2
+      }
+    ]
+  }
+}

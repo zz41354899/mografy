@@ -1,6 +1,6 @@
 # Film architecture: one world, one camera, one table
 
-Read this before writing any animation with more than one shot or a moving camera. It is how a film stays continuous: the viewer follows one thing from the first frame to the last, and nothing resets between shots. The model is the `film-starter` example (`examples/film-starter/scenes/main.ts`, about 270 lines; `mografy add film-starter <folder>` copies the whole project, fonts included): read it before writing a new film and copy its structure, or start the new film from a copy. For finished films at full length (a 60 s promo, a 42 s teaser, a 71 s story), see [examples.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md).
+Read this before writing any animation with more than one shot or a moving camera. It is how a film stays continuous: the viewer follows one thing from the first frame to the last, and nothing resets between shots. The model is the `film-starter` showcase film (`scenes/main.ts`, about 270 lines; `mografy add film-starter <folder>` downloads the whole project, fonts included): read it before writing a new film and copy its structure, or start the new film from the download. For finished films at full length (a 60 s promo, a 42 s teaser, a 71 s story), see [examples.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md).
 
 ## The shape of a film module
 

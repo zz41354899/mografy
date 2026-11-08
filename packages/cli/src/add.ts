@@ -1,8 +1,10 @@
 // `mografy add`: one command for everything optional. A name is either a reference film, copied into
-// the library as a project of its own, a helper (extra), or a template from Mografy Templates, both copied into a
-// project. Several helpers and templates can be added at once, and a folder or project may follow the names.
+// the library as a project of its own (from this installation, or downloaded from the website's showcase), a helper
+// (extra), or a template from Mografy Templates, both copied into a project. Several helpers and templates can be
+// added at once, and a folder or project may follow the names.
 import { addExtra, EXTRAS, extrasList, printAdd } from './extras.js';
 import { copyExample, examplesList, listExamples, printExample } from './examples.js';
+import { installShowcase, isShowcaseFilm, printShowcase, SHOWCASE_URL, showcaseList } from './showcase.js';
 import { addTemplate, isTemplate, listTemplates, printTemplate, printTemplatesDone, ROOT, templateProject, templatesList } from './templates.js';
 
 export type AddKind = 'film' | 'helper' | 'template';
@@ -11,14 +13,15 @@ export interface AddPlan { films: string[]; helpers: string[]; templates?: strin
 /** What `mografy install-command` suggests next: [arguments, why]. Films first, then helpers for a project. */
 const SUGGESTED: [string, string][] = [
   ['hook-impact cta-endcard projects/my-post', 'Start a 9:16 post from Mografy Templates (creates the project)'],
-  ['film-starter', 'Start a new film from the 20 s model: one camera, one shot table, one light to follow'],
-  ['mografy-montage', 'Copy a 60 s reference film to watch and study'],
+  ['stage-invoices', 'Start a product UI loop from a Stage reference film'],
+  ['film-starter', 'Download the 20 s model film from the showcase: one camera, one shot table, one light to follow'],
+  ['mografy-montage', 'Download a 60 s reference film from the showcase to watch and study'],
   ['music cjk', 'In a project: the score generator, Chinese and Japanese type'],
 ];
 
 export async function addKind(name: string): Promise<AddKind | undefined> {
   if (EXTRAS[name]) return 'helper';
-  if ((await listExamples()).some(e => e.name === name)) return 'film';
+  if ((await listExamples()).some(e => e.name === name) || isShowcaseFilm(name)) return 'film';
   return await isTemplate(ROOT, name) ? 'template' : undefined;
 }
 
@@ -42,8 +45,11 @@ export async function planAdd(args: string[]): Promise<AddPlan> {
 
 export async function addList() {
   return [
-    'Reference films, copied into your library as a new project:',
+    'Reference films in this installation, copied into your library as a new project:',
     await examplesList(),
+    '',
+    `Showcase films, downloaded from ${SHOWCASE_URL} into your library:`,
+    showcaseList(),
     '',
     'Helpers, copied into the current project or the one you name:',
     extrasList(),
@@ -67,9 +73,11 @@ export async function addList() {
  */
 export async function runAdd(plan: AddPlan, workspaceRoot: string, target: (name?: string) => Promise<string | undefined>, force = false,
   isProject: (dir: string) => Promise<boolean> = async () => true) {
+  const local = new Set((await listExamples()).map(e => e.name));
   for (const [i, name] of plan.films.entries()) {
     if (i) console.log('');
-    printExample(name, await copyExample(name, plan.target));
+    if (local.has(name)) printExample(name, await copyExample(name, plan.target));
+    else { const { dest, bytes } = await installShowcase(name, plan.target); printShowcase(name, dest, bytes); }
   }
   const templates = plan.templates ?? [];
   if (!plan.helpers.length && !templates.length) return;
@@ -96,7 +104,7 @@ export async function runAdd(plan: AddPlan, workspaceRoot: string, target: (name
 export async function addSuggestions() {
   const films = new Set((await listExamples()).map(e => e.name)), templates = new Set((await listTemplates(ROOT)).map(t => t.id));
   // Every name must exist in this installation; a trailing folder (projects/…) is not a name.
-  const rows = SUGGESTED.filter(([args]) => args.split(' ').filter(name => !name.includes('/')).every(name => EXTRAS[name] || films.has(name) || templates.has(name)));
+  const rows = SUGGESTED.filter(([args]) => args.split(' ').filter(name => !name.includes('/')).every(name => EXTRAS[name] || films.has(name) || isShowcaseFilm(name) || templates.has(name)));
   if (!rows.length) return '';
   const all: [string, string][] = [...rows.map(([args, why]): [string, string] => [`mografy add ${args}`, why]), ['mografy add', 'List every template, reference film and helper']];
   const width = Math.max(...all.map(([command]) => command.length));

@@ -4,7 +4,7 @@
 //
 //   node --import tsx scripts/bench-export.ts [--project dir[:override=value,...]]... [--case name]... [--out dir]
 //
-// Without --project it benchmarks examples/mografy-intro and examples/mografy-brand (with glow and grain).
+// Without --project it benchmarks examples/mografy-intro and examples/stage-invoices (with glow and grain).
 import { execFile } from 'node:child_process';
 import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { availableParallelism } from 'node:os';
@@ -50,7 +50,7 @@ function parseArgs(argv: string[]) {
   }
   if (!targets.length) targets.push(
     { dir: join(root, 'examples/mografy-intro'), overrides: {} },
-    { dir: join(root, 'examples/mografy-brand'), overrides: { glow: 0.12, grain: 0.008 } },
+    { dir: join(root, 'examples/stage-invoices'), overrides: { glow: 0.12, grain: 0.008 } },
   );
   return { targets, cases: cases.length ? cases : ['x265-crf', 'x264-crf', 'hardware'], out };
 }

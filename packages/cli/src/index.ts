@@ -49,8 +49,8 @@ function helpText(color: boolean) {
     ]),
     section('Add', [
       row('mografy add', 'List the reference films, helpers and templates you can add'),
-      row('mografy add <film> [folder]', 'Copy a reference film into your library to watch and build on'),
-      row('mografy add <helper...> [project]', 'Add helpers to a project: cinema, cjk, three, music, walkthrough'),
+      row('mografy add <film> [folder]', 'Copy a reference film into your library (showcase films are downloaded)'),
+      row('mografy add <helper...> [project]', 'Add helpers to a project: cinema, cjk, three, music, walkthrough, stage'),
       row('mografy add <template...> [project]', 'Add Mografy Templates: hooks, captions, screens, end cards (9:16 and 16:9)'),
       row('', '--force replaces helper and template files you changed'),
     ]),

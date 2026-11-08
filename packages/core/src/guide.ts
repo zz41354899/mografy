@@ -18,6 +18,7 @@ const CJK_TYPOGRAPHY_REFERENCE = SKILL_TEXT['references/cjk-typography.md'];
 const THREE_D_REFERENCE = SKILL_TEXT['references/three-d.md'];
 const MUSIC_REFERENCE = SKILL_TEXT['references/music.md'];
 const WALKTHROUGH_REFERENCE = SKILL_TEXT['references/product-walkthrough.md'];
+const UI_STAGE_REFERENCE = SKILL_TEXT['references/ui-stage.md'];
 const PRESENTATIONS_REFERENCE = SKILL_TEXT['references/presentations.md'];
 const VIDEO_COMPRESSION_REFERENCE = SKILL_TEXT['references/video-compression.md'];
 const TEMPLATES_REFERENCE = SKILL_TEXT['references/templates.md'];
@@ -120,6 +121,7 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'three-d.md': THREE_D_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'product-walkthrough.md': WALKTHROUGH_REFERENCE.replaceAll('__REPOSITORY__', repository),
+    'ui-stage.md': UI_STAGE_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'presentations.md': PRESENTATIONS_REFERENCE,
     'templates.md': TEMPLATES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'examples.md': EXAMPLES_REFERENCE.replaceAll('__REPOSITORY__', repository),
@@ -205,6 +207,7 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/three-d.md'];
   delete files['references/music.md'];
   delete files['references/product-walkthrough.md'];
+  delete files['references/ui-stage.md'];
   delete files['references/presentations.md'];
   delete files['references/templates.md'];
   delete files['references/examples.md'];

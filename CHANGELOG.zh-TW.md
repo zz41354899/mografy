@@ -13,6 +13,25 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-11-08
+
+### 新增
+
+- **Mografy Stage（介面舞台）**——做短的產品介面動畫：看起來像真的產品、簡化到觀眾需要的程度、構圖有意圖，每個動作都有起因。`mografy add stage <project>` 會複製 [`extras/stage/stage.ts`](extras/stage/stage.ts)：
+  - **用劇本驅動狀態。** `play(initial, [wait, click, tap, drag, type, set, focus, mark…], { layout })` 一次編譯成時間軸：游標移動時間依距離計算、走一條淺弧線，點擊的變化發生在按下那一刻，`focus` 讓鏡頭推近再拉遠。`show.at(time)` 取樣，所以畫面仍是時間的純函式；`s.on()`、`s.is()`、`s.num()` 讓元件進出場有過渡，不會「啪」一下出現。
+  - **一組 look 驅動的元件。** 視窗（`app`、`browser`、`tabs`、新版 macOS 的 `tahoe`、安靜的 `card`）、手機（鎖定畫面、通知）、`pin()` 讓視窗從兩個邊出血、側欄、按鈕、徽章、輸入框、選單、帶動作的 toast、只滾動變動位數的數字、飛進欄位的物件、分層陰影、會依指向元素換形狀的游標。四種風格（`light`、`dark`、`blueprint`、`minimal`）；`words` 決定保留多少真實文字，其餘變成 placeholder 線條。
+  - **會直接報錯的檢查。** 結尾沒有回到初始狀態、游標或鏡頭位置的 loop 會被拒絕並列出原因；超出框的文字會報錯並附上兩個寬度。
+  - 十部參考影片：`stage-invoices`（16:9，四種風格）、`stage-phone`（9:16，觸控）、`stage-dashboard`（深色、新版 macOS 視窗）、`stage-bento`（把 bento 當成一張畫來規劃）、`stage-calendar`（拖曳，目標格子一格一格跳）、`stage-upload`（藍圖風格的 API 圖解與標註）、`stage-command`（只用鍵盤）、`stage-checkout`（有分頁的瀏覽器）、`stage-request`（網頁和手機同框）、`stage-snooze`（功能卡片）。`mografy add stage-invoices <folder>`。
+  - **好壞並排對照：**`stage-invoices` 新增 **Variant** 參數，可以把同一個故事畫成假介面的五種失敗（`too-much`、`too-little`、`boxed`、`flat`、`bland`）。
+  - 為這些範例補的元件：`ui.key`（鍵帽）、`ui.callout`（標註）、`ui.card`；拖曳時的 `s.cursor.dragging`／`lift`；同時有游標和觸控的影片中，點擊不再讓游標跳過去；沒有游標的影片用 `play(..., { pointer: false })`；`words: 'none'`。
+  - Skill 新增 [`ui-stage.md`](.agents/skills/mografy/references/ui-stage.md)：假介面常見的五種失敗、七步工作流程、劇本與元件、review 檢查清單。
+- **Loop 接縫檢查**——在場景的 `meta` 設 `loop: true`，`mografy check --motion` 會再比對最後一幀和第一幀（顯示 `loop seam clean`，或 *Loop seam* 警告）。
+
+### 變更
+
+- **預設只安裝 Stage 與介紹影片。**`examples/` 現在只有十部 `stage-*` 和 `mografy-intro`。較長的參考影片搬到官網 [Showcase](https://www.mografy.app/zh-TW/showcase)：`film-starter`、`mografy-montage`、`mografy-triangulum`、`mografy-story`、`analytics-product`、`follow-interaction`、`mografy-brand` 和紙劇場系列（`paper-theatre-shadow`、`-gestalt`、`-aesthetic-usability`、`-ringelmann`、`-adhd`、`-moon-rabbit-opera`、`-sea-moon`）。它們不再隨 repository 下載；`mografy add <名稱> [資料夾]` 會從 Showcase 下載到你的專案庫，`mografy add` 會在「Showcase films」下列出。兩部 2D 的 Lunar Pop Club（`paper-theatre-moon-rabbit`、`paper-theatre-moon-rabbit-story`）已移除，3D 歌劇院版保留在 Showcase。
+- Skill 在安裝內容裡沒有合適的參考影片時，會讀取 Showcase 清單（https://www.mografy.app/showcase/films.json）；`film-starter` 也用同樣方式下載。
+
 ## 2026-11-07
 
 ### 新增

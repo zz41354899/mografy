@@ -36,6 +36,8 @@ export const sceneMetaSchema = z.strictObject({
   shots: shotsSchema.optional(),
   /** The tempo the scene is timed to. `ctx.beat` uses it when the project has no audio; `mografy check` compares it with `audio`. */
   tempo: tempoSchema.optional(),
+  /** The film is a loop: its last frame equals its first. `mografy check --motion` then also checks the seam. */
+  loop: z.boolean().optional(),
 });
 export type SceneMeta = z.infer<typeof sceneMetaSchema>;
 export const aspectRatioSchema = z.enum(['16:9', '9:16']);
@@ -525,4 +527,4 @@ export { GUIDE, SKILL, SKILL_REFERENCES, sharedSkillFiles, obsoleteStoryboardFil
 export { autoShots, storyboardShots, pictureShotEnds, settledStop } from './auto-shots.js';
 export type { AutoShots, AutoShotSource, MotionFrames } from './auto-shots.js';
 export { frameDiffs, smoothness, smoothnessReport, MOTION_LIMITS } from './smoothness.js';
-export type { Smoothness, MotionEvent, MotionEventKind } from './smoothness.js';
+export type { Smoothness, SmoothnessOptions, MotionEvent, MotionEventKind } from './smoothness.js';

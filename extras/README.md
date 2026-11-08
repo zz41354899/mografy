@@ -11,6 +11,7 @@ Optional helpers that are **not installed** with Mografy. Common motion and draw
 | Three.js r186 bundle (MIT) | `three/three.module.js`, `three/LICENSE-three.txt` | `assets/` | [three-d.md](../.agents/skills/mografy/references/three-d.md) |
 | Contextual music generator (Python, numpy) | `music/score.py`, `music/music-example.json` | `music-src/` (the generated audio goes in `assets/`) | [music.md](../.agents/skills/mografy/references/music.md) |
 | Product walkthroughs (redrawn app screens, detail shots) | `walkthrough/walkthrough.ts`, `walkthrough/walkthrough-demo.ts` | `scenes/` | [product-walkthrough.md](../.agents/skills/mografy/references/product-walkthrough.md) |
+| Stage: short product UI loops (script over state, windows and phones, placeholder lines, rolling numbers, looks) | `stage/stage.ts` (reference films: `examples/stage-*`) | `scenes/` | [ui-stage.md](../.agents/skills/mografy/references/ui-stage.md) |
 
 Add one to a project with the CLI; it copies from this checkout (or GitHub), registers CJK fonts in `mografy.json`, and keeps files you changed unless you pass `--force`:
 

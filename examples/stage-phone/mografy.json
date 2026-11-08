@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "name": "Stage · Phone reply",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "9:16",
+  "seed": 514,
+  "params": {
+    "look": "light"
+  },
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Regular.otf",
+      "weight": 400
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Medium.otf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-SemiBold.otf",
+      "weight": 600
+    }
+  ],
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 2,
+    "mixing": "srgb",
+    "shutter": 360,
+    "sampleWindow": "after",
+    "adaptiveSamples": false,
+    "canvas": "cpu",
+    "dither": false,
+    "bitrate": "8M",
+    "glow": 0,
+    "grain": 0,
+    "codec": "h265",
+    "encoding": "crf",
+    "preset": "medium",
+    "crf": 20,
+    "hardwareQuality": 65,
+    "includeAudio": false
+  },
+  "review": {
+    "times": [
+      0,
+      2.5,
+      4.2,
+      6.3,
+      7.4
+    ],
+    "transitions": [
+      {
+        "name": "Notification opens",
+        "start": 2,
+        "end": 3.2,
+        "step": 0.1
+      },
+      {
+        "name": "Send and lock",
+        "start": 5.2,
+        "end": 8.6,
+        "step": 0.2
+      }
+    ]
+  }
+}

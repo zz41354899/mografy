@@ -239,7 +239,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
 
   /** Frame-to-frame change over the whole film, for `mografy check --motion` (see smoothness in core). */
   motion(): Promise<Smoothness> {
-    return this.run(async () => { const { project, build } = this.current(); return smoothness(await this.host.motionFrames(build, project)); });
+    return this.run(async () => { const { project, build, scene } = this.current(); return smoothness(await this.host.motionFrames(build, project), undefined, { loop: scene.meta.loop }); });
   }
 
   /** Submitted sources are compiled and trial-rendered first; only then written to disk. */

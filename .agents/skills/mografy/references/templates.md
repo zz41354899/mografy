@@ -11,7 +11,7 @@ native aspect ratio and one look:
 
 A template that exists in both ratios has a `pair` (`stat-count` ↔ `stat-count-wide`). Never put a template into a film of
 the other ratio. The sources live in [templates/](https://github.com/zz41354899/mografy/blob/main/templates), with the catalog in
-[templates/catalog.json](https://github.com/zz41354899/mografy/blob/main/templates/catalog.json); every template plays live at https://www.mografy.app/en/docs/templates.
+[templates/catalog.json](https://github.com/zz41354899/mografy/blob/main/templates/catalog.json); every template plays live at https://www.mografy.app/en/library/templates.
 
 ## When to use them
 

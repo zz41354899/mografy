@@ -1,4 +1,4 @@
-// `mografy add <helper>`: copy an optional helper (cinema, cjk, three, music, walkthrough) into a project.
+// `mografy add <helper>`: copy an optional helper (cinema, cjk, three, music, walkthrough, stage) into a project.
 // Extras are not part of the installed template. They come from this checkout's extras/ folder,
 // or from GitHub when the folder is missing, so an installation stays at the sixteen built-in components.
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -56,6 +56,12 @@ export const EXTRAS: Record<string, Extra> = {
     files: [['walkthrough/walkthrough.ts', 'scenes/walkthrough.ts']],
     reference: 'product-walkthrough.md',
     next: "import { createKit, camAt, withCamera, cursorAt, drawCursor } from './walkthrough.js';",
+  },
+  stage: {
+    summary: 'Product UI loops: a script over state, windows and phones, placeholder lines, rolling numbers, looks',
+    files: [['stage/stage.ts', 'scenes/stage.ts']],
+    reference: 'ui-stage.md',
+    next: "import { play, wait, set, click, tap, type, focus, mark, withStage, createKit, look, pin } from './stage.js';",
   },
 };
 

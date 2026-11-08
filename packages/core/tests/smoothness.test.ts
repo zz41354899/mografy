@@ -47,3 +47,18 @@ test('grain-level change is ignored', () => {
   assert.deepEqual(report.warnings, []);
   assert.match(report.summary, /no jumps, hard starts or hard stops/);
 });
+
+test('a loop whose last frame matches its first has a clean seam', () => {
+  const s = smoothness(film(from([...still(5), ...eased(20, 3), ...eased(20, -3), ...still(5)])), undefined, { loop: true });
+  assert.equal(s.seam, 0);
+  assert.deepEqual(s.events, []);
+  assert.match(smoothnessReport(s).summary, /loop seam clean/);
+});
+
+test('a loop that ends somewhere else reports a seam; without meta.loop it is not checked', () => {
+  const grey = from([...still(5), ...eased(20, 3), ...still(5)]);
+  const s = smoothness(film(grey), undefined, { loop: true });
+  assert.deepEqual(s.events.map(e => e.kind), ['seam']);
+  assert.match(smoothnessReport(s).warnings.join('\n'), /Loop seam/);
+  assert.equal(smoothness(film(grey)).seam, undefined);
+});

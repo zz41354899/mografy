@@ -5,25 +5,22 @@ import { basename, join, resolve } from 'node:path';
 import { EXAMPLES_DIR, isProject, libraryDir } from '@mografy/server';
 import { displayPath } from './paths.js';
 
-/** The curated films, in the order the Skill recommends reading them. Other folders in examples/ are listed after. */
+/**
+ * The films installed with Mografy, in the order the Skill recommends reading them; other folders in examples/ are
+ * listed after. Longer reference films live on the website's showcase and are downloaded by name (showcase.ts).
+ */
 const CURATED: Record<string, string> = {
-  'film-starter': '20 s model film to start from: one camera, one shot table, a light that becomes a card, a ring, a full stop',
-  'mografy-montage': '60 s promo in one continuous camera: a comet draws act I, a 3D window, neon type, a galaxy, the logo',
-  'mografy-triangulum': '42 s launch teaser: a Three.js galaxy, a timeline drawn by light, depth of field, glass cards',
-  'mografy-story': '71 s story film in Traditional Chinese: dark to light, a black box that opens, product UI, captions',
+  'stage-invoices': '7 s Stage loop: a window off two edges, Mark paid flies the amount into a rolling total, Undo resets; Variant param shows the five failures',
+  'stage-phone': '7.6 s 9:16 Stage loop: a lock-screen notification grows into the thread, a reply is typed, the side button locks',
+  'stage-dashboard': '6.5 s Stage loop, dark: the cursor finds a spike, a tooltip, one annotation, the camera leans in and back',
+  'stage-bento': '5.7 s Stage loop, dark bento planned as one picture: keys, a task done, a count that rolls, a diagram; no cursor',
+  'stage-calendar': '7.5 s Stage loop: a meeting dragged to Wednesday, the target jumps cell to cell, attendees confirm, dragged back',
+  'stage-upload': '7.4 s Stage loop, blueprint API diagram: a file becomes a link, one annotation per hop; no cursor',
+  'stage-command': '6.5 s Stage loop, keyboard only: ⌘K, type, ↵ assigns and the avatar flies in, ⌘Z undoes',
+  'stage-checkout': '9 s Stage loop in a browser with tabs: type an email, Pay with a spinner, a check draws, Done resets',
+  'stage-request': '10 s Stage loop on two screens: a web request arrives on a cropped phone, two taps pay, the web total rolls',
+  'stage-snooze': '8 s Stage feature card: hover actions, a snooze menu, the row leaves and the list closes up, Undo',
   'mografy-intro': '12 s product intro: typing, scrubbing, an edit that updates the player, the logo',
-  'analytics-product': '8 s UI loop: a click switches the week and a dashboard chart and number update, with a gentle push-in',
-  'follow-interaction': '8 s UI loop: a cursor clicks Follow, the button springs into Following, a quiet confirmation',
-  'mografy-brand': '8 s logo reveal: a teal stroke draws the ribbon, the arches rise, the wordmark follows',
-  'paper-theatre-shadow': '82 s paper theatre explainer (繁中, narrated): one lamp, real 3D shadows, stop-motion on 2s, three acts',
-  'paper-theatre-gestalt': '78 s paper theatre explainer: card fragments whose shadows lock into a face, six laws in an ink act',
-  'paper-theatre-aesthetic-usability': '74 s paper theatre explainer: two cardboard ATMs, 2D screens inside a 3D theatre',
-  'paper-theatre-ringelmann': '75 s paper theatre explainer: one rope, a brass dial, a 3D needle against a 2D target',
-  'paper-theatre-adhd': '85 s paper theatre explainer: a spotlight on a track against the 2D ring the puppet wants to look at',
-  'paper-theatre-moon-rabbit': '25 s 2D paper toy theatre (繁中, music): a moon-rabbit puppet on a rod, strings, drapes, stop-motion on 2s',
-  'paper-theatre-moon-rabbit-story': '60 s 2D paper theatre story: hanging vertical story cards, the puppet flips to full colour on the downbeat',
-  'paper-theatre-moon-rabbit-opera': '60 s 3D opera house × 2D inserts: a paper toy theatre lit in Three.js, kamishibai cards, curtain call',
-  'paper-theatre-sea-moon': '72 s full 3D undersea castle: a paper puppet on threads, cards swapped by emotion, umbrella becomes a jellyfish',
 };
 /** Never copied: the player's caches and earlier exports. */
 const SKIP = new Set(['.mografy', 'renders', 'node_modules', '.DS_Store']);

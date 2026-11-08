@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "name": "Stage \u00b7 Bento",
+  "scene": "scenes/main.ts",
+  "aspectRatio": "16:9",
+  "seed": 5,
+  "params": {},
+  "fonts": [
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Regular.otf",
+      "weight": 400
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-Medium.otf",
+      "weight": 500
+    },
+    {
+      "family": "Inter",
+      "path": "assets/Inter-SemiBold.otf",
+      "weight": 600
+    }
+  ],
+  "render": {
+    "scale": 1,
+    "workers": 2,
+    "fps": 30,
+    "samples": 2,
+    "mixing": "srgb",
+    "bitrate": "8M",
+    "glow": 0,
+    "grain": 0,
+    "encoding": "crf",
+    "preset": "medium",
+    "crf": 20,
+    "includeAudio": false
+  },
+  "review": {
+    "times": [
+      0,
+      1.5,
+      2.4,
+      4.0,
+      6.4
+    ],
+    "transitions": [
+      {
+        "name": "Keys to done",
+        "start": 1.0,
+        "end": 3.2,
+        "step": 0.2
+      },
+      {
+        "name": "Reset and seam",
+        "start": 5.0,
+        "end": 6.7,
+        "step": 0.2
+      }
+    ]
+  }
+}

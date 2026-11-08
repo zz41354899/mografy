@@ -30,7 +30,7 @@ export function renderFrame(ctx: FrameContext, time: number, p: any) {
 }
 ```
 
-This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and start from the `film-starter` example (`mografy add film-starter <folder>`).
+This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and start from the `film-starter` showcase film (`mografy add film-starter <folder>` downloads it).
 
 ## Aspect ratio
 

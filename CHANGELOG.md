@@ -13,6 +13,25 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-11-08
+
+### Added
+
+- **Mografy Stage** — short product UI films that read as a real product, simplified to what the viewer needs, framed with intent, with a cause for every motion. `mografy add stage <project>` copies [`extras/stage/stage.ts`](extras/stage/stage.ts):
+  - **A script over state.** `play(initial, [wait, click, tap, drag, type, set, focus, mark…], { layout })` compiles once into a timeline: cursor moves take time by distance on a shallow arc, a click's change lands on the press, `focus` pushes the camera in and back. `show.at(time)` samples it, so drawing stays a pure function of time; `s.on()` / `s.is()` / `s.num()` make parts move in and out instead of popping.
+  - **A kit from one look.** Windows (`app`, `browser`, `tabs`, the newer macOS `tahoe`, quiet `card`), phones with lock screen and notifications, `pin()` to crop a window off two edges, sidebar nav, buttons, badges, fields, menus, toasts with an action, digits that roll only where they changed, objects that fly into a slot, layered shadows, cursors that change shape over what they point at. Four looks (`light`, `dark`, `blueprint`, `minimal`); `words` decides how many real words stay and turns the rest into placeholder lines.
+  - **Checks that fail loudly.** A loop that does not return to its first state, cursor and camera is refused with the reasons; text that overflows its box throws with both widths.
+  - Ten reference films: `stage-invoices` (16:9, four looks), `stage-phone` (9:16, taps), `stage-dashboard` (dark, the newer macOS window), `stage-bento` (a bento grid as one picture), `stage-calendar` (drag with a snapping target), `stage-upload` (blueprint diagram with annotations), `stage-command` (keyboard only), `stage-checkout` (browser with tabs), `stage-request` (web and phone together) and `stage-snooze` (feature card). `mografy add stage-invoices <folder>`.
+  - **Good and bad side by side:** `stage-invoices` has a **Variant** parameter that draws the same story the five ways faux UI fails (`too-much`, `too-little`, `boxed`, `flat`, `bland`).
+  - Kit additions for these: `ui.key` (keycaps), `ui.callout` (annotations), `ui.card`; `s.cursor.dragging` / `lift` for carried objects; taps no longer move the cursor in films that mix both; `play(..., { pointer: false })` for films without a cursor; `words: 'none'`.
+  - Skill reference [`ui-stage.md`](.agents/skills/mografy/references/ui-stage.md): the five ways faux UI fails, the seven-step workflow, the script and kit, review checklist.
+- **Loop seam check** — set `loop: true` in a scene's `meta` and `mografy check --motion` also compares the last frame with the first (`loop seam clean`, or a *Loop seam* warning).
+
+### Changed
+
+- **Installed films: Stage and the intro only.** `examples/` now holds the ten `stage-*` films and `mografy-intro`. The longer reference films moved to the website's [showcase](https://www.mografy.app/showcase): `film-starter`, `mografy-montage`, `mografy-triangulum`, `mografy-story`, `analytics-product`, `follow-interaction`, `mografy-brand` and the paper theatre films (`paper-theatre-shadow`, `-gestalt`, `-aesthetic-usability`, `-ringelmann`, `-adhd`, `-moon-rabbit-opera`, `-sea-moon`). They are no longer downloaded with the repository; `mografy add <name> [folder]` downloads one from the showcase into your library, and `mografy add` lists them under *Showcase films*. The two 2D Lunar Pop Club films (`paper-theatre-moon-rabbit`, `paper-theatre-moon-rabbit-story`) were removed; the 3D opera version stays on the showcase.
+- The Skill reads the showcase list (https://www.mografy.app/showcase/films.json) when it needs a reference film the installation does not have, and `film-starter` is downloaded the same way.
+
 ## 2026-11-07
 
 ### Added

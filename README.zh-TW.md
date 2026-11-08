@@ -110,11 +110,11 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 
 ## 參考影片
 
-Mografy 附上幾部完整影片作為品質參考：[mografy-montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage)（60 秒、全片一顆鏡頭的宣傳片）、[mografy-triangulum](https://github.com/zz41354899/mografy/tree/main/examples/mografy-triangulum)（42 秒、Three.js 星系的發表預告）、[mografy-story](https://github.com/zz41354899/mografy/tree/main/examples/mografy-story)（71 秒、繁體中文的故事影片），以及 12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)。播放器會在「範例」中列出它們，代理規劃新影片前也會先讀。`mografy add` 會連同輔助工具一起列出這些影片；`mografy add <名稱> [資料夾]` 會把一部複製到你的專案庫，方便以它為基礎修改。要開始一部新影片，可以複製 [film-starter](https://github.com/zz41354899/mografy/tree/main/examples/film-starter)（`mografy add film-starter <資料夾>`）：20 秒、五個鏡頭、一顆鏡頭、一張鏡頭表，是所有多鏡頭影片的範本。
+Mografy 會安裝兩種參考影片。12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)和十部 [Stage](https://github.com/zz41354899/mografy/tree/main/examples) 產品介面 loop（`stage-*`）放在 `examples/`，播放器會在「範例」中列出。較長的影片改放在官網的 [Showcase](https://www.mografy.app/zh-TW/showcase)，不隨安裝下載：60 秒的 montage、42 秒的 Triangulum 預告、71 秒的故事影片、紙劇場解說與角色影片，以及所有多鏡頭影片的範本 [film-starter](https://www.mografy.app/zh-TW/showcase)。`mografy add` 會列出兩者；`mografy add <名稱> [資料夾]` 會複製已安裝的影片，或從 Showcase 下載影片到你的專案庫（開始新影片用 `mografy add film-starter <資料夾>`）。代理需要時會讀取 [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) 的清單。
 
 ## Mografy Templates 模板庫
 
-[Mografy Templates](https://github.com/zz41354899/mografy/tree/main/templates) 是免費的產品影片現成模板庫：開場、字幕、手機／桌面／筆電畫面、功能標註、前後對比、步驟、數據、使用者評價、Logo、簡報、片尾卡與轉場，文案全部是英文。二十二個為 9:16 原生設計（Threads、Reels、Shorts），採編輯風：像印刷品的白頁、逐字升起的黑色 Anton 大標和一個橘色強調色。二十一個為 16:9（官網、YouTube、簡報，id 以 `-wide` 結尾），沿用 [montage](https://github.com/zz41354899/mografy/tree/main/examples/mografy-montage) 影片的風格：夜色背景、光軌，以及 Mografy 光譜色的動態文字。每個模板都可以在 [mografy.app/docs/templates](https://www.mografy.app/zh-TW/docs/templates) 即時播放、改文案。
+[Mografy Templates](https://github.com/zz41354899/mografy/tree/main/templates) 是免費的產品影片現成模板庫：開場、字幕、手機／桌面／筆電畫面、功能標註、前後對比、步驟、數據、使用者評價、Logo、簡報、片尾卡與轉場，文案全部是英文。二十二個為 9:16 原生設計（Threads、Reels、Shorts），採編輯風：像印刷品的白頁、逐字升起的黑色 Anton 大標和一個橘色強調色。二十一個為 16:9（官網、YouTube、簡報，id 以 `-wide` 結尾），沿用 [montage](https://www.mografy.app/zh-TW/showcase) 影片的風格：夜色背景、光軌，以及 Mografy 光譜色的動態文字。每個模板都可以在 [mografy.app/library/templates](https://www.mografy.app/zh-TW/library/templates) 即時播放、改文案。
 
 ```sh
 mografy add hook-impact three-steps cta-endcard projects/my-film
@@ -135,7 +135,7 @@ mografy add hook-impact three-steps cta-endcard projects/my-film
 
 全部 16 個內建元件專案預設使用置中的 **9:16 直式**預覽。隨附縮圖也會顯示完整直式畫布，因此全新安裝後，不必逐一開啟專案，就能看到全部 16 張預覽。修改場景後，已開啟專案的縮圖會自動更新。維護者修改內建場景原始碼或素材後，需執行 `pnpm thumbnails:generate` 重新產生隨附預覽。
 
-選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。也可以自己用 `mografy add <extra...> [project]` 加入，一次可加一個或多個（`mografy add` 會連同參考影片列出 cinema、cjk、three、music、walkthrough）。常用的動態工具已內建在 `@mografy/runtime`：緩動曲線、彈簧、時間窗、單調曲線 `keys`、全片鏡頭（`cameraPath`、`withCamera`）、鏡頭表（`beats`）、共用緩衝的圖層（`layer`、`blurLayer`、`bloom`、`buffer`）、以陰影實作的文字模糊（`blurText`、`blurWords`）、拍點網格、圓角卡片與漸層。
+選用的 [extras](https://github.com/zz41354899/mografy/tree/main/extras) 不會隨安裝加入；安裝內容只包含 16 種內建元件。代理會依創作需求將額外工具複製到專案：[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) 提供靜態圖片上的鏡頭運動、轉場（交叉淡化、淡入指定顏色、閃白、圓形遮罩、斜切、甩鏡、櫻花風格粒子擦拭）與氣氛效果；[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) 搭配 OFL 授權的 Noto Sans／Serif CJK TC 子集字型，處理日文／中文直排及 CJK 換行。詳見[鏡頭與轉場](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)及[中日韓文字排版](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md)參考文件。也可以自己用 `mografy add <extra...> [project]` 加入，一次可加一個或多個（`mografy add` 會連同參考影片列出 cinema、cjk、three、music、walkthrough、stage）。[stage.ts](https://github.com/zz41354899/mografy/blob/main/extras/stage/stage.ts) 用來做短的產品介面 loop：用劇本驅動狀態、被畫面裁切的視窗與手機、placeholder 線條、滾動數字與四種風格；詳見[介面舞台參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/ui-stage.md)與 `stage-*` 參考影片。常用的動態工具已內建在 `@mografy/runtime`：緩動曲線、彈簧、時間窗、單調曲線 `keys`、全片鏡頭（`cameraPath`、`withCamera`）、鏡頭表（`beats`）、共用緩衝的圖層（`layer`、`blurLayer`、`bloom`、`buffer`）、以陰影實作的文字模糊（`blurText`、`blurWords`）、拍點網格、圓角卡片與漸層。
 
 [元件參考文件](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md)連結到各個場景入口，並說明版面、時間安排、本機匯入與審閱方式。請代理依專案自己的素材與風格改寫適合的元件。
 
@@ -305,11 +305,9 @@ mografy/
   .claude/skills/mografy       連結至同一個 Skill
   packages/server/template/   元件原始碼庫與專案範本
   templates/                  Mografy Templates：43 個產品影片現成場景
-  examples/film-starter/       20 秒範本影片，用來開始一部新影片
   examples/mografy-intro/      12 秒參考動畫
-  examples/analytics-product/  8 秒數據分析互動示範
-  examples/mografy-brand/      8 秒品牌介紹
-  examples/follow-interaction/ 8 秒追蹤按鈕互動
+  examples/stage-*/            十部 Mografy Stage 產品介面 loop
+                               （較長的參考影片：mografy.app/showcase，`mografy add <名稱>`）
   projects/                   可編輯的動畫專案與已安裝元件
   docs/                       架構與開發狀態
 

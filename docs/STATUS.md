@@ -1,6 +1,23 @@
 # Development status
 
-Updated: 2026-11-02
+Updated: 2026-11-08
+
+## Showcase films (2026-11-08)
+
+- `examples/` holds only what is installed: ten `stage-*` films and `mografy-intro`. Fourteen longer films are zips on the website (`apps/web/public/showcase/films/<name>.zip` in mografy-website, about 34 MB in all); `packages/cli/src/showcase.ts` keeps the offline catalog (names and one-line summaries, same order as the website's `showcase-films.ts`), downloads with `fetch` and unpacks with a small central-directory zip reader (stored and deflate; refuses absolute and `..` paths; drops the single top-level folder). `MOGRAFY_SHOWCASE_URL` points it elsewhere for testing.
+- The website serves the same list as `/showcase/films.json` for agents; the Skill's examples.md tells agents to fetch it.
+- Removed: `paper-theatre-moon-rabbit`, `paper-theatre-moon-rabbit-story` (2D). The 3D opera film is on the showcase.
+
+## Mografy Stage (2026-11-08)
+
+- `extras/stage/stage.ts`: `play()` compiles a step script over a flat state object into a timeline (cursor moves 0.3–0.95 s by distance, click dwell 0.1 s, change applied 0.06 s after the press, taps without a travelling cursor, `type` as per-character state changes, `focus` as `cameraPath` keys). Sampling is pure: presence (`on`/`is`) re-targets from the value at each change, so interrupted transitions never jump. `layout(state)` is the single source of named rects for cursor targets, camera focus and cursor shapes.
+- Stages are laid out at a design size (1280 × 720 or 720 × 1280) and drawn through `withStage(..., scale)`; the camera math matches `withCamera` but is applied in design units.
+- Shadows are stacked translucent rounded rects instead of `shadowBlur` for the two soft layers: on stage-invoices (CPU canvas, 1080p) the slowest frame went from 96 ms to 56 ms and the median from 47 ms to 26 ms.
+- Validation: `loop: true` refuses a script whose state, cursor or camera does not return home; `ui.text({ max })` throws on overflow unless `fit: 'ellipsis'`. `meta.loop` (new, optional) makes `smoothness()` compare the last motion frame with the first.
+- Reference films `stage-invoices`, `stage-phone`, `stage-dashboard` carry a copy of `stage.ts`; `packages/render/tests/stage.test.ts` checks the copies match and covers the compiler (timing by distance, presence, numbers, camera home, loop and layout errors).
+- Ten reference films (2026-11-08, second pass): bento, calendar drag, blueprint diagram, keyboard palette, tabbed checkout, web + phone, feature card added. `stage-invoices` `variant` param renders the five failures from the same script (the `flat` variant uses a second compiled script without camera keys). All ten pass `check --motion` with "loop seam clean".
+- Drag: `CursorFrame.dragging` spans press (move start − 0.1 s) to release (move end + 0.08 s); `lift` eases up over 0.18 s and down over 0.2 s, so a carried object never pops. Taps record their own point (`tx`, `ty`) instead of moving the cursor.
+- Not yet: glass (frosted) windows, Stage templates on the website's template page.
 
 ## Export pipeline refactor (2026-11-02)
 

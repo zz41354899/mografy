@@ -6,6 +6,8 @@
 
 Use it for any film made from a web or mobile app's screens: product demos, feature explainers and tutorials, onboarding and help clips, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. Typical requests: "turn these screenshots into a walkthrough", "redraw the UI simpler and only film the interactions" (重繪、介面簡化、只拍操作細節).
 
+For a short loop of one to three actions (a landing-page hero, a feature card, a phone moment), use the Stage extra in [ui-stage.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/ui-stage.md) instead: a script over state, windows cropped by the frame, placeholder lines and a seamless loop.
+
 Use plates from `cinema.ts` ([camera-transitions.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md)) when the footage itself should stay a screen recording, and `three.ts` ([three-d.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/three-d.md)) when a device model must turn in 3D.
 
 ## Add to a project
