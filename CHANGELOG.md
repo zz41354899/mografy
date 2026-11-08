@@ -30,7 +30,7 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 ### Changed
 
 - **Installed films: Stage and the intro only.** `examples/` now holds the ten `stage-*` films and `mografy-intro`. The longer reference films moved to the website's [showcase](https://www.mografy.app/showcase): `film-starter`, `mografy-montage`, `mografy-triangulum`, `mografy-story`, `analytics-product`, `follow-interaction`, `mografy-brand` and the paper theatre films (`paper-theatre-shadow`, `-gestalt`, `-aesthetic-usability`, `-ringelmann`, `-adhd`, `-moon-rabbit-opera`, `-sea-moon`). They are no longer downloaded with the repository; `mografy add <name> [folder]` downloads one from the showcase into your library, and `mografy add` lists them under *Showcase films*. The two 2D Lunar Pop Club films (`paper-theatre-moon-rabbit`, `paper-theatre-moon-rabbit-story`) were removed; the 3D opera version stays on the showcase.
-- The Skill reads the showcase list (https://www.mografy.app/showcase/films.json) when it needs a reference film the installation does not have, and `film-starter` is downloaded the same way.
+- The Skill reads the [showcase list](https://www.mografy.app/showcase/films.json) when it needs a reference film the installation does not have, and `film-starter` is downloaded the same way.
 
 ## 2026-11-07
 

@@ -30,7 +30,7 @@ mografy update
 ### 變更
 
 - **預設只安裝 Stage 與介紹影片。**`examples/` 現在只有十部 `stage-*` 和 `mografy-intro`。較長的參考影片搬到官網 [Showcase](https://www.mografy.app/zh-TW/showcase)：`film-starter`、`mografy-montage`、`mografy-triangulum`、`mografy-story`、`analytics-product`、`follow-interaction`、`mografy-brand` 和紙劇場系列（`paper-theatre-shadow`、`-gestalt`、`-aesthetic-usability`、`-ringelmann`、`-adhd`、`-moon-rabbit-opera`、`-sea-moon`）。它們不再隨 repository 下載；`mografy add <名稱> [資料夾]` 會從 Showcase 下載到你的專案庫，`mografy add` 會在「Showcase films」下列出。兩部 2D 的 Lunar Pop Club（`paper-theatre-moon-rabbit`、`paper-theatre-moon-rabbit-story`）已移除，3D 歌劇院版保留在 Showcase。
-- Skill 在安裝內容裡沒有合適的參考影片時，會讀取 Showcase 清單（https://www.mografy.app/showcase/films.json）；`film-starter` 也用同樣方式下載。
+- Skill 在安裝內容裡沒有合適的參考影片時，會讀取 [Showcase 清單](https://www.mografy.app/showcase/films.json)；`film-starter` 也用同樣方式下載。
 
 ## 2026-11-07
 
