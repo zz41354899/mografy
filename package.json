@@ -14,7 +14,7 @@
   "scripts": {
     "build": "pnpm --filter \"./packages/**\" -r --workspace-concurrency=1 build && pnpm sync:skills",
     "typecheck": "pnpm --filter \"./packages/**\" -r typecheck",
-    "sync:skills": "node --import tsx scripts/sync-agent-docs.ts",
+    "sync:skills": "node scripts/ensure-built.mjs && node --import tsx scripts/sync-agent-docs.ts",
     "sync:slides": "node --import tsx scripts/sync-slides.ts",
     "templates:sync": "tsx --tsconfig templates/tsconfig.json scripts/templates.ts sync",
     "templates:preview": "tsx --tsconfig templates/tsconfig.json scripts/templates.ts preview",
