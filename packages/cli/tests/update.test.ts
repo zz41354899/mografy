@@ -11,7 +11,8 @@ import { parse } from '../src/options.js';
 
 async function fixture(t: TestContext) {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-update-'));
-  t.after(() => rm(sandbox, { recursive: true, force: true }));
+  // On Windows a folder stays locked for a moment after the process using it exits.
+  t.after(() => rm(sandbox, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }));
   const remote = join(sandbox, 'remote.git'), root = join(sandbox, 'installed copy'), author = join(sandbox, 'author');
   const git = (cwd: string, ...args: string[]) => runUpdateCommand('git', args, cwd);
   await git(sandbox, 'init', '--bare', '--initial-branch=main', remote);
@@ -199,6 +200,8 @@ test('a live export finishes before idle shutdown and a fresh CLI restores its p
   assert.notEqual(health.pid, process.pid);
   assert.equal(health.token, 'new-process');
   assert.match(f.messages.join('\n'), /Waiting for the current export/);
+  // Stop the restarted player here: on Windows its working folder cannot be removed while it runs.
+  await fetch(new URL('/__mografy/shutdown', url), { method: 'POST' }).catch(() => {});
 });
 
 test('concurrent updates preserve the other updater lock', async t => {

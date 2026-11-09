@@ -29,8 +29,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      # A failure in one suite should not hide the others.
       - run: pnpm test:browser
+        if: ${{ !cancelled() }}
       - run: pnpm test:compression
+        if: ${{ !cancelled() }}
       # A build must leave the checkout clean, or the next `mografy update` is blocked.
       - name: Checkout stays clean after a build
         shell: bash
