@@ -1,4 +1,6 @@
 // One writer per project: .mografy/server.json records who is serving it.
+import { projectPaths } from '@mografy/render/fs-util';
+import { apiPath } from '@mografy/core';
 import { randomUUID } from 'node:crypto';
 import { readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -8,9 +10,9 @@ export interface ServerRecord { pid: number; url: string; token: string; started
 export class AlreadyRunning extends Error {
   constructor(readonly url: string) { super(`Mografy is already running for this project: ${url}`); this.name = 'AlreadyRunning'; }
 }
-export const lockPath = (projectDir: string) => join(projectDir, '.mografy', 'server.json');
+export const lockPath = (projectDir: string) => projectPaths(projectDir).serverLock;
 
-function alive(pid: number) {
+export function alive(pid: number) {
   try { process.kill(pid, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === 'EPERM'; }
 }
 /** The URL of a live server for this project, if any. */
@@ -18,7 +20,7 @@ export async function findServer(projectDir: string): Promise<ServerRecord | und
   const record = await readJson<ServerRecord>(lockPath(projectDir));
   if (!record || !Number.isInteger(record.pid) || !alive(record.pid) || !record.url) return undefined;
   try {
-    const response = await fetch(new URL('/__mografy/health', record.url), { signal: AbortSignal.timeout(1500) });
+    const response = await fetch(new URL(apiPath('health'), record.url), { signal: AbortSignal.timeout(1500) });
     const health = await response.json() as { token?: string };
     return health.token === record.token ? record : undefined;
   } catch { return undefined; }

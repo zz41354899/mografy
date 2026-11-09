@@ -15,7 +15,7 @@ import { handleWorkspaceRequest } from './workspace-routes.js';
 import { ensureComponentProjects } from './components.js';
 import { ExportQueue } from './export-queue.js';
 import { body } from './http-io.js';
-import { queueCancelSchema, queueRequestSchema } from '@mografy/core';
+import { API_PREFIX, apiPath, queueCancelSchema, queueRequestSchema } from '@mografy/core';
 
 const webDist = () => join(dirname(fileURLToPath(import.meta.resolve('@mografy/web/package.json'))), 'dist');
 
@@ -64,7 +64,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
     const path = url.pathname, method = request.method ?? 'GET';
     if (!allowed(request)) throw new ApiError(403, 'ORIGIN', 'Only same-origin localhost requests are accepted');
     if (stopping) throw new ApiError(503, 'CLOSED', 'Server is closing');
-    if (!path.startsWith('/__mografy/')) {
+    if (!path.startsWith(`${API_PREFIX}/`)) {
       if (method !== 'GET' && method !== 'HEAD') throw new ApiError(405, 'METHOD', 'Method not allowed');
       if (player && await player.handle(request, response)) return;
       const root = webDist(), file = normalize(join(root, path === '/' ? 'index.html' : decodeURIComponent(path)));
@@ -75,7 +75,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
       response.writeHead(200, { 'content-type': page ? MIME['.html']! : MIME[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-cache' });
       response.end(method === 'HEAD' ? undefined : data); return;
     }
-    const route = `${method} ${path.replace(/^\/__mografy/, '')}`;
+    const route = `${method} ${path.slice(API_PREFIX.length)}`;
     if (route === 'POST /shutdown') {
       if (url.searchParams.get('onlyIfIdle') === '1' && (session.project.snapshot().render?.state === 'running' || queue.busy)) throw new ApiError(409, 'EXPORT_RUNNING', 'Wait for the export to finish before updating.');
       stopping = true;
@@ -88,7 +88,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
       case 'POST /queue/cancel': return json(response, 200, queue.cancel((await body(request, queueCancelSchema)).id));
       case 'POST /queue/clear': return json(response, 200, queue.clear());
     }
-    if (path === '/__mografy/health' || path.startsWith('/__mografy/projects')) return handleWorkspaceRequest(session, request, response, url, route);
+    if (path === apiPath('health') || path.startsWith(apiPath('projects'))) return handleWorkspaceRequest(session, request, response, url, route);
     return handleProjectRequest(session.project, request, response, url, route);
   };
   const server: Server = createServer((request, response) => {
@@ -103,7 +103,7 @@ export async function startServer(projectDir: string, options: StartOptions = {}
   server.on('upgrade', (request, socket, head) => {
     // Vite answers its own HMR socket, but only for the same-origin localhost player.
     if (player?.ownsUpgrade(request)) { if (!allowed(request)) socket.destroy(); return; }
-    if (new URL(request.url ?? '/', 'http://localhost').pathname !== '/__mografy/events' || !allowed(request)) { socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return; }
+    if (new URL(request.url ?? '/', 'http://localhost').pathname !== apiPath('events') || !allowed(request)) { socket.end('HTTP/1.1 403 Forbidden\r\n\r\n'); return; }
     sockets.handleUpgrade(request, socket, head, ws => sockets.emit('connection', ws, request));
   });
   let heartbeat: ReturnType<typeof setInterval> | undefined, closing: Promise<void> | undefined;

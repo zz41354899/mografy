@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./fs-util": {
+      "types": "./dist/fs-util.d.ts",
+      "import": "./dist/fs-util.js"
     }
   },
   "files": [

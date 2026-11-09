@@ -1,6 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { lstat, mkdir, open, readFile, rename, stat, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, realpath, rename, stat, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { PROJECT_STATE_DIR, retryWhileLocked } from '@mografy/render/fs-util';
 
 export const sha256 = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 
@@ -15,28 +16,13 @@ export async function atomicWrite(path: string, data: string | Buffer | AsyncIte
   try {
     if (typeof data === 'string' || Buffer.isBuffer(data)) await file.writeFile(data);
     else for await (const chunk of data) await file.writeFile(chunk);
-    await file.sync(); await file.close(); await replace(temp, path);
+    await file.sync(); await file.close(); await retryWhileLocked(() => rename(temp, path));
   }
   finally { await file.close().catch(() => {}); await unlink(temp).catch(() => {}); }
 }
 
-/**
- * On Windows a virus scanner, the search indexer or an editor can hold a just-written file for a moment,
- * and the rename then fails with EPERM, EACCES or EBUSY. Retry briefly instead of failing the save.
- */
-async function replace(from: string, to: string) {
-  for (let attempt = 0; ; attempt++) {
-    try { return await rename(from, to); }
-    catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (process.platform !== 'win32' || attempt >= 9 || !['EPERM', 'EACCES', 'EBUSY'].includes(code ?? '')) throw error;
-      await new Promise(done => setTimeout(done, 50 * (attempt + 1)));
-    }
-  }
-}
-
 const SOURCE = /\.(ts|mts|cts|js|mjs|cjs)$/;
-const RESERVED = new Set(['.mografy', 'renders', 'node_modules', '.git', 'assets']);
+const RESERVED = new Set([PROJECT_STATE_DIR, 'renders', 'node_modules', '.git', 'assets']);
 /** Validate a project-relative scene source path from a client. */
 export function sourcePath(root: string, path: string) {
   const parts = path.split('/');
@@ -70,4 +56,15 @@ export async function saveAsset(root: string, name: string, data: Buffer) {
     if (!existing) { await atomicWrite(path, data); return `assets/${file}`; }
   }
   throw new Error('Too many files with that name');
+}
+
+// Scaffolding and live updates share the same writer for each project directory.
+const writers = new Map<string, Promise<unknown>>();
+export async function queueProjectWrite<T>(dir: string, task: () => Promise<T>): Promise<T> {
+  const key = await realpath(resolve(dir)).catch(() => resolve(dir));
+  const next = (writers.get(key) ?? Promise.resolve()).then(task);
+  const tail = next.catch(() => {});
+  writers.set(key, tail);
+  void tail.then(() => { if (writers.get(key) === tail) writers.delete(key); });
+  return next;
 }

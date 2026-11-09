@@ -1,6 +1,7 @@
 // Playback engine, independent of React: owns the scene frame, the scene runtime and the clock.
 // The scene only ever receives t. While music plays, the audio clock advances t;
 // otherwise the browser clock does.
+import { apiPath } from './api.js';
 import { createSceneRuntime, renderOutputFrame } from '@mografy/runtime';
 import { sceneRuntimeKey } from '@mografy/core';
 import type { SceneRuntime } from '@mografy/runtime';
@@ -27,16 +28,18 @@ export interface PlayerSources {
 }
 /** A short, stable tag for a project folder (keeps audio URLs and error messages readable). */
 function projectTag(dir: string) { let h = 5381; for (let i = 0; i < dir.length; i++) h = (h * 33) ^ dir.charCodeAt(i); return (h >>> 0).toString(36); }
-const SERVER: PlayerSources = { sceneUrl: version => '/__mografy/scene/' + version + '.js', assetBase: '/__mografy/files/' };
+const SERVER: PlayerSources = { sceneUrl: version => apiPath(`scene/${version}.js`), assetBase: apiPath('files/') };
 interface Segment { end: number; loopFrom: number | null; arrived: boolean; onArrive?: (() => void) | undefined }
 
 export class ScenePlayer {
-  private runtime: SceneRuntime | null = null;
-  private canvas: HTMLCanvasElement | null = null;
-  /** The iframe holding the current version; removing it frees that version's module. */
-  private stage: SceneFrame | null = null;
+  /** The version on screen. Its iframe holds the version's module: removing it frees that module. */
+  private current: Loaded | null = null;
+  private get runtime() { return this.current?.runtime ?? null; }
+  private get canvas() { return this.current?.canvas ?? null; }
+  private get project() { return this.current?.project ?? null; }
+  private get loadedKey() { return this.current?.key ?? ''; }
+  get version() { return this.current?.version ?? null; }
   private params: ParameterValues = {};
-  private project: SceneProject | null = null;
   private effects = { glow: 0, grain: 0 };
   private previewEffects = false;
   private listeners = new Set<Listener>();
@@ -44,20 +47,16 @@ export class ScenePlayer {
   private startedAt = 0;
   private startT = 0;
   private loading: Promise<void> = Promise.resolve();
-  version: string | null = null;
   t = 0;
   playing = false;
   loop = true;
   readonly audio = new AudioTrack();
   /** The open project's folder; tags its audio URL so projects never share a decoded track. */
   private projectDir = '';
-  /** The folder of the project the current runtime belongs to. */
-  private loadedDir = '';
   /** Recently shown projects, hidden but still set up, newest last: switching back to one skips its whole setup. */
   private kept = new Map<string, Loaded>();
   /** The saved thumbnail of the project being opened, over the stage until its film appears. */
   private poster: HTMLImageElement | null = null;
-  private loadedKey = '';
   private loadRequest = 0;
   private disposed = false;
   /** Playback stopped because renderFrame threw; resume once a working version loads. */
@@ -93,7 +92,7 @@ export class ScenePlayer {
       if (this.disposed || request !== this.loadRequest) return;
       // Version, seed, fonts and the beat grid feed the runtime; anything else (volume, render settings) is applied in place.
       const key = sceneRuntimeKey(version, project);
-      if (key === this.loadedKey) { this.project = project; this.syncAudio(project); this.hidePoster(); return; }
+      if (key === this.loadedKey) { this.current!.project = project; this.syncAudio(project); this.hidePoster(); return; }
       const keptKey = `${projectDir}\n${key}`, kept = this.kept.get(keptKey);
       if (kept) { this.kept.delete(keptKey); this.adopt({ ...kept, version, project }, true); return; }
       for (const [k, old] of this.kept) if (old.dir === projectDir) { this.kept.delete(k); old.runtime.dispose(); old.stage.remove(); }
@@ -101,7 +100,7 @@ export class ScenePlayer {
       if (this.disposed || request !== this.loadRequest) { stage.remove(); return; }
       const { scene, canvas } = stage;
       const width = project.aspectRatio === '9:16' ? Math.min(scene.meta.width, scene.meta.height) : scene.meta.width;
-      const scale = Math.min(1, Math.max(0.25, Math.ceil(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / width * 4) / 4));
+      const scale = this.stageScale(width);
       const creating = createSceneRuntime(canvas, scene, {
         seed: project.seed, renderScale: scale, params, assetBase: this.sources.assetBase, assetUrls: this.sources.assetUrls, fonts: project.fonts, audio: project.audio,
         aspectRatio: project.aspectRatio,
@@ -126,18 +125,32 @@ export class ScenePlayer {
     return run.catch(error => { if (request === this.loadRequest) throw error; });
   }
 
+  /** How much of the film's resolution the stage needs at its present size, in quarter steps. */
+  private stageScale(filmWidth: number) {
+    return Math.min(1, Math.max(0.25, Math.ceil(((this.container.clientWidth || 960) * Math.min(2, window.devicePixelRatio || 1)) / filmWidth * 4) / 4));
+  }
+
+  /** The stage grew (zoom, full screen) past what the film was drawn for: load it again with more pixels. Never fewer. */
+  sharpen() {
+    const { current } = this;
+    if (!current) return;
+    const { runtime, canvas, version, project } = current;
+    const width = project.aspectRatio === '9:16' ? Math.min(runtime.meta.width, runtime.meta.height) : runtime.meta.width;
+    if (this.stageScale(width) * width <= canvas.width + 1) return;
+    current.key = '';
+    void this.load(version, project, this.params, this.projectDir).catch(() => {});
+  }
+
   /**
    * Make a loaded runtime current. The previous one is kept (hidden) when it belongs to another project, so
    * switching back is instant; a previous version of the same project is disposed as before.
    */
   private adopt(next: Loaded, restored: boolean) {
-    const previous: Loaded | null = this.runtime && this.stage && this.canvas && this.version && this.project
-      ? { runtime: this.runtime, canvas: this.canvas, stage: this.stage, version: this.version, project: this.project, key: this.loadedKey, dir: this.loadedDir } : null;
+    const previous = this.current;
     const keep = !!previous && !!previous.dir && previous.dir !== next.dir;
     // The previous version stops drawing now; its last frame stays under the new one until the fade ends.
     if (previous && !keep) previous.runtime.dispose();
-    this.runtime = next.runtime; this.canvas = next.canvas; this.stage = next.stage; this.version = next.version; this.project = next.project;
-    this.loadedKey = next.key; this.loadedDir = next.dir;
+    this.current = next;
     // A kept frame sits under newer ones in the DOM (moving an iframe would reload it), so hide what covers it first.
     if (restored) for (const frame of this.container.querySelectorAll<HTMLIFrameElement>('iframe.stage-frame')) if (frame !== next.stage.frame) frame.style.visibility = 'hidden';
     this.hidePoster();

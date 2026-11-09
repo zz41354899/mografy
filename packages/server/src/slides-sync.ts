@@ -1,12 +1,13 @@
 // `pnpm install` / `mografy update`: give every project whose scene marks no shots a set of slides in
 // mografy.json (`slides.shots`, `slides.guessedFrom`), so presenting works without any edits.
+import { projectPaths } from '@mografy/render/fs-util';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
 import type { AutoShotSource } from '@mografy/core';
 import { buildScene, detectShots, readStoryboard, SceneHost } from '@mografy/render';
 import { atomicWrite, readJson, sha256 } from './files.js';
-import { queueProjectWrite } from './project.js';
+import { queueProjectWrite } from './files.js';
 
 export type SlidesSync =
   | { result: 'written'; slides: number; source: AutoShotSource }
@@ -23,7 +24,7 @@ export async function syncProjectSlides(dir: string): Promise<SlidesSync> {
   const build = await buildScene(dir, project);
   const storyboard = await readStoryboard(dir);
   const key = sha256(JSON.stringify(['slides-sync-1', build.version, project.seed, project.params, storyboard ?? null]));
-  const marker = join(dir, '.mografy', 'slides-sync.json');
+  const marker = projectPaths(dir).slidesSync;
   if ((await readJson<{ key?: string }>(marker))?.key === key) return { result: 'skipped', reason: 'checked' };
   const host = await SceneHost.start(dir);
   let outcome: SlidesSync;

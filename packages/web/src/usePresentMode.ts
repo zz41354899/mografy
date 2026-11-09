@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deckSlides } from '@mografy/core';
 import type { SlidePage, Slides, Snapshot } from '@mografy/core';
-import { callApi } from './api.js';
+import { apiPath, callApi } from './api.js';
 import type { ScenePlayer } from './player.js';
 import type { Session } from './session.js';
 import { setDeck, setPage } from './slides-edit.js';
@@ -14,7 +14,7 @@ export interface DeckFile { output: string; bytes: number; slides: number }
 /** Hand the exported file to the browser as a download, so it lands in Downloads like any export. */
 function download(file: DeckFile) {
   const name = file.output.split(/[\\/]/).pop()!;
-  const link = Object.assign(document.createElement('a'), { href: `/__mografy/files/renders/${encodeURIComponent(name)}?download`, download: name });
+  const link = Object.assign(document.createElement('a'), { href: apiPath(`files/renders/${encodeURIComponent(name)}?download`), download: name });
   document.body.append(link); link.click(); link.remove();
 }
 

@@ -6,8 +6,9 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // @ts-expect-error plain ESM build script without type declarations
 import { writeSkillText } from '../packages/core/scripts/skill-text.mjs';
-import { atomicWrite } from '../packages/server/src/files.js';
-import { queueProjectWrite } from '../packages/server/src/project.js';
+// @ts-expect-error plain ESM build script without type declarations
+import { sameText } from '../packages/core/scripts/generated-file.mjs';
+import { atomicWrite, queueProjectWrite } from '../packages/server/src/files.js';
 import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js';
 import { recordSkillSources } from '../packages/cli/src/skills.js';
 
@@ -20,7 +21,10 @@ for (const [name, files] of Object.entries(sharedSkillFiles())) {
   if (name === 'mografy') files['scripts/compress-video.py'] = await readFile(join(root, 'scripts', 'compress-video.py'), 'utf8');
   const skill = join(root, '.agents', 'skills', name);
   await queueProjectWrite(skill, async () => {
-    for (const [file, contents] of Object.entries(files)) await atomicWrite(join(skill, file), contents);
+    for (const [file, contents] of Object.entries(files)) {
+      const path = join(skill, file);
+      if (!sameText(await readFile(path, 'utf8').catch(() => undefined), contents)) await atomicWrite(path, contents);
+    }
   });
   console.log(`Generated ${skill}`);
 }

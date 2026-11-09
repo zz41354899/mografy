@@ -1,0 +1,36 @@
+# Windows has its own line endings, shell and pnpm shims, and problems there do not show on a Mac.
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test:browser
+      - run: pnpm test:compression
+      # A build must leave the checkout clean, or the next `mografy update` is blocked.
+      - name: Checkout stays clean after a build
+        shell: bash
+        run: |
+          status="$(git status --porcelain)"
+          if [ -n "$status" ]; then echo "$status"; exit 1; fi

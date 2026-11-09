@@ -2,8 +2,10 @@ import { useCallback, useEffect } from 'react';
 import { beatAt } from '@mografy/core';
 import type { SceneProject } from '@mografy/core';
 import type { ScenePlayer } from './player.js';
+import type { Viewport } from './useViewport.js';
 
-export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProject['audio'], toggleGuides: () => void, toggleProjects: () => void, enabled = true) {
+export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProject['audio'], toggleGuides: () => void, toggleProjects: () => void, viewport: Viewport, enabled = true) {
+  const { toggleFullscreen, setZoom, zoomIn, zoomOut } = viewport;
   const seekBy = useCallback((direction: number, coarse: boolean) => {
     if (!player) return;
     if (!coarse) { player.step(direction); return; }
@@ -24,9 +26,14 @@ export function usePlayerShortcuts(player: ScenePlayer | null, audio: SceneProje
       else if (event.code === 'KeyL') player.setLoop(!player.loop);
       else if (event.code === 'KeyG') toggleGuides();
       else if (event.code === 'KeyP') toggleProjects();
+      else if (event.code === 'KeyF') toggleFullscreen();
+      else if (event.key === '0') setZoom('fit');
+      else if (event.key === '1') setZoom(1);
+      else if (event.key === '+' || event.key === '=') zoomIn();
+      else if (event.key === '-') zoomOut();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [enabled, player, seekBy, toggleGuides, toggleProjects]);
+  }, [enabled, player, seekBy, toggleGuides, toggleProjects, toggleFullscreen, setZoom, zoomIn, zoomOut]);
   return seekBy;
 }

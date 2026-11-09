@@ -1,11 +1,12 @@
 // Bundled previews are captured in Chromium; scene modules are never evaluated here.
+import { projectPaths } from '@mografy/render/fs-util';
 import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateSceneProject } from '@mografy/core';
 import { atomicWrite, readJson } from './files.js';
-import { queueProjectWrite } from './project.js';
+import { queueProjectWrite } from './files.js';
 
 export const COMPONENT_THUMBNAILS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../thumbnails');
 
@@ -28,7 +29,7 @@ export async function thumbnailFingerprint(dir: string) {
 /** Seed only missing previews of unchanged built-ins. Preserve custom scenes and existing captures. */
 export function seedComponentThumbnail(dir: string, id: string) {
   return queueProjectWrite(dir, async () => {
-    const target = join(dir, '.mografy/thumb.png');
+    const target = projectPaths(dir).thumb;
     if (await access(target).then(() => true, () => false)) return;
     const metadata = await readJson<{ fingerprint: string }>(join(COMPONENT_THUMBNAILS_DIR, `${id}.json`));
     if (!metadata || metadata.fingerprint !== await thumbnailFingerprint(dir).catch(() => undefined)) return;

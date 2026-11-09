@@ -1,4 +1,5 @@
 // Compile a scene entry (TS/JS) into one browser ES module. Nothing is executed here.
+import { PROJECT_STATE_DIR } from './fs-util.js';
 import { createHash } from 'node:crypto';
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -24,7 +25,7 @@ const runtimeHelpers = fileURLToPath(import.meta.resolve('@mografy/runtime/scene
 const runtimeDir = dirname(runtimeHelpers);
 const isRuntime = (file: string) => dirname(file) === runtimeDir;
 const SOURCE = /\.[cm]?[jt]sx?$/;
-const EXCLUDED = new Set(['.mografy', 'renders', 'node_modules', '.git']);
+const EXCLUDED = new Set([PROJECT_STATE_DIR, 'renders', 'node_modules', '.git']);
 
 async function hashAssets(root: string, project: SceneProject) {
   const hash = createHash('sha256');

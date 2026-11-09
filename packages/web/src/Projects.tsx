@@ -1,25 +1,23 @@
 // Left panel: every project this computer knows about, and a way to start a new one.
 // Opening a project switches this same player over to it.
 import { useCallback, useEffect, useState } from 'react';
-import { callApi } from './api.js';
+import { apiPath, callApi } from './api.js';
 import type { ProjectList, ProjectSummary } from '@mografy/core';
+import { useT } from './i18n.js';
+import type { T } from './i18n.js';
 
-const GROUPS: { kind: ProjectSummary['kind']; title: string }[] = [
-  { kind: 'component', title: 'Built-in components' },
-  { kind: 'recent', title: 'Recent' },
-  { kind: 'library', title: 'Projects folder' },
-  { kind: 'example', title: 'Examples' },
-];
+const GROUPS: ProjectSummary['kind'][] = ['component', 'recent', 'library', 'example'];
 
-function ago(iso: string) {
+function ago(iso: string, t: T) {
   const s = (Date.now() - Date.parse(iso)) / 1000;
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  if (s < 60) return t.justNow;
+  if (s < 3600) return t.minAgo(Math.floor(s / 60));
+  if (s < 86400) return t.hAgo(Math.floor(s / 3600));
   return new Date(iso).toLocaleDateString();
 }
 
 export function Projects({ current, refreshKey }: { current: string | undefined; refreshKey: string }) {
+  const t = useT();
   const [list, setList] = useState<ProjectList | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -45,34 +43,34 @@ export function Projects({ current, refreshKey }: { current: string | undefined;
     finally { setBusy(null); }
   };
 
-  return <nav className="projects" aria-label="Projects">
+  return <nav className="projects" aria-label={t.projects}>
     <header>
-      <h2>Projects</h2>
+      <h2>{t.projects}</h2>
     </header>
 
     {creating ? <form className="new-project" onSubmit={e => { e.preventDefault(); void create(); }}>
-      <input autoFocus type="text" placeholder="Project name" value={name} maxLength={80} onChange={e => setName(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Escape') setCreating(false); }} aria-label="New project name" />
+      <input autoFocus type="text" placeholder={t.projectName} value={name} maxLength={80} onChange={e => setName(e.currentTarget.value)} onKeyDown={e => { if (e.key === 'Escape') setCreating(false); }} aria-label={t.newProjectName} />
       <div className="row">
-        <button type="submit" className="primary" disabled={!name.trim() || busy === 'new'}>{busy === 'new' ? 'Creating…' : 'Create'}</button>
-        <button type="button" onClick={() => setCreating(false)}>Cancel</button>
+        <button type="submit" className="primary" disabled={!name.trim() || busy === 'new'}>{busy === 'new' ? t.creating : t.create}</button>
+        <button type="button" onClick={() => setCreating(false)}>{t.cancel}</button>
       </div>
-      {list ? <p className="hint">Saved in {list.library}</p> : null}
-    </form> : <button className="new-button" onClick={() => setCreating(true)}>New project</button>}
+      {list ? <p className="hint">{t.savedIn(list.library)}</p> : null}
+    </form> : <button className="new-button" onClick={() => setCreating(true)}>{t.newProject}</button>}
 
     {error ? <p className="error-text">{error}</p> : null}
 
-    {GROUPS.map(group => {
-      const items = list?.projects.filter(p => p.kind === group.kind) ?? [];
+    {GROUPS.map(kind => {
+      const items = list?.projects.filter(p => p.kind === kind) ?? [];
       if (!items.length) return null;
-      return <section key={group.kind}>
-        <h3>{group.title}</h3>
+      return <section key={kind}>
+        <h3>{t.groups[kind]}</h3>
         <ul>
           {items.map(p => <li key={p.dir}>
             <button className={`project-item ${p.kind === 'component' ? 'component-item' : ''} ${p.dir === current ? 'current' : ''}`} onClick={() => void open(p.dir)} disabled={busy !== null && busy !== p.dir} aria-current={p.dir === current ? 'true' : undefined} title={p.dir}>
-              <span className="thumb">{p.thumb ? <img src={`/__mografy/projects/thumb?dir=${encodeURIComponent(p.dir)}&v=${p.thumb}`} alt="" loading="lazy" decoding="async" /> : <i />}</span>
+              <span className="thumb">{p.thumb ? <img src={apiPath(`projects/thumb?dir=${encodeURIComponent(p.dir)}&v=${p.thumb}`)} alt="" loading="lazy" decoding="async" /> : <i />}</span>
               <span className="project-text">
                 <span className="project-name">{p.name}</span>
-                <span className="project-meta">{busy === p.dir ? 'Opening…' : !p.valid ? 'mografy.json needs fixing' : p.dir === current ? 'Open now' : p.kind === 'component' ? 'Ready-to-use animation' : ago(p.updatedAt)}</span>
+                <span className="project-meta">{busy === p.dir ? t.openingShort : !p.valid ? t.needsFix : p.dir === current ? t.openNow : p.kind === 'component' ? t.readyMade : ago(p.updatedAt, t)}</span>
               </span>
             </button>
           </li>)}

@@ -6,6 +6,7 @@ import type { Snapshot } from '@mografy/core';
 import { useSession } from './session.js';
 import { DeckApp } from './deck/deck-app.js';
 import type { DeckSource } from './deck/deck-app.js';
+import { DICTS, initialLang } from './i18n.js';
 import './deck/deck.css';
 
 function sourceOf(snapshot: Snapshot | null): DeckSource | null {
@@ -21,7 +22,7 @@ export function PresentRoute() {
   const [app, setApp] = useState<DeckApp | null>(null);
   useEffect(() => {
     document.documentElement.classList.add('deck-page');
-    document.title = 'Presentation · Mografy';
+    document.title = DICTS[initialLang()].prTitle;
     const created = new DeckApp(root.current!, { live: true, onBack: () => location.assign('/') });
     setApp(created);
     return () => created.dispose();
@@ -31,7 +32,7 @@ export function PresentRoute() {
   const source = useMemo(() => sourceOf(snapshot), [snapshot?.scene?.version, spec, snapshot?.scene?.params, shots]);
   useEffect(() => {
     if (!app || !snapshot) return;
-    if (source) app.setSource(source); else if (snapshot.error) app.setError('The scene has an error. Fix it in the editor.');
+    if (source) app.setSource(source); else if (snapshot.error) app.setError(DICTS[initialLang()].prError);
   }, [app, source, snapshot?.error]);
   return <div ref={root} />;
 }

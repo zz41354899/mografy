@@ -1,8 +1,9 @@
 import { access, mkdir, unlink } from 'node:fs/promises';
+import { apiPath } from '@mografy/core';
 import { join } from 'node:path';
 import { atomicWrite, readJson } from './files.js';
 import { stateDir } from './installation.js';
-import { queueProjectWrite } from './project.js';
+import { queueProjectWrite } from './files.js';
 
 interface Recent { projects: string[] }
 async function readRecentAt(root: string): Promise<Recent> {
@@ -46,7 +47,7 @@ export async function findActive(): Promise<ActiveServer | undefined> {
   const record = await readJson<ActiveServer>(activePath());
   if (!record?.url) return undefined;
   try {
-    const health = await (await fetch(new URL('/__mografy/health', record.url), { signal: AbortSignal.timeout(1500) })).json() as { token?: string };
+    const health = await (await fetch(new URL(apiPath('health'), record.url), { signal: AbortSignal.timeout(1500) })).json() as { token?: string };
     return health.token === record.token ? record : undefined;
   } catch { return undefined; }
 }

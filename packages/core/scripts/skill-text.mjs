@@ -1,9 +1,10 @@
 // Bundle the Skill's Markdown (skill/**/*.md) into src/skill-text.ts, so the guidance ships with
 // @mografy/core without file access at runtime. Edit the Markdown; never the generated module.
 // `node scripts/skill-text.mjs --check` exits 1 when the generated module is out of date.
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sameText, writeGeneratedSync } from './generated-file.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'skill'), target = join(root, 'src', 'skill-text.ts');
@@ -22,17 +23,14 @@ export function skillText() {
 }
 
 export function writeSkillText() {
-  const next = skillText();
-  let current = '';
-  try { current = readFileSync(target, 'utf8'); } catch {}
-  if (current !== next) writeFileSync(target, next);
+  writeGeneratedSync(target, skillText());
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   if (process.argv.includes('--check')) {
-    let current = '';
+    let current;
     try { current = readFileSync(target, 'utf8'); } catch {}
-    if (current !== skillText()) { console.error('packages/core/src/skill-text.ts is out of date: run `node packages/core/scripts/skill-text.mjs`.'); process.exit(1); }
+    if (!sameText(current, skillText())) { console.error('packages/core/src/skill-text.ts is out of date: run `node packages/core/scripts/skill-text.mjs`.'); process.exit(1); }
   } else {
     writeSkillText();
   }

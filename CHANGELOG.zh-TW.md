@@ -13,6 +13,26 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 2026-11-09
+
+### 新增
+
+- **播放器支援繁體中文與英文** — 播放器和編輯器的所有文字會跟著瀏覽器語言；上方列的地球按鈕可以切換，並記住你的選擇。
+- **全螢幕與可調整的預覽** — 按 `F` 或角落按鈕只顯示影片，播放時控制列會自動讓開。可用 − / + 按鈕、縮放選單、`+` `-` `0` `1`，或 ⌘ 滾輪與雙指縮放；放大後可拖曳平移；拖曳預覽的角落可調整大小。兩側面板和時間軸都有分隔線可拖曳，時間軸往下拖到底會收起。
+
+### 修正
+
+- **Windows 上 `mografy update` 每次更新後都被擋住** — 生成器用不同換行重寫檔案，Git 會回報有修改但 diff 是空的。現在只有換行不同的檔案不會重寫，生成檔的換行固定，`update` 也會自動清掉這個狀態。**如果你的更新已經停在 `Local changes found`**，請在 Mografy 資料夾執行一次這行，再更新：
+
+  ```sh
+  git add .agents/skills/mografy packages/core/src/skill-text.ts
+  ```
+
+- **`mografy update` 可能還在跑舊的 build** — 只改原始碼時 pnpm 會略過 `postinstall`，所以沒有重新 build。`update` 現在一定會執行。
+- **Windows 上的 `mografy update` 其他修正** — 不再限定 `pnpm.cmd`，動到任何東西之前就會回報缺少 pnpm，會忽略關掉終端機後留下的 lock，改寫正在執行的 `mografy.cmd` 也安全。
+- **Windows 的 `mografy` 指令** 在安裝來源的資料夾被刪除後，會改用目前資料夾所在的 Mografy，和 macOS、Linux 一致。
+- `mografy review` 與 `mografy export --cancel` 現在會指明專案，不會作用到播放器剛切換過去的另一個專案。
+
 ## 2026-11-08
 
 ### 新增

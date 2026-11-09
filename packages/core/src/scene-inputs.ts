@@ -1,4 +1,4 @@
-import type { SceneProject } from './index.js';
+import type { SceneProject } from './project-schema.js';
 
 /** Inputs that require a fresh scene setup or change renderFrame's context. */
 export function sceneRuntimeKey(version: string, project: Pick<SceneProject, 'aspectRatio' | 'seed' | 'fonts' | 'audio'>) {

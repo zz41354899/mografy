@@ -1,14 +1,15 @@
+import { projectPaths } from '@mografy/render/fs-util';
 import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { projectFile } from '@mografy/render';
-import type { Cell } from '@mografy/render';
-import { cancelRenderRequestSchema, exportRequestSchema, outputFrameCount, playheadRequestSchema, projectPatchEnvelopeSchema, seekRequestSchema, sheetRequestSchema, sourceRequestSchema } from '@mografy/core';
+import { apiPath, PROJECT_HEADER, cancelRenderRequestSchema, exportRequestSchema, playheadRequestSchema, projectPatchEnvelopeSchema, seekRequestSchema, sheetRequestSchema, sourceRequestSchema } from '@mografy/core';
 import { ApiError, Project } from './project.js';
 import { body, json, num, rawBody, sendFile } from './http-io.js';
+import { sheetPlan } from './sheet-plan.js';
 
 export async function handleProjectRequest(project: Project, request: IncomingMessage, response: ServerResponse, url: URL, route: string) {
-  const expected = request.headers['x-mografy-project'];
+  const expected = request.headers[PROJECT_HEADER];
   if (expected !== undefined) {
     let dir: string;
     try { dir = decodeURIComponent(String(expected)); } catch { throw new ApiError(400, 'INVALID', 'Invalid project header'); }
@@ -17,12 +18,12 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
   const path = url.pathname;
   const scene = /^GET \/scene\/([\da-f]{16})\.js$/.exec(route);
   if (scene) {
-    const build = project.build(scene[1]!) ?? { code: await readFile(join(project.dir, '.mografy', 'builds', `${scene[1]}.js`), 'utf8').catch(() => { throw new ApiError(404, 'NOT_FOUND', 'Unknown version'); }) };
+    const build = project.build(scene[1]!) ?? { code: await readFile(join(projectPaths(project.dir).builds, `${scene[1]}.js`), 'utf8').catch(() => { throw new ApiError(404, 'NOT_FOUND', 'Unknown version'); }) };
     response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=31536000, immutable' });
     response.end(build.code); return;
   }
   if (route.startsWith('GET /files/') || route.startsWith('HEAD /files/')) {
-    const file = await projectFile(project.dir, decodeURIComponent(path.slice('/__mografy/files/'.length))).catch(error => { throw new ApiError(404, 'NOT_FOUND', String(error.message)); });
+    const file = await projectFile(project.dir, decodeURIComponent(path.slice(apiPath('files/').length))).catch(error => { throw new ApiError(404, 'NOT_FOUND', String(error.message)); });
     // ?download saves the file under its own name (Unicode names included) instead of opening it.
     if (url.searchParams.has('download')) response.setHeader('content-disposition', `attachment; filename*=UTF-8''${encodeURIComponent(basename(file))}`);
     return sendFile(request, response, file);
@@ -60,17 +61,8 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
     case 'POST /sheet': {
       const spec = await body(request, sheetRequestSchema);
       const { project: p, scene: s } = project.current();
-      const fps = p.render.fps, frames = outputFrameCount(s.meta.duration, fps);
-      let times = spec.times?.map(t => num(t, 'time')) ?? p.review.times;
-      if (spec.transition) {
-        const step = num(spec.transition.step ?? 1 / fps, 'step'), start = num(spec.transition.start, 'start'), end = num(spec.transition.end, 'end');
-        if (step <= 0 || end < start) throw new ApiError(400, 'INVALID', 'Invalid transition range');
-        times = []; for (let t = start; t <= end + 1e-9 && times.length < 48; t += step) times.push(Number(t.toFixed(6)));
-      }
-      if (!times.length || times.length > 48) throw new ApiError(400, 'INVALID', 'Give 1–48 times');
-      const kind = spec.kind === 'output' ? 'output' : 'raw';
-      const cells: Cell[] = times.map(t => { const c = Math.min(Math.max(0, t), s.meta.duration); const k = Math.min(frames - 1, Math.floor(c * fps + 1e-9)); return kind === 'raw' ? { kind, t: c, label: `t=${c.toFixed(3)}s` } : { kind, k, label: `frame ${k}, ${(k / fps).toFixed(3)}s` }; });
-      const png = await project.still({ kind: 'raw', t: 0 }, { title: [`${p.name}, version ${s.version}, ${kind === 'raw' ? 'raw' : 'final'} frames`], cells, columns: Math.min(times.length, spec.transition ? 6 : 4), cellWidth: spec.transition ? 280 : 400 });
+      const plan = sheetPlan(spec, p, s);
+      const png = await project.still({ kind: 'raw', t: 0 }, plan);
       response.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' }); response.end(png); return;
     }
     case 'POST /render': {

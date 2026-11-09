@@ -1,10 +1,11 @@
 // Project creation and generated instruction migration; every write uses Project's queue.
+import { PROJECT_STATE_DIR } from '@mografy/render/fs-util';
 import { access, mkdir, readdir, readFile, rmdir, unlink } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { aspectRatioSchema, projectGuide, SKILL, SKILL_REFERENCES, isLegacyAgentFile } from '@mografy/core';
 import type { AspectRatio } from '@mografy/core';
 import { atomicWrite } from './files.js';
-import { queueProjectWrite } from './project.js';
+import { queueProjectWrite } from './files.js';
 import { REPO_ROOT, TEMPLATE_DIR } from './installation.js';
 
 export const exists = (path: string) => access(path).then(() => true, () => false);
@@ -64,7 +65,7 @@ export async function createProject(dir: string, name?: string, scene?: string, 
     if (await isProject(dir)) throw new Error(`${dir} already has a mografy.json`);
     const copy = async (source: string, target: string): Promise<void> => {
       for (const entry of await readdir(source, { withFileTypes: true })) {
-        if (entry.name === '.mografy') continue;
+        if (entry.name === PROJECT_STATE_DIR) continue;
         const dest = join(target, entry.name === 'gitignore' ? '.gitignore' : entry.name);
         if (entry.isDirectory()) { await mkdir(dest, { recursive: true }); await copy(join(source, entry.name), dest); }
         else if (!await exists(dest) && entry.name !== 'mografy.json') await atomicWrite(dest, await readFile(join(source, entry.name)));

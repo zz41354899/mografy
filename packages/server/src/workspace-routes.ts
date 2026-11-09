@@ -1,3 +1,4 @@
+import { projectPaths } from '@mografy/render/fs-util';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -15,7 +16,7 @@ export async function handleWorkspaceRequest(session: ProjectSession, request: I
     case 'GET /projects/thumb': {
       const dir = url.searchParams.get('dir') ?? '';
       if (!(await session.getProjects()).projects.some(p => p.dir === dir)) throw new ApiError(404, 'NOT_FOUND', 'Unknown project');
-      const file = await open(join(dir, '.mografy', 'thumb.png'), 'r').catch(() => { throw new ApiError(404, 'NOT_FOUND', 'No thumbnail yet'); });
+      const file = await open(projectPaths(dir).thumb, 'r').catch(() => { throw new ApiError(404, 'NOT_FOUND', 'No thumbnail yet'); });
       try {
         // Read bytes and timestamp from the same inode across atomic replacements.
         const info = await file.stat(), png = await file.readFile();

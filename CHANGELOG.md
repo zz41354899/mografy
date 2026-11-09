@@ -13,6 +13,26 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## 2026-11-09
+
+### Added
+
+- **Traditional Chinese and English in the player** — every label in the player and editor follows the browser's language; the globe button in the top bar switches it and the choice is remembered.
+- **Full screen and an adjustable preview** — `F` or the corner button shows the film alone, with controls that step aside while it plays. Zoom with the − / + buttons, the zoom menu, `+` `-` `0` `1`, or ⌘-scroll and pinch; drag a zoomed preview to look around it; drag a corner of the preview to resize it. The side panels and the timeline have dragging dividers, and dragging the timeline's far enough down folds it away.
+
+### Fixed
+
+- **`mografy update` blocked after every update on Windows** — generators rewrote files with different line endings, which Git reported as changed with an empty diff. A file that differs only in line endings is no longer rewritten, generated files have a fixed line ending, and `update` clears this state by itself. **If your update already stops with `Local changes found`**, run this once in your Mografy folder, then update:
+
+  ```sh
+  git add .agents/skills/mografy packages/core/src/skill-text.ts
+  ```
+
+- **`mografy update` could leave the old build running** — pnpm skips `postinstall` when only source files changed, so nothing was rebuilt. `update` now always runs it.
+- **`mografy update` on Windows, part 2** — it no longer needs `pnpm.cmd` in particular, reports a missing pnpm before anything changes, ignores a lock left by a closed terminal, and is safe when it rewrites the `mografy.cmd` it was started from.
+- **The `mografy` command on Windows** now uses the Mografy folder around the current one, like on macOS and Linux, when the folder it was installed from is gone.
+- `mografy review` and `mografy export --cancel` now name the project they mean, so they cannot act on another project the player switched to.
+
 ## 2026-11-08
 
 ### Added

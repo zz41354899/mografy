@@ -1,0 +1,3 @@
+# Files the generators write: the same bytes on every platform, so a rewrite never looks like a local change.
+.agents/skills/mografy/** text eol=lf
+packages/core/src/skill-text.ts text eol=lf

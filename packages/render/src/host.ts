@@ -1,46 +1,19 @@
 // Node side of the scene host: a localhost server plus headless Chromium pages.
 // Scene code only ever runs inside Chromium, never in the Node process.
 import { createServer } from 'node:http';
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { readFile, realpath, stat } from 'node:fs/promises';
+import type { Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { extname, isAbsolute, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { build as esbuild } from 'esbuild';
+import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
 import type { ExportSize, MotionFrames, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
 import type { Cell, HostApi, LoadSpec, SheetSpec } from './host-page.js';
 import type { SceneBuild } from './build.js';
+import { handleHostRequest } from './host-server.js';
+import type { FrameWaiter } from './host-server.js';
 
-const MIME: Record<string, string> = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.html': 'text/html', '.ttf': 'font/ttf', '.otf': 'font/otf', '.woff': 'font/woff', '.woff2': 'font/woff2', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.json': 'application/json', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
-
-const bundles = new Map<string, Promise<string>>();
-/** Bundle an in-page script (the host page or its output worker, with runtime + core) once per process. */
-function pageBundle(name: 'host-page' | 'post-worker') {
-  let bundle = bundles.get(name);
-  if (!bundle) {
-    const self = fileURLToPath(import.meta.url);
-    const entry = resolve(self, '..', `${name}${extname(self)}`);
-    bundle = esbuild({ entryPoints: [entry], bundle: true, format: 'esm', platform: 'browser', target: 'chrome120', write: false, logLevel: 'silent' })
-      .then(result => result.outputFiles[0]!.text);
-    bundles.set(name, bundle);
-  }
-  return bundle;
-}
-
-/** Resolve a request path to a file inside the project, refusing dot-directories and escapes. */
-export async function projectFile(projectDir: string, relativePath: string) {
-  const parts = relativePath.split('/');
-  if (!relativePath || parts.some(p => !p || p === '..' || p.startsWith('.')) || relativePath.includes('\\') || relativePath.includes(':')) throw new Error(`Unsafe asset path: ${relativePath}`);
-  const root = await realpath(projectDir);
-  const file = await realpath(resolve(root, relativePath));
-  const local = relative(root, file);
-  if (!local || local.startsWith('..') || isAbsolute(local)) throw new Error(`Asset outside project: ${relativePath}`);
-  if (!(await stat(file)).isFile()) throw new Error(`Not a file: ${relativePath}`);
-  return file;
-}
+export { projectFile } from './host-server.js';
 
 export interface LoadedScene { meta: SceneMeta; params: ParameterDefinitions; width: number; height: number }
 export interface OpenOptions {
@@ -75,8 +48,6 @@ type OutputSettings = Pick<RenderSettings, 'fps' | 'samples' | 'mixing' | 'glow'
  * so a scene whose setup never resolves or whose renderFrame never returns would otherwise hold the
  * project queue forever and every later edit would wait behind it.
  */
-/** Largest frame or sheet a page may upload; Node buffers cannot hold much more. */
-const UPLOAD_LIMIT = 512 * 1024 ** 2;
 // The trial allows 60 s: headless WebGL is SwiftShader, which compiles each Three.js pipeline on its first draw, so a
 // lit 3D film's first frame alone can take ~20 s (lunar-pop-club-3d: 19 s at t = 0, 0.7 s once warm).
 export const hostTimeouts = { load: 30_000, trial: 60_000, frame: 120_000 };
@@ -153,17 +124,33 @@ function cleanError(error: unknown) {
   return new Error(message.replace(/^page\.evaluate: /, '').replace(/\n\s+at .*/gs, '').trim());
 }
 
+async function watchedPage(context: BrowserContext) {
+  const page = await context.newPage(), errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  return { page, errors };
+}
+
+/** A page's failure, with what the page itself reported when that says more. */
+function pageFailure(error: unknown, errors: string[]) {
+  const detail = cleanError(error).message;
+  return new Error(errors.length && !detail.includes(errors[0]!) ? `${detail}\n${errors.join('\n')}` : detail);
+}
+
+type Browsers = Partial<Record<CanvasBacking, Promise<Browser>>>;
+/** Close every browser in a set and leave the set empty. */
+async function closeBrowsers(set: Browsers) {
+  const browsers = await Promise.all(Object.values(set).map(b => b.catch(() => undefined)));
+  for (const key of Object.keys(set) as CanvasBacking[]) delete set[key];
+  await Promise.all(browsers.map(b => b?.close().catch(() => {})));
+}
+
 /**
  * Chromium processes, by canvas backing. A host owns its own unless it is handed a shared set (batch export: one
  * Chromium for every project in the batch instead of a launch per project); the owner of a shared set closes it.
  */
 export class SharedBrowsers {
-  readonly browsers: Partial<Record<CanvasBacking, Promise<Browser>>> = {};
-  async close() {
-    const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
-    for (const key of Object.keys(this.browsers) as CanvasBacking[]) delete this.browsers[key];
-    await Promise.all(browsers.map(b => b?.close().catch(() => {})));
-  }
+  readonly browsers: Browsers = {};
+  async close() { await closeBrowsers(this.browsers); }
 }
 
 /**
@@ -172,58 +159,20 @@ export class SharedBrowsers {
  */
 export class SceneHost {
   private builds = new Map<string, string>();
-  private waiters = new Map<string, { resolve(data: Buffer): void; reject(error: Error): void }>();
-  private browsers: Partial<Record<CanvasBacking, Promise<Browser>>>;
+  private waiters = new Map<string, FrameWaiter>();
+  private browsers: Browsers;
   private constructor(readonly projectDir: string, private server: Server, readonly origin: string, private shared?: SharedBrowsers) {
     this.browsers = shared?.browsers ?? {};
   }
 
   static async start(projectDir: string, shared?: SharedBrowsers) {
     let host!: SceneHost;
-    const server = createServer((request, response) => { void host.handle(request, response); });
+    const server = createServer((request, response) => { void handleHostRequest({ origin: host.origin, projectDir: host.projectDir, builds: host.builds, waiters: host.waiters }, request, response); });
     await new Promise<void>((done, fail) => { server.once('error', fail); server.listen(0, '127.0.0.1', done); });
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Host server failed to start');
     host = new SceneHost(resolve(projectDir), server, `http://127.0.0.1:${address.port}`, shared);
     return host;
-  }
-
-  private async handle(request: IncomingMessage, response: ServerResponse) {
-    const url = new URL(request.url ?? '/', this.origin);
-    const fail = (status: number, message: string) => { response.writeHead(status, { 'content-type': 'text/plain; charset=utf-8' }); response.end(message); };
-    // Only the headless page this host opened: refuse other hosts (DNS rebinding) and cross-site requests.
-    if (request.headers.host !== new URL(this.origin).host || request.headers['sec-fetch-site'] === 'cross-site') return fail(403, 'forbidden');
-    try {
-      if (request.method === 'POST' && url.pathname.startsWith('/upload/')) {
-        const waiter = this.waiters.get(url.pathname.slice(8));
-        if (!waiter) return fail(404, 'unknown token');
-        const chunks: Buffer[] = []; let size = 0;
-        for await (const chunk of request) {
-          size += (chunk as Buffer).length;
-          if (size > UPLOAD_LIMIT) { this.waiters.delete(url.pathname.slice(8)); waiter.reject(new Error('Rendered data is larger than 512 MB')); return fail(413, 'too large'); }
-          chunks.push(chunk as Buffer);
-        }
-        this.waiters.delete(url.pathname.slice(8));
-        waiter.resolve(Buffer.concat(chunks));
-        response.writeHead(204); response.end(); return;
-      }
-      if (request.method !== 'GET') return fail(405, 'method');
-      if (url.pathname === '/') { response.writeHead(200, { 'content-type': 'text/html' }); response.end('<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><script type="module" src="/host.js"></script>'); return; }
-      if (url.pathname === '/host.js') { response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await pageBundle('host-page')); return; }
-      if (url.pathname === '/post-worker.js') { response.writeHead(200, { 'content-type': 'text/javascript' }); response.end(await pageBundle('post-worker')); return; }
-      const scene = /^\/scene\/([\da-f]+)\.js$/.exec(url.pathname);
-      if (scene) {
-        const code = this.builds.get(scene[1]!);
-        if (!code) return fail(404, 'unknown build');
-        response.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-store' }); response.end(code); return;
-      }
-      if (url.pathname.startsWith('/project/')) {
-        const file = await projectFile(this.projectDir, decodeURIComponent(url.pathname.slice(9)));
-        response.writeHead(200, { 'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream' });
-        response.end(await readFile(file)); return;
-      }
-      fail(404, 'not found');
-    } catch (error) { fail(404, error instanceof Error ? error.message : String(error)); }
   }
 
   expect() {
@@ -279,21 +228,34 @@ export class SceneHost {
     }
   }
 
+  private async ready(page: Page) {
+    await page.goto(`${this.origin}/`, { timeout: hostTimeouts.load });
+    await page.waitForFunction(() => 'mografyHost' in window, undefined, { timeout: hostTimeouts.load });
+  }
+
+  /** Open a page for one job and always close it. */
+  private async withPage<T>(build: SceneBuild, project: SceneProject, options: OpenOptions, run: (page: HostPage) => Promise<T>): Promise<T> {
+    const page = await this.open(build, project, options);
+    try { return await run(page); } finally { await page.close(); }
+  }
+
+  private trial(page: HostPage, timeoutMessage: string) {
+    return bounded(page.page.evaluate(() => window.mografyHost.trial()), hostTimeouts.trial, timeoutMessage, () => page.close()).catch(e => { throw cleanError(e); });
+  }
+
   /** Each page gets its own browser context, so parallel segments run in separate renderer processes. */
   async open(build: SceneBuild, project: SceneProject, options: OpenOptions = {}) {
     const sceneUrl = this.register(build);
     const canvas = options.canvas ?? canvasBacking();
     const context = await this.context(canvas);
-    const page = await context.newPage();
-    const errors: string[] = [], assets = new Set<string>();
-    page.on('pageerror', error => errors.push(error.message));
+    const { page, errors } = await watchedPage(context);
+    const assets = new Set<string>();
     page.on('request', request => {
       const url = new URL(request.url());
       if (url.origin === this.origin && url.pathname.startsWith('/project/')) assets.add(decodeURIComponent(url.pathname.slice(9)));
     });
     try {
-      await page.goto(`${this.origin}/`, { timeout: hostTimeouts.load });
-      await page.waitForFunction(() => 'mografyHost' in window, undefined, { timeout: hostTimeouts.load });
+      await this.ready(page);
       const spec: LoadSpec = {
         sceneUrl, assetBase: `${this.origin}/project/`, seed: options.seed ?? project.seed,
         renderScale: options.renderScale ?? 1, params: options.params ?? project.params,
@@ -308,12 +270,10 @@ export class SceneHost {
       return new HostPage(this, context, page, scene, assets);
     } catch (error) {
       await context.close().catch(() => {});
-      const detail = cleanError(error).message;
-      throw new Error(errors.length && !detail.includes(errors[0]!) ? `${detail}\n${errors.join('\n')}` : detail);
+      throw pageFailure(error, errors);
     }
   }
 
-  /** Load in Chromium, validate exports and params, run setup and a trial render. */
   /**
    * Meta and parameter definitions read from the module's exports, validated exactly as the runtime does, without
    * setup or a frame: seconds faster than `inspect` for 3D scenes, whose headless WebGL is software. Opening a
@@ -322,49 +282,39 @@ export class SceneHost {
   async describe(build: SceneBuild, project: SceneProject): Promise<LoadedScene> {
     const sceneUrl = this.register(build);
     const context = await this.context('cpu');
-    const page = await context.newPage();
-    const errors: string[] = [];
-    page.on('pageerror', error => errors.push(error.message));
+    const { page, errors } = await watchedPage(context);
     try {
-      await page.goto(`${this.origin}/`, { timeout: hostTimeouts.load });
-      await page.waitForFunction(() => 'mografyHost' in window, undefined, { timeout: hostTimeouts.load });
+      await this.ready(page);
       const raw = await bounded(page.evaluate(url => window.mografyHost.describe(url), sceneUrl), hostTimeouts.load,
         `Loading the scene module did not finish within ${seconds(hostTimeouts.load)}.`, () => context.close());
       const meta = sceneMetaForAspect(sceneMetaSchema.parse(raw.meta), project.aspectRatio), params = parameterDefinitionsSchema.parse(raw.params);
       resolveParams(params, project.params ?? {});
       return { meta, params, width: meta.width, height: meta.height };
     } catch (error) {
-      const detail = cleanError(error).message;
-      throw new Error(errors.length && !detail.includes(errors[0]!) ? `${detail}\n${errors.join('\n')}` : detail);
+      throw pageFailure(error, errors);
     } finally { await context.close().catch(() => {}); }
   }
 
-  async inspect(build: SceneBuild, project: SceneProject) {
-    const page = await this.open(build, project, { params: {} });
-    try {
-      await bounded(page.page.evaluate(() => window.mografyHost.trial()), hostTimeouts.trial,
-        `Trial render did not finish within ${seconds(hostTimeouts.trial)}. renderFrame may contain a loop that never ends, or one frame is far too slow to preview.`,
-        () => page.close()).catch(e => { throw cleanError(e); });
+  /** Load in Chromium, validate exports and params, run setup and a trial render. */
+  inspect(build: SceneBuild, project: SceneProject) {
+    return this.withPage(build, project, { params: {} }, async page => {
+      await this.trial(page, `Trial render did not finish within ${seconds(hostTimeouts.trial)}. renderFrame may contain a loop that never ends, or one frame is far too slow to preview.`);
       return page.scene;
-    } finally { await page.close(); }
+    });
   }
 
   /** Load the scene and measure what its frames cost to draw (see FrameCost). */
-  async measure(build: SceneBuild, project: SceneProject) {
-    const page = await this.open(build, project, { params: {} });
-    try {
-      return await bounded(page.page.evaluate(() => window.mografyHost.cost()), hostTimeouts.trial,
-        `Measuring frames did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); });
-    } finally { await page.close(); }
+  measure(build: SceneBuild, project: SceneProject) {
+    return this.withPage(build, project, { params: {} }, page => bounded(page.page.evaluate(() => window.mografyHost.cost()), hostTimeouts.trial,
+      `Measuring frames did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); }));
   }
 
   /**
    * Tiny greyscale frames every `step` seconds over the whole film, for `mografy check --motion`. Drawn at
    * quarter scale: motion, not detail, is what it measures.
    */
-  async motionFrames(build: SceneBuild, project: SceneProject, step = 1 / 30, width = 128): Promise<MotionFrames> {
-    const page = await this.open(build, project, { params: {}, renderScale: 0.25 });
-    try {
+  motionFrames(build: SceneBuild, project: SceneProject, step = 1 / 30, width = 128): Promise<MotionFrames> {
+    return this.withPage(build, project, { params: {}, renderScale: 0.25 }, async page => {
       const { duration } = page.scene.meta, count = Math.floor(duration / step + 1e-6) + 1;
       const times = Array.from({ length: count }, (_, i) => Math.min(duration, Number((i * step).toFixed(4))));
       const parts: Uint8Array[] = [];
@@ -372,27 +322,21 @@ export class SceneHost {
       const data = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
       parts.reduce((offset, p) => { data.set(p, offset); return offset + p.length; }, 0);
       return { step, size: data.length / count, data };
-    } finally { await page.close(); }
+    });
   }
 
   /** The project files a scene loads: run setup and a trial render, recording every request. */
-  async loadedAssets(build: SceneBuild, project: SceneProject) {
-    const page = await this.open(build, project, { renderScale: 0.25 });
-    try {
-      await bounded(page.page.evaluate(() => window.mografyHost.trial()), hostTimeouts.trial,
-        `Trial render did not finish within ${seconds(hostTimeouts.trial)}.`, () => page.close()).catch(e => { throw cleanError(e); });
+  loadedAssets(build: SceneBuild, project: SceneProject) {
+    return this.withPage(build, project, { renderScale: 0.25 }, async page => {
+      await this.trial(page, `Trial render did not finish within ${seconds(hostTimeouts.trial)}.`);
       return [...page.assets].sort();
-    } finally { await page.close(); }
+    });
   }
 
   async close() {
     for (const waiter of this.waiters.values()) waiter.reject(new Error('Host closed'));
     this.waiters.clear();
-    if (!this.shared) {
-      const browsers = await Promise.all(Object.values(this.browsers).map(b => b.catch(() => undefined)));
-      this.browsers = {};
-      await Promise.all(browsers.map(b => b?.close().catch(() => {})));
-    }
+    if (!this.shared) await closeBrowsers(this.browsers);
     await new Promise<void>(done => this.server.close(() => done()));
   }
 }

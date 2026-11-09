@@ -1,9 +1,10 @@
+import { PROJECT_STATE_DIR } from '@mografy/render/fs-util';
 import { watch } from 'node:fs';
 import type { FSWatcher } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const IGNORED = new Set(['.mografy', 'renders', 'node_modules', '.git']);
+const IGNORED = new Set([PROJECT_STATE_DIR, 'renders', 'node_modules', '.git']);
 
 /** Fast filesystem events plus a fallback poll; owns all watcher timers. */
 export class ProjectWatcher {

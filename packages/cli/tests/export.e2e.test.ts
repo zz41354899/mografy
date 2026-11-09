@@ -2,6 +2,7 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { TEMPLATE_DIR } from '@mografy/server';
@@ -81,11 +82,11 @@ test('export dialog: four usable formats, keyboard choices, advanced controls an
         assert.equal(await encoding.innerText(), 'Constant quality · one-pass');
         assert.equal(await modal.getByRole('slider', { name: 'CRF', exact: true }).inputValue(), '32');
         assert.equal(await modal.getByRole('textbox', { name: 'Bitrate', exact: true }).count(), 0);
-        await mkdir(resolve('../../artifacts/webm-export'), { recursive: true });
-        await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-desktop.png') });
+        const webmQa = join(tmpdir(), 'mografy-qa/webm-export'); await mkdir(webmQa, { recursive: true });
+        await page.screenshot({ path: join(webmQa, 'settings-desktop.png') });
         await page.setViewportSize({ width: 390, height: 844 });
         assert.equal(await modal.evaluate(element => element.scrollWidth > element.clientWidth), false, 'five formats fit the mobile dialog');
-        await page.screenshot({ path: resolve('../../artifacts/webm-export/settings-mobile.png') });
+        await page.screenshot({ path: join(webmQa, 'settings-mobile.png') });
         await page.setViewportSize({ width: 1280, height: 800 });
       }
       assert.equal(await encoding.innerText(), 'Constant quality · one-pass', 'constant quality is the default');
@@ -181,7 +182,7 @@ test('portrait canvas persists, reopens, previews and exports both MP4 orientati
   assert.deepEqual([png.readUInt32BE(16),png.readUInt32BE(20)],[1080,1920]);
   assert.equal((await api('project','PATCH',{patch:{aspectRatio:'1:1'}})).status,422);
   const manifest = await readFile(join(dir,'mografy.json'),'utf8');
-  const qa = fileURLToPath(new URL('../../../artifacts/portrait-video', import.meta.url)); await mkdir(qa,{recursive:true});
+  const qa = join(tmpdir(), 'mografy-qa/portrait-video'); await mkdir(qa,{recursive:true});
   await page.screenshot({path:join(qa,'portrait-player.png')});
   await page.getByRole('button',{name:'Export',exact:true}).click();
   const modal = page.getByRole('dialog'), toggle = modal.getByRole('group',{name:'MP4 orientation'});
@@ -256,7 +257,7 @@ test('export dialog continues through progress, background work, cancellation, f
   const published = await api('source','POST',{files:{'scenes/main.ts':source}});
   assert.equal(published.status,200);
   await page.waitForFunction(v=>document.querySelector<HTMLElement>('[data-testid=stage]')?.dataset.version===v,published.data.version);
-  const qa = fileURLToPath(new URL('../../../artifacts/export-dialog', import.meta.url)); await mkdir(qa,{recursive:true});
+  const qa = join(tmpdir(), 'mografy-qa/export-dialog'); await mkdir(qa,{recursive:true});
   await page.getByRole('button',{name:'Export',exact:true}).click();
   const modal = page.getByRole('dialog',{name:'Export animation'});
   await modal.getByRole('group',{name:'MP4 orientation'}).getByRole('button',{name:'Portrait 9:16'}).click();

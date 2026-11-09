@@ -19,6 +19,14 @@ Updated: 2026-11-08
 - Drag: `CursorFrame.dragging` spans press (move start − 0.1 s) to release (move end + 0.08 s); `lift` eases up over 0.18 s and down over 0.2 s, so a carried object never pops. Taps record their own point (`tx`, `ty`) instead of moving the cursor.
 - Not yet: glass (frosted) windows, Stage templates on the website's template page.
 
+## Bilingual player, viewport and update reliability (2026-11-09)
+
+- Interface strings live in `packages/web/src/locales/{zh,en}.ts`, with no i18n library; the presentation page's own overlay (`deck-app.ts`) stays English, as in Pro.
+- Preview: view state only, in `useViewport.ts` and `viewport.ts`; the player redraws sharper when the stage grows past what it was drawn for.
+- `mografy update` is split into preflight, heal, compare, pause, merge, setup and restart stages. Generators go through `generated-file.mjs`; `bin/locate.mjs` is the one place that picks the checkout.
+- `core/src/index.ts` is split by area with its public API unchanged; `core/src/api.ts` is the HTTP contract for the CLI, web and Server; `cli/src/index.ts` dispatches to `commands/`.
+- `.github/workflows/ci.yml` runs on Windows and Ubuntu.
+
 ## Export pipeline refactor (2026-11-02)
 
 - Ported the Pro export core: `render/src/codecs.ts` plans each export; constant quality streams into each capture segment (no FFV1 master); still frames draw one sample; only changed rectangles cross from the page; separate CPU (SwiftShader) and GPU browsers. Added presets (`share`, `high`, `fast`, `master`), MOV/ProRes, hardware encoders for macOS, Windows and Linux with probe-and-fallback, shutter angle, centred sample window (opt-in), ordered dither (opt-in), motion-extent adaptive samples, 48 kHz audio, `workers: auto`, project-local temp files and Windows-safe FFmpeg arguments.

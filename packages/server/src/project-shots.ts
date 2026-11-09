@@ -1,3 +1,4 @@
+import { projectPaths } from '@mografy/render/fs-util';
 import { join } from 'node:path';
 import { sceneRuntimeKey } from '@mografy/core';
 import type { AutoShots, SceneInfo, SceneProject } from '@mografy/core';
@@ -65,7 +66,7 @@ export class ShotGuesser {
     const storyboard = await readStoryboard(this.dir);
     const key = sha256(JSON.stringify(['guess-1', sceneRuntimeKey(scene.version, project), project.params, storyboard ?? null]));
     if (this.guess?.key === key) return;
-    const file = join(this.dir, '.mografy', 'auto-shots.json');
+    const file = projectPaths(this.dir).autoShots;
     const saved = await readJson<AutoShots & { key?: string }>(file);
     let result: AutoShots;
     if (saved?.key === key && Array.isArray(saved.shots)) result = { source: saved.source, shots: saved.shots };

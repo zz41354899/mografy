@@ -1,4 +1,5 @@
 // Export lifecycle; Project supplies the only persistent write operation.
+import { projectPaths } from '@mografy/render/fs-util';
 import { createReadStream } from 'node:fs';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
@@ -53,8 +54,8 @@ export class RenderJobs {
     this.task = (async () => {
       if (isVideoFormat(format)) {
         // Beside the project, so the finished video is on the same volume as renders/.
-        await mkdir(join(this.dir, '.mografy', 'tmp'), { recursive: true });
-        const temp = await mkdtemp(join(this.dir, '.mografy', 'tmp', 'export-'));
+        await mkdir(projectPaths(this.dir).tmp, { recursive: true });
+        const temp = await mkdtemp(join(projectPaths(this.dir).tmp, 'export-'));
         try {
           const result = await renderVideo({ projectDir: this.dir, project: snapshot, build, format, output: join(temp, `output.${format}`), host: this.host, size: request.size, signal: controller.signal, onProgress });
           if (controller.signal.aborted) throw new Error('Render cancelled');

@@ -1,4 +1,5 @@
 // Read-only discovery and explicit library-level operations.
+import { projectPaths } from '@mografy/render/fs-util';
 import { mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
@@ -7,7 +8,7 @@ import { EXAMPLES_DIR, libraryDir } from './installation.js';
 import { lastProject, readRecent } from './workspace-state.js';
 import { COMPONENT_PRESETS, componentRoot, ensureComponentsProject } from './components.js';
 import { createProject, exists, folderName, isProject } from './project-scaffold.js';
-import { queueProjectWrite } from './project.js';
+import { queueProjectWrite } from './files.js';
 
 export * from './installation.js';
 export * from './workspace-state.js';
@@ -40,7 +41,7 @@ async function summarize(dir: string, kind: ProjectSummary['kind']): Promise<Pro
     const [raw, info] = await Promise.all([readFile(file, 'utf8'), stat(file)]);
     let name = basename(dir), valid = true;
     try { name = validateSceneProject(JSON.parse(raw)).name; } catch { valid = false; }
-    const thumb = await stat(join(dir, '.mografy', 'thumb.png')).then(s => s.mtimeMs, () => null);
+    const thumb = await stat(projectPaths(dir).thumb).then(s => s.mtimeMs, () => null);
     return { dir: await realpath(dir), name, kind, valid, updatedAt: new Date(info.mtimeMs).toISOString(), thumb };
   } catch { return undefined; }
 }

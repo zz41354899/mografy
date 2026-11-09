@@ -1,5 +1,6 @@
 // Project state: the only writer of mografy.json and scene sources.
 // Every change goes compile → Chromium trial render → publish, in one queue.
+import { projectPaths } from '@mografy/render/fs-util';
 import { EventEmitter } from 'node:events';
 import { mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
@@ -8,7 +9,7 @@ import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, Scen
 import { buildScene, renderReview, SceneHost } from '@mografy/render';
 import type { SharedBrowsers } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
-import { atomicWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
+import { atomicWrite, queueProjectWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
 import { ShotGuesser } from './project-shots.js';
 import { ProjectWatcher } from './project-watcher.js';
 import { ProjectFrames } from './project-frames.js';
@@ -24,16 +25,7 @@ const now = () => new Date().toISOString();
 /** What a passed trial render reports, saved in .mografy/verified.json. */
 type Verified = Awaited<ReturnType<SceneHost['inspect']>>;
 
-// Scaffolding and live updates share the same writer for each project directory.
-const writers = new Map<string, Promise<unknown>>();
-export async function queueProjectWrite<T>(dir: string, task: () => Promise<T>): Promise<T> {
-  const key = await realpath(resolve(dir)).catch(() => resolve(dir));
-  const next = (writers.get(key) ?? Promise.resolve()).then(task);
-  const tail = next.catch(() => {});
-  writers.set(key, tail);
-  void tail.then(() => { if (writers.get(key) === tail) writers.delete(key); });
-  return next;
-}
+export { queueProjectWrite };
 
 export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   readonly manifestFile: string;
@@ -76,9 +68,9 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   /** `browsers`: Chromium shared with other projects (batch export); the caller closes it. */
   static async open(projectDir: string, browsers?: SharedBrowsers) {
     const dir = await realpath(resolve(projectDir));
-    await mkdir(join(dir, '.mografy', 'builds'), { recursive: true });
+    await mkdir(projectPaths(dir).builds, { recursive: true });
     const project = new Project(dir, await SceneHost.start(dir, browsers));
-    const saved = await readJson<{ playhead?: unknown }>(join(dir, '.mografy', 'state.json'));
+    const saved = await readJson<{ playhead?: unknown }>(projectPaths(dir).stateFile);
     if (typeof saved?.playhead === 'number' && Number.isFinite(saved.playhead)) project.state.playhead = Math.max(0, saved.playhead);
     await project.rebuild('startup');
     return project;
@@ -142,7 +134,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     // Opening a project used to trial-render the unchanged build again in headless Chromium, whose WebGL is software
     // (SwiftShader): 3D films took many seconds to switch to. A build that already passed keeps its result on disk;
     // any source or settings change gives a new key, so edits are always trial-rendered.
-    const verifiedFile = join(this.dir, '.mografy', 'verified.json');
+    const verifiedFile = projectPaths(this.dir).verified;
     const saved = !known && opening ? await readJson<{ key?: string } & Partial<Verified>>(verifiedFile) : undefined;
     const reused = saved?.key === key && saved.meta && saved.params ? { meta: saved.meta, params: saved.params } : undefined;
     // An unverified build being opened is only described (module exports, no setup); its trial runs later in the
@@ -160,7 +152,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     if (issues.length) await this.writeManifest({ ...project, params: values });
     this.builds.set(build.version, build);
     for (const key of [...this.builds.keys()].slice(0, -8)) this.builds.delete(key);
-    await atomicWrite(join(this.dir, '.mografy', 'builds', `${build.version}.js`), build.code).catch(() => {});
+    await atomicWrite(join(projectPaths(this.dir).builds, `${build.version}.js`), build.code).catch(() => {});
     await this.pruneBuilds().catch(() => {});
     const changed = this.scene?.version !== build.version || this.scene.meta.width !== meta.width || this.scene.meta.height !== meta.height;
     if (changed) this.scene = { version: build.version, meta, params, sources: build.sources, publishedAt: now(), reason };
@@ -180,7 +172,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     const timer = setTimeout(() => {
       if (this.closed || this.preparedKey !== key) return;
       void this.host.inspect(build, project).then(
-        loaded => this.run(() => atomicWrite(join(this.dir, '.mografy', 'verified.json'), JSON.stringify({ key, meta: loaded.meta, params: loaded.params }) + '\n')),
+        loaded => this.run(() => atomicWrite(projectPaths(this.dir).verified, JSON.stringify({ key, meta: loaded.meta, params: loaded.params }) + '\n')),
         error => this.run(async () => {
           if (this.closed || this.preparedKey !== key) return;
           this.error = { message: describe(error), reason: 'startup', at: now() }; this.publish('error');
@@ -192,7 +184,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
 
   /** Keep the newest saved builds on disk, so a player still showing a recent version can reload it. */
   private async pruneBuilds(keep = 16) {
-    const folder = join(this.dir, '.mografy', 'builds');
+    const folder = projectPaths(this.dir).builds;
     const names = (await readdir(folder)).filter(name => /^[\da-f]{16}\.js$/.test(name) && !this.builds.has(name.slice(0, -3)));
     const dated = await Promise.all(names.map(async name => ({ name, at: (await stat(join(folder, name)).catch(() => undefined))?.mtimeMs ?? 0 })));
     const extra = Math.max(0, names.length + this.builds.size - keep);
@@ -319,7 +311,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     if (!Number.isFinite(t) || t < 0) throw new ApiError(400, 'INVALID', 'Invalid time');
     this.state.playhead = Math.min(t, this.scene?.meta.duration ?? t);
     clearTimeout(this.stateTimer);
-    this.stateTimer = setTimeout(() => { void this.run(() => atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n')).catch(() => {}); }, 300);
+    this.stateTimer = setTimeout(() => { void this.run(() => atomicWrite(projectPaths(this.dir).stateFile, JSON.stringify(this.state) + '\n')).catch(() => {}); }, 300);
     if (seek) { this.sequence++; this.emit('event', { type: 'seek', t: this.state.playhead, clientId }); }
     return this.state;
   }
@@ -345,9 +337,9 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   }
   /** The saved thumbnail was drawn from this version and manifest, so it need not be drawn again on open. */
   private async thumbIsCurrent(version: string | undefined, revision: string) {
-    const saved = await readJson<{ version?: string; revision?: string }>(join(this.dir, '.mografy', 'thumb.json'));
+    const saved = await readJson<{ version?: string; revision?: string }>(projectPaths(this.dir).thumbInfo);
     if (!version || saved?.version !== version || saved.revision !== revision) return false;
-    const png = await readFile(join(this.dir, '.mografy', 'thumb.png')).catch(() => null);
+    const png = await readFile(projectPaths(this.dir).thumb).catch(() => null);
     if (!png) return false;
     this.thumbnail = sha256(png);
     return true;
@@ -362,8 +354,8 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     });
     return this.run(async () => {
       if (this.scene?.version !== version || sha256(this.raw) !== revision) return;
-      await atomicWrite(join(this.dir, '.mografy', 'thumb.png'), png);
-      await atomicWrite(join(this.dir, '.mografy', 'thumb.json'), JSON.stringify({ version, revision }) + '\n').catch(() => {});
+      await atomicWrite(projectPaths(this.dir).thumb, png);
+      await atomicWrite(projectPaths(this.dir).thumbInfo, JSON.stringify({ version, revision }) + '\n').catch(() => {});
       this.thumbnail = sha256(png);
       this.publish('thumbnail');
       return this.thumbnail;
@@ -404,7 +396,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     await this.jobs.close();
     await Promise.allSettled([...this.reviews]);
     await this.queue;
-    if (this.stateTimer) await queueProjectWrite(this.dir, () => atomicWrite(join(this.dir, '.mografy', 'state.json'), JSON.stringify(this.state) + '\n')).catch(() => {});
+    if (this.stateTimer) await queueProjectWrite(this.dir, () => atomicWrite(projectPaths(this.dir).stateFile, JSON.stringify(this.state) + '\n')).catch(() => {});
     await this.frames.close();
     await this.host.close();
     this.removeAllListeners();

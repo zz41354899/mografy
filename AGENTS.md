@@ -6,7 +6,7 @@
 - Keep one shared Skill named `mografy` in this repository's outer `.agents/skills/mografy/` folder. Read [.agents/skills/mografy/SKILL.md](.agents/skills/mografy/SKILL.md) for product, scene, and storyboard work. Its `references/` contains project guidance, scene authoring, the sixteen built-in components, the intro example, storyboards, and animation principles. Claude's root `.claude/skills/mografy` entry links to this same folder. Never create Skill folders inside animation subprojects.
 - Keep Skill entrypoints short. Put detailed guidance in local `references/` files for both hosts. Codex storyboards use image generation; Claude storyboards use Artifacts when available, otherwise a standalone local HTML preview. Keep plans and prompts in English.
 - Scene code executes only in the browser. The Server must never import or evaluate a scene in Node.
-- All application writes to projects go through the queue in `packages/server/src/project.ts` and use `atomicWrite`.
+- All application writes to projects go through the queue in `packages/server/src/files.ts` and use `atomicWrite`.
 - The player and exports share `@mografy/runtime`, including post-processing in `post.ts`. Changes to output effects must apply to both.
 - `package.json` scripts must work under Windows `cmd` (pnpm runs scripts through it there): quote globs and paths with escaped double quotes (`--filter \"./packages/**\"`), never single quotes, which `cmd` passes through literally (`No projects matched the filters`).
 - After changes, run `pnpm check` (including real Chromium and FFmpeg tests) and `pnpm test:browser`.

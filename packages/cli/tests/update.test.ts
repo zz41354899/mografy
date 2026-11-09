@@ -3,10 +3,10 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import type { TestContext } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { updateInstallation, runUpdateCommand } from '../src/update.js';
+import { updateInstallation, runUpdateCommand, PNPM_INSTALL_ARGS } from '../src/update.js';
 import { parse } from '../src/options.js';
 
 async function fixture(t: TestContext) {
@@ -47,12 +47,12 @@ server.listen(port,'127.0.0.1');
     async pause() { steps.push('pause'); return player; },
     async restart(_root: string, received: typeof player) { assert.deepEqual(received, player); steps.push('restart'); },
     async run(command: string, args: string[], cwd: string) {
-      if (command === 'pnpm' || command === 'pnpm.cmd') { steps.push(args.join(' ')); return ''; }
+      if (command === 'pnpm') { if (args[0] !== '--version') steps.push(args.join(' ')); return ''; }
       if (args[0] === 'merge') steps.push('merge');
       return runUpdateCommand(command, args, cwd);
     },
   };
-  return { root, git, before, advance, steps, messages, services };
+  return { root, author, git, before, advance, steps, messages, services };
 }
 
 test('update --check fetches a newer revision without changing files or stopping the player', async t => {
@@ -70,7 +70,7 @@ test('update fast-forwards, installs/builds, syncs skills and restarts the same 
   await updateInstallation(f.root, false, f.services);
   assert.equal(await f.git(f.root, 'rev-parse', 'HEAD'), target);
   assert.equal(await readFile(join(f.root, 'version.txt'), 'utf8'), 'second');
-  assert.deepEqual(f.steps, ['pause', 'merge', 'install --frozen-lockfile', 'sync:skills', 'restart']);
+  assert.deepEqual(f.steps, ['pause', 'merge', PNPM_INSTALL_ARGS.join(' '), 'sync:skills', 'restart']);
   assert.match(f.messages.join('\n'), /Refresh http/);
 });
 
@@ -139,9 +139,9 @@ test('update rejects diverged history before stopping the player', async t => {
 test('failed installation reports recovery commands without starting an incomplete build', async t => {
   const f = await fixture(t), target = await f.advance();
   await assert.rejects(updateInstallation(f.root, false, { ...f.services, run: async (command, args, cwd) => {
-    if (command.startsWith('pnpm')) throw new Error('offline install');
+    if (command === 'pnpm' && args[0] === 'install') throw new Error('offline install');
     return f.services.run(command, args, cwd);
-  } }), /Source updated, but setup did not finish/);
+  } }), /Source updated, but setup did not finish[\s\S]*git reset --hard/);
   assert.equal(await f.git(f.root, 'rev-parse', 'HEAD'), target);
   assert.deepEqual(f.steps, ['pause', 'merge']);
 });
@@ -215,4 +215,72 @@ test('update rejects a detached HEAD before stopping the player, with the way ba
   await f.git(f.root, 'checkout', '--detach');
   await assert.rejects(updateInstallation(f.root, false, f.services), /Detached HEAD[\s\S]*^  git checkout main$/m);
   assert.deepEqual(f.steps, []);
+});
+
+test('a missing pnpm is reported before the player stops or anything merges', async t => {
+  const f = await fixture(t); await f.advance();
+  await assert.rejects(updateInstallation(f.root, false, { ...f.services, run: async (command, args, cwd) => {
+    if (command === 'pnpm') throw new Error('not found');
+    return f.services.run(command, args, cwd);
+  } }), /pnpm was not found[\s\S]*no update was applied/);
+  assert.equal(await f.git(f.root, 'rev-parse', 'HEAD'), f.before);
+  assert.deepEqual(f.steps, []);
+});
+
+test('a lock left by a process that no longer exists does not block the update', async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.root, '.git/mografy-update.lock'), '99999999');
+  await updateInstallation(f.root, true, f.services);
+  assert.match(f.messages.join('\n'), /Already up to date/);
+});
+
+test('a lock held by a running process is respected', async t => {
+  const f = await fixture(t);
+  await writeFile(join(f.root, '.git/mografy-update.lock'), String(process.pid));
+  await assert.rejects(updateInstallation(f.root, true, f.services), /Another update is running/);
+});
+
+test('with autocrlf, a generator rewriting a file does not block this or the next update', async t => {
+  const f = await fixture(t);
+  const publish = async (text: string) => {
+    await writeFile(join(f.author, 'generated.txt'), text);
+    await f.git(f.author, 'add', '.'); await f.git(f.author, 'commit', '-m', 'generated'); await f.git(f.author, 'push');
+  };
+  await publish('one\ntwo\n');
+  await f.git(f.root, 'pull', '--ff-only');
+  await f.git(f.root, 'config', 'core.autocrlf', 'true');
+  await rm(join(f.root, 'generated.txt'));
+  await f.git(f.root, 'checkout', '--', 'generated.txt');
+  assert.equal(await readFile(join(f.root, 'generated.txt'), 'utf8'), 'one\r\ntwo\r\n', 'checked out with CRLF, as on Windows');
+  // What the generator does: the same content written back with LF.
+  await writeFile(join(f.root, 'generated.txt'), 'one\ntwo\n');
+  assert.match(await f.git(f.root, 'status', '--porcelain'), /generated\.txt/);
+  await publish('one\ntwo\nthree\n');
+  const target = await f.advance();
+  await updateInstallation(f.root, false, f.services);
+  assert.equal(await f.git(f.root, 'rev-parse', 'HEAD'), target);
+  assert.equal((await readFile(join(f.root, 'generated.txt'), 'utf8')).replaceAll('\r\n', '\n'), 'one\ntwo\nthree\n');
+  assert.equal(await f.git(f.root, 'status', '--porcelain'), '');
+});
+
+test('with autocrlf, a real edit is still a local change', async t => {
+  const f = await fixture(t); await f.advance();
+  await f.git(f.root, 'config', 'core.autocrlf', 'true');
+  await writeFile(join(f.root, 'version.txt'), 'my changes');
+  await assert.rejects(updateInstallation(f.root, false, f.services), /Local changes/);
+  assert.equal(await readFile(join(f.root, 'version.txt'), 'utf8'), 'my changes');
+});
+
+test('the real pnpm runs postinstall again when only source files changed', async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-pnpm-'));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'update-fixture', private: true, scripts: { postinstall: 'node postinstall.cjs' } }));
+  await writeFile(join(dir, 'pnpm-workspace.yaml'), 'packages: []\n');
+  await writeFile(join(dir, 'postinstall.cjs'), "require('node:fs').appendFileSync('ran.log', 'x')\n");
+  await writeFile(join(dir, 'source.txt'), 'first');
+  await runUpdateCommand('pnpm', ['install'], dir);
+  assert.equal(await readFile(join(dir, 'ran.log'), 'utf8'), 'x');
+  await appendFile(join(dir, 'source.txt'), ' second');
+  await runUpdateCommand('pnpm', ['install', '--no-frozen-lockfile', ...PNPM_INSTALL_ARGS.slice(2)], dir);
+  assert.equal(await readFile(join(dir, 'ran.log'), 'utf8'), 'xx');
 });

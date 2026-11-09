@@ -7,6 +7,7 @@ import { availableParallelism, totalmem } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { exportWorkers, outputFrameCount, sampleTimes, segmentFrames, validateExportFrameRate } from '@mografy/core';
 import type { ExportSize, SceneProject, VideoFormat } from '@mografy/core';
+import { isLockedError, projectPaths, retryWhileLocked } from './fs-util.js';
 import type { SceneBuild } from './build.js';
 import { LOSSLESS, concatList, planCodec, segmentArgs } from './codecs.js';
 import type { CodecPlan } from './codecs.js';
@@ -79,15 +80,11 @@ async function checkSpace(work: string, frames: number, width: number, height: n
  */
 async function place(partial: string, output: string) {
   await mkdir(dirname(output), { recursive: true });
-  for (let attempt = 0; ; attempt++) {
-    try { return await rename(partial, output); }
-    catch (error) {
-      const code = (error as NodeJS.ErrnoException).code ?? '';
-      if (code === 'EXDEV') return copyFile(partial, output);
-      if (process.platform === 'win32' && attempt < 9 && ['EPERM', 'EACCES', 'EBUSY'].includes(code)) { await new Promise(done => setTimeout(done, 50 * (attempt + 1))); continue; }
-      if (['EPERM', 'EACCES', 'EBUSY'].includes(code)) throw new Error(`Could not write ${output}: it may be open in another program. Close it and export again.`);
-      throw error;
-    }
+  try { await retryWhileLocked(() => rename(partial, output)); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EXDEV') return copyFile(partial, output);
+    if (isLockedError(error)) throw new Error(`Could not write ${output}: it may be open in another program. Close it and export again.`);
+    throw error;
   }
 }
 
@@ -104,7 +101,7 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const canvas: CanvasBacking = settings.canvas === 'gpu' && gpuCanvasAvailable() ? 'gpu' : 'cpu';
   const ownHost = !job.host, host = job.host ?? await SceneHost.start(job.projectDir);
   // Work beside the project, on the same volume as renders/: the result moves into place without a copy.
-  const temp = join(resolve(job.projectDir), '.mografy', 'tmp');
+  const temp = projectPaths(resolve(job.projectDir)).tmp;
   await mkdir(temp, { recursive: true });
   const work = await mkdtemp(join(temp, 'render-'));
   try {

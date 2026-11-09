@@ -1,10 +1,9 @@
-import { EXPORT_PRESETS, EXPORT_SIZES, isVideoFormat, MP4_PORTRAIT_SIZES } from '@mografy/core';
+import { callApi, EXPORT_PRESETS, EXPORT_SIZES, isVideoFormat, MP4_PORTRAIT_SIZES } from '@mografy/core';
 import type { RenderStatus } from '@mografy/core';
 import { findServer, isProject } from '@mografy/server';
 import { SharedBrowsers } from '@mografy/render';
-import { readdir } from 'node:fs/promises';
-import { basename, join } from 'node:path';
-import { responseJson } from './api.js';
+import { readdir, realpath } from 'node:fs/promises';
+import { basename, join, resolve } from 'node:path';
 import { displayPath, requireProject } from './paths.js';
 import { formatName, progressReporter } from './progress.js';
 import { openExportConnection } from './export-transport.js';
@@ -22,14 +21,13 @@ async function cancelExport(dir: string) {
   await requireProject(dir);
   const running = await findServer(dir);
   if (!running) throw new Error('No dev server is running for this project. Press Ctrl+C in the terminal that started the export.');
-  const before = (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
+  const identity = await realpath(resolve(dir));
+  const before = (await callApi<{ render: RenderStatus | null }>(running.url, 'snapshot', 'GET', undefined, identity)).render;
   if (!before || before.state !== 'running') { console.log('No export is running for this project.'); return; }
-  await responseJson<RenderStatus>(await fetch(new URL('/__mografy/render/cancel', running.url), {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: before.id }),
-  }));
+  await callApi<RenderStatus>(running.url, 'render/cancel', 'POST', { id: before.id }, identity);
   console.log(`Cancelling ${formatName(before.format)} export…`);
   for (;;) {
-    const current = (await responseJson<{ render: RenderStatus | null }>(await fetch(new URL('/__mografy/snapshot', running.url)))).render;
+    const current = (await callApi<{ render: RenderStatus | null }>(running.url, 'snapshot', 'GET', undefined, identity)).render;
     if (!current || current.id !== before.id) throw new Error('The export job disappeared.');
     if (current.state === 'cancelled') { console.log('Export cancelled.'); return; }
     if (current.state === 'done') { console.log(`Export already completed: ${displayPath(current.output)}`); return; }

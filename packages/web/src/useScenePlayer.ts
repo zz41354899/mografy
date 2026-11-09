@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { apiPath } from './api.js';
 import type { RefObject } from 'react';
 import type { ParameterValues, Snapshot } from '@mografy/core';
 import { ScenePlayer } from './player.js';
@@ -30,14 +31,14 @@ export function useScenePlayer(stage: RefObject<HTMLDivElement | null>, snapshot
     const previous = player.version;
     // A project always opens at 0s; live edits to the same project keep the playhead where it is.
     // Opening another project: its saved thumbnail covers the stage until its film is ready.
-    if (started.current !== dir) { player.pause(); player.seek(0); player.showPoster(`/__mografy/projects/thumb?dir=${encodeURIComponent(dir)}`); }
+    if (started.current !== dir) { player.pause(); player.seek(0); player.showPoster(apiPath(`projects/thumb?dir=${encodeURIComponent(dir)}`)); }
     void player.load(version, project, values, dir).then(() => {
       if (cancelled) return;
       setError('');
       // A project opens paused; it plays only when asked.
       if (started.current !== dir) started.current = dir;
       if (previous && previous !== version) {
-        setMessage(`Updated to ${version.slice(0, 7)}`);
+        setMessage(version.slice(0, 7));
         clearTimeout(messageTimer.current);
         messageTimer.current = setTimeout(() => setMessage(''), 2600);
       }

@@ -4,6 +4,7 @@ dist/
 .DS_Store
 *.tsbuildinfo
 .tmp/
+/artifacts/
 .nuxt/
 .output/
 .data/

@@ -1,4 +1,5 @@
 // Connection to the Mografy server: snapshots and seek events over WebSocket, writes over HTTP.
+import { apiPath } from './api.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { callApi } from './api.js';
 import type { ExportQueueStatus, ExportRequest, ProjectPatch, QueueRequest, RenderStatus, ServerEvent, Snapshot } from '@mografy/core';
@@ -37,7 +38,7 @@ export function useSession(): Session {
     const connect = () => {
       if (stopped) return;
       setConnection('connecting');
-      socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/__mografy/events`);
+      socket = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${apiPath('events')}`);
       socket.onopen = () => { delay = 400; sequence.current = -1; setConnection('connected'); };
       socket.onmessage = message => {
         const event = JSON.parse(String(message.data)) as ServerEvent;
