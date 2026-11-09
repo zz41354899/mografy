@@ -170,11 +170,12 @@ test('a live export finishes before idle shutdown and a fresh CLI restores its p
   await f.git(f.root, 'config', 'core.excludesFile', join(f.root, '.git/test-ignore'));
   await writeFile(join(f.root, '.git/test-ignore'), 'ignored-state/\n');
   process.env.MOGRAFY_STATE = state;
-  let exporting = true, interrupted = false;
+  // The export ends once the updater has seen it running, however long Git takes to get there.
+  let exporting = true, interrupted = false, snapshots = 0;
   const project = join(f.root, 'my animation');
   const old = createServer((request, response) => {
     response.setHeader('content-type', 'application/json');
-    if (request.url === '/__mografy/snapshot') { response.end(JSON.stringify({render:{state:exporting?'running':'done'}})); return; }
+    if (request.url === '/__mografy/snapshot') { response.end(JSON.stringify({render:{state:exporting?'running':'done'}})); if (++snapshots >= 2) exporting = false; return; }
     if (request.url?.startsWith('/__mografy/shutdown')) {
       interrupted = exporting;
       response.once('finish', () => { old.close(); old.closeAllConnections(); });
@@ -191,8 +192,6 @@ test('a live export finishes before idle shutdown and a fresh CLI restores its p
     if (previousState === undefined) delete process.env.MOGRAFY_STATE; else process.env.MOGRAFY_STATE = previousState;
   });
   await writeFile(join(state, 'active.json'), JSON.stringify({pid:process.pid,url,token:'old-process',project}));
-  const timer = setTimeout(() => { exporting = false; }, 500);
-  t.after(() => clearTimeout(timer));
   await updateInstallation(f.root, false, { run:f.services.run, log:f.services.log });
   assert.equal(interrupted, false);
   const health = await (await fetch(new URL('/__mografy/health', url))).json();

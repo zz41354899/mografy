@@ -23,7 +23,7 @@ test('an older PATH launcher uses the current installed clone and fails clearly 
   const sandbox = await realpath(await mkdtemp(join(tmpdir(), 'mografy-launcher-')));
   const checkout = join(sandbox, 'clone with spaces');
   const nested = join(checkout, 'examples/intro');
-  const home = join(sandbox, 'home'), env = { ...process.env, HOME: home };
+  const home = join(sandbox, 'home'), env = { ...process.env, HOME: home, USERPROFILE: home };
   try {
     await mkdir(nested, { recursive: true });
     await writeFile(join(checkout, 'package.json'), JSON.stringify({ name: 'mografy-workspace', type: 'module' }));
@@ -76,7 +76,7 @@ test('dev never creates a project; a missing path points to mografy init', async
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 
-test('the PATH launcher survives a moved or deleted checkout and a missing Node path', async () => {
+test('the PATH launcher survives a moved or deleted checkout and a missing Node path', { skip: process.platform === 'win32' && 'the sh launcher is not used on Windows' }, async () => {
   const sandbox = await realpath(await mkdtemp(join(tmpdir(), "mografy-path-launcher-")));
   // A checkout whose fake CLI prints its name, like the real bin/mografy.js would start it.
   const checkout = async (dir: string, name: string) => {

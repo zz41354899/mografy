@@ -11,6 +11,9 @@ work="$RUNNER_TEMP/sandbox"
 mkdir -p "$work" "$APPDATA/npm"
 export PATH="$APPDATA/npm:$PATH"
 git clone -q --bare . "$work/remote.git"
+# A pull request's checkout has no branch; the upstream needs one to update from.
+git -C "$work/remote.git" update-ref refs/heads/sandbox HEAD
+git -C "$work/remote.git" symbolic-ref HEAD refs/heads/sandbox
 git clone -q "$work/remote.git" "$work/installed"
 git clone -q "$work/remote.git" "$work/author"
 
