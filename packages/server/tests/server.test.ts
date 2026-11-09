@@ -2,14 +2,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { atomicWrite, sourcePath } from '../src/files.js';
 import { ServerLock, AlreadyRunning, findServer } from '../src/lock.js';
 
 test('source paths stay inside the project and out of reserved folders', () => {
   const root = '/p';
-  assert.equal(sourcePath(root, 'scenes/main.ts'), '/p/scenes/main.ts');
-  assert.equal(sourcePath(root, 'lib/ease.js'), '/p/lib/ease.js');
+  assert.equal(sourcePath(root, 'scenes/main.ts'), resolve(root, 'scenes/main.ts'));
+  assert.equal(sourcePath(root, 'lib/ease.js'), resolve(root, 'lib/ease.js'));
   for (const bad of ['../x.ts', '/abs.ts', 'scenes/../../x.ts', '.mografy/x.ts', 'renders/a.ts', 'assets/a.ts', 'scenes/a.txt', 'C:/x.ts', 'scenes\\a.ts', 'scenes/.hidden.ts'])
     assert.throws(() => sourcePath(root, bad), undefined, bad);
 });

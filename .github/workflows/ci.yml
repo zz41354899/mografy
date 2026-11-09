@@ -2,7 +2,7 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, 'ci/**']
   pull_request:
 
 jobs:
@@ -14,9 +14,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # The version comes from packageManager in package.json.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,3 +33,18 @@ jobs:
         run: |
           status="$(git status --porcelain)"
           if [ -n "$status" ]; then echo "$status"; exit 1; fi
+
+  # A real `mografy update` on Windows, twice in a row: a local bare repository stands in for GitHub.
+  windows-update:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update twice from a local upstream
+        shell: bash
+        run: scripts/windows-update-sandbox.sh
