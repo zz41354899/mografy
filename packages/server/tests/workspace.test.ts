@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir, readRecent, writeActive, clearActive } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
 import { Project } from '../src/project.js';
-import { seedComponentThumbnail } from '../src/component-thumbnails.js';
+import { seedComponentThumbnail, thumbnailFingerprint } from '../src/component-thumbnails.js';
 
 test('projects: create in the library, remember, list without duplicates', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-ws-'));
@@ -247,4 +247,18 @@ test('concurrent library creation and recent writes retain every project', async
     if (previousHome === undefined) delete process.env.MOGRAFY_HOME; else process.env.MOGRAFY_HOME = previousHome;
     if (previousState === undefined) delete process.env.MOGRAFY_STATE; else process.env.MOGRAFY_STATE = previousState;
   }
+});
+
+test('a thumbnail fingerprint is the same for CRLF and LF source, and still sees real edits', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-fingerprint-'));
+  try {
+    const source = 'export const a = 1;\nexport const b = 2;\n';
+    const dir = await createProject(join(sandbox, 'film'), 'Film', source, '9:16');
+    const lf = await thumbnailFingerprint(dir);
+    const scene = join(dir, 'scenes/main.ts');
+    await writeFile(scene, source.replaceAll('\n', '\r\n'));
+    assert.equal(await thumbnailFingerprint(dir), lf);
+    await writeFile(scene, `${source}export const c = 3;\n`);
+    assert.notEqual(await thumbnailFingerprint(dir), lf);
+  } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
