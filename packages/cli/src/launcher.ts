@@ -4,7 +4,7 @@
 import { access, appendFile, chmod, constants, copyFile, mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { homedir, platform } from 'node:os';
 import { delimiter, dirname, join, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { CLI_BIN } from './paths.js';
 import { addSuggestions } from './add.js';
 
 /** One real checkout path per line, written by install-command. */
@@ -71,7 +71,7 @@ async function writeLauncher(file: string, script: string) {
 }
 
 const writable = (dir: string) => access(dir, constants.W_OK).then(() => true, () => false);
-const BIN = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'bin', 'mografy.js');
+const BIN = CLI_BIN;
 
 /** Put a `mografy` launcher into a writable folder on PATH (no pnpm global setup needed). */
 export async function installCommand(workspaceRoot: string) {

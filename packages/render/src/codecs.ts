@@ -4,7 +4,7 @@
 // FFmpeg runs in: a Windows drive letter's colon would split `-x265-params` and filter option lists.
 import { hevcQuality } from '@mografy/core';
 import type { RenderSettings, VideoFormat } from '@mografy/core';
-import { runFfmpeg } from './ffmpeg.js';
+import { ensureFfmpeg, runFfmpeg } from './ffmpeg.js';
 
 /** Every encoder writes BT.709 limited range, tagged, so players do not guess. */
 export const BT709 = ['-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv'];
@@ -158,6 +158,7 @@ async function requireEncoder(name: string) {
  * - WebM: VP9 (`hardware` means constant quality).
  */
 export async function planCodec(format: VideoFormat, settings: RenderSettings, platform: Platform = process.platform): Promise<CodecPlan> {
+  await ensureFfmpeg();
   if (format === 'webm') {
     await requireEncoder('libvpx-vp9');
     return vp9(settings.encoding === 'hardware' ? { ...settings, encoding: 'crf' } : settings);

@@ -40,7 +40,7 @@ mografy dev
 
 前三行只取出工具執行需要的部分。模板、輔助工具（cinema、cjk、three、music、walkthrough、stage）、十部 Stage 參考影片與 showreel 仍放在同一個 GitHub 儲存庫，等 `mografy add` 第一次用到時才下載，不會佔用你沒要求的空間。直接 `git clone https://github.com/zz41354899/mografy.git` 也可以，會取得完整儲存庫；要修改 Mografy 本身的貢獻者需要完整的工作副本（在精簡版中執行 `git sparse-checkout disable` 即可轉成完整版）。
 
-`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium headless shell（不是完整、有視窗的 Chromium，檢查與匯出都用不到），再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。若想改用電腦上已有的 Google Chrome 或 Microsoft Edge，執行 `mografy` 時設定 `PLAYWRIGHT_CHANNEL=chrome`（或 `msedge`）。改版前安裝的版本可能還留著完整的 Chromium，執行 `pnpm exec playwright uninstall` 再 `pnpm install`，就只會留下 headless shell。
+`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium headless shell（不是完整、有視窗的 Chromium，檢查與匯出都用不到），再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。FFmpeg 不隨安裝下載：影片匯出時，若 PATH 上的 `ffmpeg` 具備所需的全部編碼器就直接使用，否則第一次匯出時自動下載一份（約 25 MB）。執行 `mografy setup` 可預先下載 FFmpeg 與 Chromium shell，例如要離線工作之前。若想改用電腦上已有的 Google Chrome 或 Microsoft Edge，執行 `mografy` 時設定 `PLAYWRIGHT_CHANNEL=chrome`（或 `msedge`）。改版前安裝的版本可能還留著完整的 Chromium，執行 `pnpm exec playwright uninstall` 再 `pnpm install`，就只會留下 headless shell。
 
 執行 `mografy update --check` 可檢查是否有更新。若要安裝目前分支所追蹤上游的最新提交，請在 Mografy 資料夾中執行 `mografy update`。指令會檢查本機修改、等待進行中的匯出完成、停止目前播放器、以快轉方式更新原始碼、執行 `pnpm install`（包含建置、Chromium 設定與啟動器更新）、同步共用 Skill，最後以相同連接埠重啟原本的專案。重啟後請重新整理瀏覽器。若沒有正在執行的播放器，則只更新安裝內容，不會開啟專案。
 
@@ -53,6 +53,8 @@ mografy dev
 ```
 
 `--check` 會取得 Git 中繼資料，但不會修改工作檔案、安裝相依套件或重啟播放器。若有本機修改（包含尚未追蹤的檔案）、缺少上游分支、處於 detached HEAD 狀態，或提交歷史已分歧，更新會停止。被 Git 忽略的使用者專案會保留。若原始碼更新後的相依套件設定失敗，播放器會維持停止，錯誤訊息會列出復原指令。不同工作副本會各自更新；若在工作副本以外執行，PATH 啟動器會選用安裝它的那份副本。
+
+只做影片、不改 Mografy 本身的人可以用的 npm 套件（`npm install -g mografy`，不需要 Git 或 pnpm）正在準備中，見 [npm 套件說明](docs/npm-package.md)。
 
 `npm install -g pnpm` 用來安裝 pnpm 套件管理工具；若已安裝 pnpm，可略過此步驟。pnpm 會自行切換成 Mografy 在 `package.json` 指定的版本。若 npm 回報權限錯誤，請執行 `sudo npm install -g pnpm`。修改 Mografy 本身的貢獻者還需執行 `pnpm check` 與 `pnpm test:browser`；詳見[開發與架構](#開發與架構)。
 
@@ -297,6 +299,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 | `mografy review [project] [--video file.mp4]` | 產生審閱圖片及選用的影片比較 |
 | `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` 或 `--preset share\|high\|fast\|master` | 匯出動畫 |
 | `mografy update [--check]` | 更新目前的原始碼安裝，或檢查是否有新版本 |
+| `mografy setup [ffmpeg\|chromium] [--check]` | 現在就下載 FFmpeg 與 Chromium shell（不等第一次使用），或顯示目前使用哪一個 |
 | `mografy stop [project]` | 停止專案的播放器伺服器 |
 | `mografy --help` | 顯示指令與支援的選項 |
 

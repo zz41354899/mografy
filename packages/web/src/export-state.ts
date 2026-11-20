@@ -33,7 +33,7 @@ export function exportProgress(job: RenderStatus) {
   return {
     running, ready: job.state === 'done', failed: job.state === 'failed',
     percentage: Math.min(100, Math.max(0, Math.round(job.done / Math.max(1, job.total) * 100))),
-    indeterminate: running && job.stage !== 'capture',
-    stageLabel: job.stage === 'capture' ? 'Exporting' : isVideoFormat(job.format) ? 'Encoding' : 'Packaging',
+    indeterminate: running && job.stage !== 'capture' && job.stage !== 'download',
+    stageLabel: job.stage === 'download' ? 'Downloading' : job.stage === 'capture' ? 'Exporting' : isVideoFormat(job.format) ? 'Encoding' : 'Packaging',
   };
 }

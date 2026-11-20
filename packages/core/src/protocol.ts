@@ -25,7 +25,7 @@ export interface FrameCost {
 }
 export interface SceneError { message: string; reason: 'startup' | 'watch'; at: string }
 export interface RenderStatus {
-  id: string; format: ExportFormat; state: 'running' | 'done' | 'failed' | 'cancelled'; stage: 'capture' | 'encode' | 'package' | 'done';
+  id: string; format: ExportFormat; state: 'running' | 'done' | 'failed' | 'cancelled'; stage: 'download' | 'capture' | 'encode' | 'package' | 'done';
   done: number; total: number; version: string; output: string; error?: string | undefined;
   /** The job is still cleaning up and cannot be replaced yet. */
   cancelling?: boolean | undefined;
@@ -56,7 +56,7 @@ export interface QueueJob {
   id: string; dir: string; name: string;
   state: 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
   format: ExportFormat;
-  stage?: 'capture' | 'encode' | 'package' | 'done' | undefined;
+  stage?: 'download' | 'capture' | 'encode' | 'package' | 'done' | undefined;
   done: number; total: number;
   output?: string | undefined; error?: string | undefined;
   startedAt?: string | undefined; finishedAt?: string | undefined;

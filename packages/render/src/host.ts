@@ -5,6 +5,7 @@ import type { Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
+import { installChromiumShell } from './chromium.js';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
 import type { ExportSize, MotionFrames, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
@@ -200,8 +201,14 @@ export class SceneHost {
     const signals = { handleSIGINT: false, handleSIGTERM: false };
     const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args, ...signals }).catch(async error => {
       if (channel || !/Executable doesn't exist|install/i.test(String(error))) throw error;
-      return chromium.launch({ channel: 'chrome', args, ...signals }).catch(() => {
-        throw new Error('No Chromium found. Run `pnpm exec playwright install chromium --only-shell`, or install Google Chrome.');
+      return chromium.launch({ channel: 'chrome', args, ...signals }).catch(async () => {
+        // Neither the shell nor Chrome: the npm package (and a checkout installed with --ignore-scripts) downloads
+        // the shell on first use, as it does FFmpeg.
+        console.log('Downloading the Chromium headless shell (first run only)…');
+        await installChromiumShell().catch(() => {
+          throw new Error('No Chromium found, and the headless shell could not be downloaded. Connect to the internet and run `mografy setup chromium`, or install Google Chrome.');
+        });
+        return chromium.launch({ args, ...signals });
       });
     });
     this.browsers[backing] = launching;

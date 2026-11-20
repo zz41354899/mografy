@@ -46,7 +46,7 @@ export const en: Dict = {
   prTitle: 'Presentation · Mografy', prError: 'The scene has an error. Fix it in the editor.',
 
   xpTitle: 'Export animation', xdBatch: 'Export several projects…', xdClose: 'Close export',
-  stage: { Exporting: 'Exporting', Encoding: 'Encoding', Packaging: 'Packaging', Capturing: 'Capturing', Starting: 'Starting' },
+  stage: { Downloading: 'Downloading FFmpeg', Exporting: 'Exporting', Encoding: 'Encoding', Packaging: 'Packaging', Capturing: 'Capturing', Starting: 'Starting' },
   xjReady: 'Export ready', xjCancelling: 'Cancelling', xjVideo: 'Exported video', xjFramePreview: 'Export frame preview', xjFrames: 'frames', xjElapsed: 'Elapsed time', xjUnplayable: 'This browser cannot play the video here. The file is fine: open it in QuickTime, a phone or a video player, or export with the Share (H.264) encoder for this browser.', xjEncoder: e => `Encoder: ${e}.`, xjCancelExport: 'Cancel export', xjHideExport: 'Hide export', xjHideHelp: 'Continue exporting in the background', xjHide: 'Hide', xjDone: 'Done', xjDownload: 'Download', xjEditSettings: 'Edit settings', xjRetryExport: 'Retry export', xjStarting: 'Starting…', xjProgress: 'Export progress', xjViewExport: 'View export', xjView: 'View', xjFinalizing: 'Finalizing export', xjCapture: 'Frame capture', xjMascot: 'Export loading animation',
 
   xfVideo: 'Video', xfVp9: 'VP9 video', xfProres: 'ProRes master', xfWeb: 'Web animation', xfApp: 'App animation', xfOutput: 'Output format',

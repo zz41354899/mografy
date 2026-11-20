@@ -2,7 +2,7 @@
 import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
 import { sendApi } from '@mografy/core';
-import { AlreadyRunning, findActive, startServer } from '@mografy/server';
+import { AlreadyRunning, findActive, startServer, installation } from '@mografy/server';
 import { displayPath } from '../paths.js';
 import { monitorDevExports } from '../progress.js';
 import type { Flags } from '../options.js';
@@ -30,7 +30,7 @@ export async function dev(dir: string, flags: Flags) {
     const snapshot = server.project.snapshot();
     console.log(`Mografy dev server: ${server.url}`);
     console.log(`Project: ${displayPath(dir)}`);
-    console.log(server.hmr ? 'Player: hot reload from source (Vite)' : 'Player: built files (Vite not installed; run `pnpm install` for hot reload)');
+    if (installation.kind === 'source') console.log(server.hmr ? 'Player: hot reload from source (Vite)' : 'Player: built files (Vite not installed; run `pnpm install` for hot reload)');
     console.log(snapshot.scene
       ? `Scene ${snapshot.scene.version} (${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s)`
       : `Scene failed to load:\n${snapshot.error?.message ?? ''}`);

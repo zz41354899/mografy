@@ -20,7 +20,7 @@ export function jobProgress(job: QueueJob, now: number) {
   const percentage = capture ? Math.min(99, Math.round(job.done / job.total * 100)) : job.state === 'done' ? 100 : 0;
   const elapsed = job.startedAt ? Math.max(0, (now - Date.parse(job.startedAt)) / 1000) : 0;
   const left = capture && job.done > 0 && elapsed > 2 ? elapsed / job.done * (job.total - job.done) : null;
-  const stage = job.state === 'running' ? job.stage === 'encode' ? 'Encoding' : job.stage === 'package' ? 'Packaging' : capture ? 'Capturing' : 'Starting' : '';
+  const stage = job.state === 'running' ? job.stage === 'download' ? 'Downloading' : job.stage === 'encode' ? 'Encoding' : job.stage === 'package' ? 'Packaging' : capture ? 'Capturing' : 'Starting' : '';
   return { capture, percentage, elapsed, left, stage };
 }
 

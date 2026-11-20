@@ -1,9 +1,11 @@
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { isProject } from '@mografy/server';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { installation, isProject } from '@mografy/server';
 
-export const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..', '..');
+/** The installation's root folder (the repository root of a checkout); see `installation` in @mografy/server. */
+export const workspaceRoot = installation.root;
+/** The `mografy` entry script the PATH launcher runs (packages/cli/bin/mografy.js in a checkout). */
+export const CLI_BIN = installation.cliBin;
 /** Keep terminal output useful without exposing the user's absolute home path. */
 export function displayPath(value: string) {
   const absolute = resolve(value);

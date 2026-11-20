@@ -40,7 +40,7 @@ mografy dev
 
 The first three lines check out only what the tool runs on. Templates, extras (cinema, cjk, three, music, walkthrough, stage), the ten Stage reference films and the showreel stay in the same repository on GitHub and download the first time `mografy add` needs them, so they never take space you did not ask for. A plain `git clone https://github.com/zz41354899/mografy.git` also works and gives the whole repository; contributors changing Mografy itself need that full checkout (`git sparse-checkout disable` turns a slim one into it).
 
-`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the headless Chromium shell it uses for checks and exports (not the full, headed Chromium, which they never need), and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: templates to start a film from, a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works. To use the Google Chrome or Microsoft Edge you already have instead, set `PLAYWRIGHT_CHANNEL=chrome` (or `msedge`) when you run `mografy`. An installation from before the headless shell may still keep a full Chromium in Playwright's browser folder; `pnpm exec playwright uninstall` and then `pnpm install` leave only the shell.
+`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the headless Chromium shell it uses for checks and exports (not the full, headed Chromium, which they never need), and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: templates to start a film from, a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works. FFmpeg is not part of the installation: video exports use the `ffmpeg` on your PATH when it has every encoder they need, otherwise the first export downloads one (about 25 MB). Run `mografy setup` to fetch FFmpeg and the Chromium shell ahead of time, for example before working offline. To use the Google Chrome or Microsoft Edge you already have instead, set `PLAYWRIGHT_CHANNEL=chrome` (or `msedge`) when you run `mografy`. An installation from before the headless shell may still keep a full Chromium in Playwright's browser folder; `pnpm exec playwright uninstall` and then `pnpm install` leave only the shell.
 
 To check for updates, run `mografy update --check`. To install the latest commit from your branch's tracked upstream, run `mografy update` from the Mografy folder. The command checks for local changes, waits for an active export to finish, stops the active player, fast-forwards the source, runs `pnpm install` (including build, Chromium setup and launcher refresh), synchronizes the shared Skill, then restarts the same project on the same port. Refresh the browser after it restarts. Without an active player, it updates the installation without opening a project.
 
@@ -53,6 +53,8 @@ mografy dev
 ```
 
 `--check` fetches Git metadata but does not change working files, install dependencies or restart the player. Updates stop for local changes (including untracked files), missing upstreams, detached HEADs or diverged history. User projects ignored by Git stay in place. If dependency setup fails after the source update, the player stays stopped and the error lists recovery commands. Separate checkouts update independently; outside a checkout, the PATH launcher selects its installed copy.
+
+An npm package for people who only make films (`npm install -g mografy`, no Git or pnpm needed) is in preparation; see [the npm package](docs/npm-package.md).
 
 `npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
 
@@ -299,6 +301,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
 | `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` or `--preset share\|high\|fast\|master` | Export the animation |
 | `mografy update [--check]` | Update this source installation, or check for a newer revision |
+| `mografy setup [ffmpeg\|chromium] [--check]` | Download FFmpeg and the Chromium shell now instead of on first use, or show which ones are used |
 | `mografy stop [project]` | Stop the project's player server |
 | `mografy --help` | Show commands and supported options |
 

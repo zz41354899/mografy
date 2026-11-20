@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { deckSlides, outputFrameCount, resolveParams } from '@mografy/core';
 import type { SceneProject } from '@mografy/core';
 import type { SceneBuild } from './build.js';
-import { ffmpegOutput } from './ffmpeg.js';
+import { ensureFfmpeg, ffmpegOutput } from './ffmpeg.js';
 import { detectShots, readStoryboard } from './shots.js';
 import { SceneHost } from './host.js';
 import type { Cell } from './host-page.js';
@@ -90,6 +90,7 @@ export async function renderReview(job: ReviewJob): Promise<ReviewResult> {
     const comparisons: FrameComparison[] = [];
     const video = job.video;
     if (video && await access(video).then(() => true, () => false)) {
+      await ensureFfmpeg();
       const { width, height } = page.scene;
       for (const k of [...new Set(times.map(frameOf))]) {
         const decoded = await ffmpegOutput(['-i', video, '-vf', `select=eq(n\\,${k})`, '-vsync', '0', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${width}x${height}`, 'pipe:1']);

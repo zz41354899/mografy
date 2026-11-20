@@ -42,7 +42,7 @@ export const zh = {
   prTitle: '簡報 · Mografy', prError: '場景有錯誤，請到編輯器修正。',
 
   xpTitle: '匯出動畫', xdBatch: '匯出多個專案…', xdClose: '關閉匯出',
-  stage: { Exporting: '匯出中', Encoding: '編碼中', Packaging: '封裝中', Capturing: '擷取中', Starting: '開始中' } as Record<string, string>,
+  stage: { Downloading: '下載 FFmpeg', Exporting: '匯出中', Encoding: '編碼中', Packaging: '封裝中', Capturing: '擷取中', Starting: '開始中' } as Record<string, string>,
   xjReady: '匯出完成', xjCancelling: '取消中', xjVideo: '匯出的影片', xjFramePreview: '匯出畫面預覽', xjFrames: '影格', xjElapsed: '已經過時間', xjUnplayable: '這個瀏覽器無法在這裡播放影片，但檔案沒有問題：可以用 QuickTime、手機或影片播放器開啟，或改用 Share（H.264）編碼匯出。', xjEncoder: (e: string) => `編碼器：${e}。`, xjCancelExport: '取消匯出', xjHideExport: '隱藏匯出', xjHideHelp: '在背景繼續匯出', xjHide: '隱藏', xjDone: '完成', xjDownload: '下載', xjEditSettings: '修改設定', xjRetryExport: '重新匯出', xjStarting: '開始中…', xjProgress: '匯出進度', xjViewExport: '查看匯出', xjView: '查看', xjFinalizing: '正在完成匯出', xjCapture: '擷取影格', xjMascot: '匯出載入動畫',
 
   xfVideo: '影片', xfVp9: 'VP9 影片', xfProres: 'ProRes 母帶', xfWeb: '網頁動畫', xfApp: 'App 動畫', xfOutput: '輸出格式',

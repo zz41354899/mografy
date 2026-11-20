@@ -3,14 +3,13 @@
 // project yet, one is created for the templates, so `mografy add hook-impact cta-endcard projects/my-film` is a complete
 // way to start a film. Templates come from this checkout's templates/ folder, or from GitHub when the folder is missing.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createInLibrary, createProject, isProject } from '@mografy/server';
+import { dirname, join, relative, sep } from 'node:path';
+import { createInLibrary, createProject, installation, isProject } from '@mografy/server';
 import { displayPath } from './paths.js';
 import { exists, repoFile } from './github.js';
 
-/** This installation's checkout (packages/cli/{src,dist} → root). */
-export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..', '..');
+/** This installation's root folder (see `installation` in @mografy/server). */
+export const ROOT = installation.root;
 
 export interface TemplateEntry {
   id: string; name: string; category: string; aspect: '9:16' | '16:9'; pair?: string; look?: string;
@@ -113,7 +112,7 @@ export async function templateProject(workspaceRoot: string, dir: string | undef
 export async function writeEditorConfig(workspaceRoot: string, dir: string) {
   const file = join(dir, 'tsconfig.json');
   if (await exists(file)) return false;
-  const types = relative(dir, join(workspaceRoot, 'packages/runtime/dist/index.d.ts')).split(sep).join('/');
+  const types = relative(dir, workspaceRoot === installation.root ? installation.runtimeTypes : join(workspaceRoot, 'packages/runtime/dist/index.d.ts')).split(sep).join('/');
   const config = {
     '//': "Editor support only. Mografy's build resolves @mografy/runtime itself.",
     compilerOptions: {

@@ -1,6 +1,14 @@
 // `mografy --help`.
 
-export const VERSION = '0.1.0';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { installation } from '@mografy/server';
+
+/** The installation's version: the `mografy` package's, or the checkout's root package.json. */
+export const VERSION: string = (() => {
+  try { return (JSON.parse(readFileSync(join(installation.root, 'package.json'), 'utf8')) as { version: string }).version; }
+  catch { return '0.1.0'; }
+})();
 
 /** Help text, grouped by what the user is doing. Brand colour only on an interactive terminal. */
 export function helpText(color: boolean) {
@@ -33,6 +41,8 @@ export function helpText(color: boolean) {
       row('mografy stop [project]', "Stop a project's player"),
       row('mografy update [--check]', 'Update Mografy, or only check for updates'),
       row('mografy install-command', 'Put the mografy command on PATH'),
+      row('mografy setup [ffmpeg|chromium]', 'Download FFmpeg and the Chromium shell now, not on first use'),
+      row('mografy setup --check', 'Show which FFmpeg and Chromium exports use'),
     ]),
     section('Export options', [
       row('--format <mp4|webm|mov|lottie|svga|html>', 'Output format (default: mp4); mov is ProRes; html writes a presentation file'),

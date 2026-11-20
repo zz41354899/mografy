@@ -2,13 +2,13 @@
 import { projectPaths } from '@mografy/render/fs-util';
 import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
 import { atomicWrite, readJson } from './files.js';
 import { queueProjectWrite } from './files.js';
+import { installation } from './installation.js';
 
-export const COMPONENT_THUMBNAILS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../thumbnails');
+export const COMPONENT_THUMBNAILS_DIR = installation.thumbnails;
 
 /** Git on Windows checks source out with CRLF; latin1 keeps every other byte as it was. Assets are compared as they are. */
 const comparable = (path: string, data: Buffer) => path.startsWith('scenes/') ? Buffer.from(data.toString('latin1').replaceAll('\r\n', '\n'), 'latin1') : data;

@@ -1,11 +1,12 @@
 // Mografy CLI: read the command line and hand each command to its module.
 import { resolve } from 'node:path';
 import { sendApi } from '@mografy/core';
-import { createProject, ensureAgentFiles, findServer, libraryDir, rememberProject } from '@mografy/server';
+import { createProject, ensureAgentFiles, findServer, installation, libraryDir, rememberProject } from '@mografy/server';
 import { displayPath, workspaceRoot } from './paths.js';
 import { exportBatch, exportProject, projectsIn } from './export.js';
 import { installCommand } from './launcher.js';
 import { updateInstallation } from './update.js';
+import { packageUpdate } from './package-update.js';
 import { refreshSkill } from './skills.js';
 import { addList, planAdd, runAdd } from './add.js';
 import { parse } from './options.js';
@@ -15,18 +16,19 @@ import { exportDeckProject } from './commands/deck.js';
 import { dev, openBrowser, switchActive } from './commands/dev.js';
 import { HELP, VERSION, helpText } from './commands/help.js';
 import { reviewProject } from './commands/review.js';
+import { setup } from './commands/setup.js';
 export { displayPath } from './paths.js';
 export { openBrowser };
 
 export async function main(argv = process.argv.slice(2)) {
   const { flags, rest } = parse(argv);
-  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'help']);
+  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'setup', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(helpText(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR)); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
   if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
-  if (flags.updateCheck && command !== 'update') throw new Error('--check is only supported by mografy update.');
+  if (flags.updateCheck && command !== 'update' && command !== 'setup') throw new Error('--check is only supported by mografy update and mografy setup.');
   if (flags.force && command !== 'add') throw new Error('--force is only supported by mografy add.');
   if (flags.motion && command !== 'check') throw new Error('--motion is only supported by mografy check.');
   if (flags.all && command !== 'export' && command !== 'render') throw new Error('--all is only supported by mografy export.');
@@ -38,12 +40,17 @@ export async function main(argv = process.argv.slice(2)) {
       : await Promise.all(rest.map(resolveProjectArg));
     return exportBatch(dirs, flags);
   }
+  if (command === 'setup') return setup(rest, flags.updateCheck);
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
+    if (installation.kind === 'package') return packageUpdate(flags.updateCheck);
     return updateInstallation(workspaceRoot, flags.updateCheck);
   }
   // Installation must not initialize components or consult a previous project's state.
-  if (command === 'install-command') return installCommand(workspaceRoot);
+  if (command === 'install-command') {
+    if (installation.kind === 'package') { console.log('npm already put the mografy command on PATH.'); return; }
+    return installCommand(workspaceRoot);
+  }
   if (command === 'add') {
     if (!rest.length) { console.log(await addList()); return; }
     // The target is the named folder, MOGRAFY_PROJECT, or the project in the current folder. `add` never falls back

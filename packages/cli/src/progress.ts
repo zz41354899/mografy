@@ -20,6 +20,16 @@ export function progressReporter(format: ExportFormat) {
     if (status.stage === 'done') return;
     const pct = status.total ? Math.floor(status.done / status.total * 100) : 0;
     const bucket = process.stdout.isTTY ? pct : Math.floor(pct / 10) * 10;
+    if (status.stage === 'download') {
+      // Only the first video export on a machine without a usable FFmpeg downloads one.
+      if (lastStage === 'download' && bucket === lastBucket) return;
+      const mb = (bytes: number) => (bytes / 1048576).toFixed(1);
+      const line = `Downloading FFmpeg ${mb(status.done)}/${mb(status.total)} MB (${pct}%)`;
+      if (process.stdout.isTTY) process.stdout.write(`\r${line.padEnd(52)}`); else console.log(line);
+      lastBucket = bucket; lastStage = status.stage;
+      return;
+    }
+    if (lastStage === 'download') { if (process.stdout.isTTY) process.stdout.write('\n'); lastBucket = -1; }
     if (status.stage === 'capture' && (bucket !== lastBucket || lastStage !== status.stage)) {
       const line = `Capturing frames ${status.done}/${status.total} (${pct}%)`;
       if (process.stdout.isTTY) process.stdout.write(`\r${line.padEnd(52)}`); else console.log(line);

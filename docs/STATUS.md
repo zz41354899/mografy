@@ -25,7 +25,7 @@ Updated: 2026-11-08
 - Preview: view state only, in `useViewport.ts` and `viewport.ts`; the player redraws sharper when the stage grows past what it was drawn for.
 - `mografy update` is split into preflight, heal, compare, pause, merge, setup and restart stages. Generators go through `generated-file.mjs`; `bin/locate.mjs` is the one place that picks the checkout.
 - `core/src/index.ts` is split by area with its public API unchanged; `core/src/api.ts` is the HTTP contract for the CLI, web and Server; `cli/src/index.ts` dispatches to `commands/`.
-- `.github/workflows/ci.yml` runs on Windows and Ubuntu.
+- No CI: `.github/workflows/ci.yml` was removed (2026-11-20). Run `pnpm check`, `pnpm test:browser` and `pnpm test:package` before pushing. Windows is no longer tested automatically; `scripts/windows-update-sandbox.sh` still runs the Windows update check by hand on a Windows machine with Git Bash.
 
 ## Export pipeline refactor (2026-11-02)
 

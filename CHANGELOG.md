@@ -18,6 +18,9 @@ Older installations without `update`: stop the player, run `git pull --ff-only` 
 ### Changed
 
 - **Slim installation** — the install steps now check out only what the tool runs on (about 10 MB instead of about 240 MB with Git history). Templates, extras and the ten Stage reference films stay in the same repository and download from GitHub the first time `mografy add` needs them; `examples/catalog.json` lists each film's files. A full `git clone` still works, and `git sparse-checkout disable` turns a slim checkout into a full one.
+- **npm package (in preparation)** — `pnpm pack:cli` builds a `mografy` npm package of about 2 MB (about 65 MB installed with its dependencies) from a checkout: only the built packages, the built-in components, the intro and the Skill. It installs projects to `~/Mografy`, downloads FFmpeg and the Chromium shell on first use, and updates through npm. `pnpm test:package` installs and runs it. See [docs/npm-package.md](docs/npm-package.md).
+- **One place for installation paths** — every folder Mografy reads from its installation (built-in components, previews, reference films, runtime types, Skill, entry script) now comes from `installation` in `@mografy/server`.
+- **FFmpeg on first export** — FFmpeg is no longer installed with Mografy. Video exports use `ffmpeg` on PATH when it has every encoder they need, otherwise the first export downloads a pinned static build (checked by SHA-256, cached in `~/.mografy/tools`, shared by every installation) and the player shows the download as the first export stage. `mografy setup` downloads FFmpeg and the Chromium shell ahead of time; `mografy setup --check` shows what is used.
 - **Headless shell only** — `pnpm install` downloads Playwright's headless Chromium shell instead of the full Chromium; checks and exports already ran on the shell. Older installations can drop the full Chromium with `pnpm exec playwright uninstall` and `pnpm install`.
 
 ## 2026-11-09

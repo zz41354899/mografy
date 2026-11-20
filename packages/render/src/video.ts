@@ -11,7 +11,7 @@ import { isLockedError, projectPaths, retryWhileLocked } from './fs-util.js';
 import type { SceneBuild } from './build.js';
 import { LOSSLESS, concatList, planCodec, segmentArgs } from './codecs.js';
 import type { CodecPlan } from './codecs.js';
-import { runFfmpeg, startFfmpeg } from './ffmpeg.js';
+import { ensureFfmpeg, runFfmpeg, startFfmpeg } from './ffmpeg.js';
 import { SceneHost, gpuCanvasAvailable } from './host.js';
 import type { CanvasBacking } from './host.js';
 
@@ -25,7 +25,8 @@ export interface VideoJob {
   overwrite?: boolean;
   /** Reuse a running host (the server's); otherwise one is started and closed. */
   host?: SceneHost;
-  onProgress?: (done: number, total: number, stage: 'capture' | 'encode') => void;
+  /** `download`: bytes of FFmpeg received, the first time this machine exports a video. */
+  onProgress?: (done: number, total: number, stage: 'download' | 'capture' | 'encode') => void;
   signal?: AbortSignal;
   size?: ExportSize | undefined;
 }
@@ -95,6 +96,7 @@ export async function renderVideo(job: VideoJob): Promise<VideoResult> {
   const output = resolve(job.output);
   if (extname(output).toLowerCase() !== `.${format}`) throw new Error(`Output must end with .${format}`);
   if (!job.overwrite && await exists(output)) throw new Error(`Output already exists: ${output}`);
+  await ensureFfmpeg({ onProgress: (received, total) => job.onProgress?.(received, total, 'download'), signal: job.signal });
   const plan = await planCodec(format, settings);
   const audioPath = project.audio && settings.includeAudio ? resolve(job.projectDir, project.audio.path) : undefined;
   if (audioPath && !await exists(audioPath)) throw new Error(`Audio not found: ${project.audio!.path}`);
