@@ -18,7 +18,7 @@ mografy update
 ### 變更
 
 - **精簡安裝** — 安裝步驟改成只取出工具執行需要的部分（約 10 MB，原本連同 Git 歷史約 240 MB）。模板、extras 與十部 Stage 參考影片仍放在同一個儲存庫，`mografy add` 第一次用到時才從 GitHub 下載；`examples/catalog.json` 列出每部影片的檔案。完整的 `git clone` 仍然可用，`git sparse-checkout disable` 可把精簡版轉成完整版。
-- **`mografy skill`** — 把共用 Skill 安裝到 `~/.agents/skills/mografy` 與 `~/.claude/skills/mografy`，讓 Claude Code 與 Codex 在任何資料夾都找得到；`--check` 顯示目前安裝的內容。npm 套件版在更新後啟動 `mografy dev` 時會自動更新這份副本。用其他方式安裝的 Skill（也可以用 `npx skills add zz41354899/mografy -g`）不會被動到，除非加上 `--force`。
+- **`mografy skill`** — 把共用 Skill 安裝到 `~/.agents/skills/mografy` 與 `~/.claude/skills/mografy`，讓 Claude Code 與 Codex 在任何資料夾都找得到；`--check` 顯示目前安裝的內容。副本記錄了來源 Skill 的雜湊值，只要安裝中的 Skill 有變，`pnpm build`（經由 `pnpm sync:skills`）與 `mografy dev` 就會更新它們，讓工作副本以外的代理讀到同一份 Skill。用其他方式安裝的 Skill（也可以用 `npx skills add zz41354899/mografy -g`）不會被動到，除非加上 `--force`。
 - **npm 套件（準備中）** — `pnpm pack:cli` 會從工作副本建出約 2 MB 的 `mografy` npm 套件（連同依賴安裝後約 65 MB），只含建置好的套件、內建元件、介紹影片與 Skill。專案放在 `~/Mografy`，FFmpeg 與 Chromium shell 第一次使用時才下載，透過 npm 更新。`pnpm test:package` 會實際安裝並執行它。見 [docs/npm-package.md](docs/npm-package.md)。
 - **安裝路徑集中一處** — Mografy 從安裝位置讀取的所有資料夾（內建元件、預覽圖、參考影片、runtime 型別、Skill、進入點）改由 `@mografy/server` 的 `installation` 統一提供。
 - **第一次匯出才下載 FFmpeg** — FFmpeg 不再隨 Mografy 安裝。影片匯出時，若 PATH 上的 `ffmpeg` 具備所需的全部編碼器就直接使用，否則第一次匯出會下載固定版本的靜態 build（以 SHA-256 驗證，快取在 `~/.mografy/tools`，同一台電腦的所有安裝共用），播放器會把下載顯示成匯出的第一個階段。`mografy setup` 可預先下載 FFmpeg 與 Chromium shell，`mografy setup --check` 顯示目前使用哪一個。

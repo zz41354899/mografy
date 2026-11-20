@@ -94,7 +94,7 @@ Based on the maintainer's current experience, the Claude workflow is more fully 
 
 The Skill lives at [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) imports it. Both hosts read one maintained copy.
 
-Inside this checkout the agent finds the Skill by itself. For projects elsewhere, install it where agents look in every folder, either from this installation (`mografy skill` copies it to `~/.agents/skills/mografy` and `~/.claude/skills/mografy`, matching your Mografy version, and the npm package keeps that copy up to date) or from GitHub with the [skills CLI](https://github.com/vercel-labs/skills), which also knows other agents:
+Inside this checkout the agent finds the Skill by itself. For projects elsewhere, install it where agents look in every folder, either from this installation (`mografy skill` copies it to `~/.agents/skills/mografy` and `~/.claude/skills/mografy`, and keeps those copies identical to this installation's Skill: `pnpm build` and `mografy dev` refresh them after you edit the Skill or update Mografy) or from GitHub with the [skills CLI](https://github.com/vercel-labs/skills), which also knows other agents:
 
 ```sh
 mografy skill                              # this installation's Skill, for Claude Code and Codex

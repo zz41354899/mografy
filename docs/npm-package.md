@@ -26,8 +26,9 @@ of a package with bundled dependencies installs every platform's optional esbuil
 `installation` in `@mografy/server` recognises the layout (`kind: 'package'`): projects go to `~/Mografy`,
 `mografy update` checks the npm registry and prints the `npm install -g` command, and `mografy install-command` is
 not needed. The Skill reaches agents through `mografy skill`, which copies it to `~/.agents/skills/mografy` and
-`~/.claude/skills/mografy` with a version marker; `mografy dev` refreshes those copies after a package update (a copy
-without the marker, for example from `npx skills add`, is never touched).
+`~/.claude/skills/mografy` with a marker holding the Skill's hash; `mografy dev` refreshes those copies after a package
+update, as `pnpm build` does in a checkout (a copy without the marker, for example from `npx skills add`, is never
+touched).
 
 ## Check it
 

@@ -92,7 +92,7 @@ export MOGRAFY_HOME="$HOME/Animations"
 
 Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md)。Claude 的 `.claude/skills/mografy` 入口連結到同一個資料夾，[CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) 也會匯入它。兩種代理環境讀取同一份維護中的內容。
 
-在這個工作副本裡，代理會自己找到 Skill。若專案在別的地方，就把 Skill 安裝到代理在任何資料夾都會讀的位置：可以從目前的安裝取得（`mografy skill` 會複製到 `~/.agents/skills/mografy` 與 `~/.claude/skills/mografy`，版本和你的 Mografy 一致，npm 套件版還會自動保持最新），或用 [skills CLI](https://github.com/vercel-labs/skills) 從 GitHub 安裝，它也支援其他代理：
+在這個工作副本裡，代理會自己找到 Skill。若專案在別的地方，就把 Skill 安裝到代理在任何資料夾都會讀的位置：可以從目前的安裝取得（`mografy skill` 會複製到 `~/.agents/skills/mografy` 與 `~/.claude/skills/mografy`，並讓這兩份副本和目前安裝的 Skill 保持一致：修改 Skill 或更新 Mografy 後，`pnpm build` 與 `mografy dev` 會自動更新它們），或用 [skills CLI](https://github.com/vercel-labs/skills) 從 GitHub 安裝，它也支援其他代理：
 
 ```sh
 mografy skill                              # 目前安裝的 Skill，給 Claude Code 與 Codex
