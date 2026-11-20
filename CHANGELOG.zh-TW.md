@@ -13,6 +13,12 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## 未發布
+
+### 變更
+
+- **精簡安裝** — 安裝步驟改成只取出工具執行需要的部分（約 10 MB，原本連同 Git 歷史約 240 MB）。模板、extras 與十部 Stage 參考影片仍放在同一個儲存庫，`mografy add` 第一次用到時才從 GitHub 下載；`examples/catalog.json` 列出每部影片的檔案。完整的 `git clone` 仍然可用，`git sparse-checkout disable` 可把精簡版轉成完整版。
+
 ## 2026-11-09
 
 ### 新增

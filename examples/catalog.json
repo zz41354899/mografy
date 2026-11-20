@@ -1,0 +1,221 @@
+{
+  "generated": "pnpm examples:sync — do not edit by hand",
+  "examples": [
+    {
+      "name": "mografy-intro",
+      "title": "Mografy intro",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "assets/ABeeZee-Regular.ttf",
+        "assets/OFL.txt",
+        "assets/intro-music.mp3",
+        "mografy.json",
+        "scenes/logo.ts",
+        "scenes/main.ts",
+        "tools/make-music.py"
+      ]
+    },
+    {
+      "name": "stage-bento",
+      "title": "Stage · Bento",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-calendar",
+      "title": "Stage · Calendar drag",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-checkout",
+      "title": "Stage · Checkout",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-command",
+      "title": "Stage · Command palette",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-dashboard",
+      "title": "Stage · Dashboard",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-invoices",
+      "title": "Stage · Invoices",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-phone",
+      "title": "Stage · Phone reply",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-request",
+      "title": "Stage · Two screens",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-snooze",
+      "title": "Stage · Snooze",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    },
+    {
+      "name": "stage-upload",
+      "title": "Stage · Upload diagram",
+      "files": [
+        ".gitignore",
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "assets/Inter-LICENSE.txt",
+        "assets/Inter-Medium.otf",
+        "assets/Inter-Regular.otf",
+        "assets/Inter-SemiBold.otf",
+        "mografy.json",
+        "scenes/main.ts",
+        "scenes/stage.ts",
+        "storyboards/storyboard.md",
+        "style.md",
+        "tsconfig.json"
+      ]
+    }
+  ]
+}

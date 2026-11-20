@@ -30,12 +30,15 @@ Mografy 是為 Claude Code 與 Codex 設計的本機 Canvas 動畫工具。共�
 需要 [Node.js](https://nodejs.org/) 22.12 或更新版本。接著執行：
 
 ```sh
-git clone https://github.com/zz41354899/mografy.git
+git clone --filter=blob:none --sparse https://github.com/zz41354899/mografy.git
 cd mografy
+git sparse-checkout set .agents .claude .github packages scripts projects docs/motion-design examples/mografy-intro
 npm install -g pnpm
 pnpm install
 mografy dev
 ```
+
+前三行只取出工具執行需要的部分。模板、輔助工具（cinema、cjk、three、music、walkthrough、stage）、十部 Stage 參考影片與 showreel 仍放在同一個 GitHub 儲存庫，等 `mografy add` 第一次用到時才下載，不會佔用你沒要求的空間。直接 `git clone https://github.com/zz41354899/mografy.git` 也可以，會取得完整儲存庫；要修改 Mografy 本身的貢獻者需要完整的工作副本（在精簡版中執行 `git sparse-checkout disable` 即可轉成完整版）。
 
 `pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
 
@@ -110,7 +113,7 @@ Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https:/
 
 ## 參考影片
 
-Mografy 會安裝兩種參考影片。12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)和十部 [Stage](https://github.com/zz41354899/mografy/tree/main/examples) 產品介面 loop（`stage-*`）放在 `examples/`，播放器會在「範例」中列出。較長的影片改放在官網的 [Showcase](https://www.mografy.app/zh-TW/showcase)，不隨安裝下載：60 秒的 montage、42 秒的 Triangulum 預告、71 秒的故事影片、紙劇場解說與角色影片，以及所有多鏡頭影片的範本 [film-starter](https://www.mografy.app/zh-TW/showcase)。`mografy add` 會列出兩者；`mografy add <名稱> [資料夾]` 會複製已安裝的影片，或從 Showcase 下載影片到你的專案庫（開始新影片用 `mografy add film-starter <資料夾>`）。代理需要時會讀取 [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) 的清單。
+Mografy 有兩種參考影片。12 秒的[介紹影片](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro)會隨安裝提供，播放器會在「範例」中列出；十部 [Stage](https://github.com/zz41354899/mografy/tree/main/examples) 產品介面 loop（`stage-*`）列在 `examples/catalog.json`，第一次加入時才從 GitHub 下載。較長的影片改放在官網的 [Showcase](https://www.mografy.app/zh-TW/showcase)，不隨安裝下載：60 秒的 montage、42 秒的 Triangulum 預告、71 秒的故事影片、紙劇場解說與角色影片，以及所有多鏡頭影片的範本 [film-starter](https://www.mografy.app/zh-TW/showcase)。`mografy add` 會列出兩者；`mografy add <名稱> [資料夾]` 會複製介紹影片、從 GitHub 下載 Stage 影片，或從 Showcase 下載影片到你的專案庫（開始新影片用 `mografy add film-starter <資料夾>`）。代理需要時會讀取 [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) 的清單。
 
 ## Mografy Templates 模板庫
 

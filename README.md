@@ -30,12 +30,15 @@ Describe the animation in your agent, then watch it in `mografy dev`. The agent 
 You need [Node.js](https://nodejs.org/) 22.12 or later. Then run:
 
 ```sh
-git clone https://github.com/zz41354899/mografy.git
+git clone --filter=blob:none --sparse https://github.com/zz41354899/mografy.git
 cd mografy
+git sparse-checkout set .agents .claude .github packages scripts projects docs/motion-design examples/mografy-intro
 npm install -g pnpm
 pnpm install
 mografy dev
 ```
+
+The first three lines check out only what the tool runs on. Templates, extras (cinema, cjk, three, music, walkthrough, stage), the ten Stage reference films and the showreel stay in the same repository on GitHub and download the first time `mografy add` needs them, so they never take space you did not ask for. A plain `git clone https://github.com/zz41354899/mografy.git` also works and gives the whole repository; contributors changing Mografy itself need that full checkout (`git sparse-checkout disable` turns a slim one into it).
 
 `pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the Chromium it uses for checks and exports, and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: templates to start a film from, a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works.
 
@@ -112,7 +115,7 @@ Its English references cover:
 
 ## Reference films
 
-Mografy installs two kinds of reference film. The twelve-second [intro](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro) and ten [Stage](https://github.com/zz41354899/mografy/tree/main/examples) product UI loops (`stage-*`) are in `examples/`; the player lists them under Examples. Longer films live on the website's [showcase](https://www.mografy.app/showcase) instead of in the installation: the 60 s montage, the 42 s Triangulum teaser, the 71 s story film, the paper theatre explainers and character films, and [film-starter](https://www.mografy.app/showcase), the twenty-second model for every multi-shot film. `mografy add` lists both; `mografy add <name> [folder]` copies an installed film or downloads a showcase film into your library to build on (`mografy add film-starter <folder>` to start a new film). The agent reads the showcase list at [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) when it needs one.
+Mografy has two kinds of reference film. The twelve-second [intro](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro) is installed and listed in the player under Examples; the ten [Stage](https://github.com/zz41354899/mografy/tree/main/examples) product UI loops (`stage-*`) are listed in `examples/catalog.json` and download from GitHub the first time you add one. Longer films live on the website's [showcase](https://www.mografy.app/showcase) instead of in the installation: the 60 s montage, the 42 s Triangulum teaser, the 71 s story film, the paper theatre explainers and character films, and [film-starter](https://www.mografy.app/showcase), the twenty-second model for every multi-shot film. `mografy add` lists both; `mografy add <name> [folder]` copies the intro, downloads a Stage film from GitHub or downloads a showcase film into your library to build on (`mografy add film-starter <folder>` to start a new film). The agent reads the showcase list at [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) when it needs one.
 
 ## Mografy Templates
 

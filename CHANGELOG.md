@@ -13,6 +13,12 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## Unreleased
+
+### Changed
+
+- **Slim installation** — the install steps now check out only what the tool runs on (about 10 MB instead of about 240 MB with Git history). Templates, extras and the ten Stage reference films stay in the same repository and download from GitHub the first time `mografy add` needs them; `examples/catalog.json` lists each film's files. A full `git clone` still works, and `git sparse-checkout disable` turns a slim checkout into a full one.
+
 ## 2026-11-09
 
 ### Added

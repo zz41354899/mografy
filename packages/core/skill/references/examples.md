@@ -2,7 +2,7 @@
 
 Reference films are finished films kept as references for quality. Before planning a new film, read the one whose brief is closest to yours, watch it in the player, and reuse its structure; then compare your own frames against it at review.
 
-- **Installed** with Mografy, in `examples/` and listed in the player under Examples: `mografy-intro` and the ten `stage-*` films ([ui-stage.md](ui-stage.md)).
+- **In the repository's `examples/`**: `mografy-intro`, installed and listed in the player under Examples, and the ten `stage-*` films ([ui-stage.md](ui-stage.md)), listed in `examples/catalog.json` and downloaded from GitHub by `mografy add <name>` the first time (a full checkout has them locally).
 - **Showcase films** live on the website, not in the installation: watch them at **https://www.mografy.app/showcase** and download one by name with `mografy add <name> [folder]`. When a brief needs a longer film, a narrated explainer, 3D, or a model to start a multi-shot film from, fetch the showcase first: the page shows every film with its preview, and **https://www.mografy.app/showcase/films.json** lists the same films for agents (name, title, length, aspect ratio, what to read it for, where to look, download URL). Pick from that list, then download the closest one. The tables below describe the showcase films as of this Mografy version; the website's list wins when they differ.
 
 They follow the [quality floor](../SKILL.md) and the [film architecture](film-architecture.md): drawing is a pure function of time, one table drives the shot times and `meta.shots`, and the runtime's `keys`, `cameraPath`, `layer`, `blurLayer`, `bloom` and `blurText` do the camera, fades, blur and glow. Each has a composed, sustained score in `music-src/` and its fonts and licences in `assets/`.
@@ -10,13 +10,13 @@ They follow the [quality floor](../SKILL.md) and the [film architecture](film-ar
 ## Copy one to work on
 
 ```sh
-mografy add                           # list installed films, showcase films and helpers
-mografy add stage-invoices ./hero     # copy an installed film
+mografy add                           # list reference films, showcase films and helpers
+mografy add stage-invoices ./hero     # copy a Stage film (downloaded from GitHub when not checked out)
 mografy add film-starter ~/Films/new  # download a showcase film: the model for a new multi-shot film
 mografy add mografy-montage           # into the library (projects/mografy-montage when running from source)
 ```
 
-The copy is an ordinary project: open it with `mografy dev <folder>`, and edit, check, review and export it like any other. Never edit the films in `examples/` themselves; they are the reference other agents read. A showcase download needs a network connection; if it fails, the same zip is on the film's showcase page.
+The copy is an ordinary project: open it with `mografy dev <folder>`, and edit, check, review and export it like any other. Never edit the films in `examples/` themselves; they are the reference other agents read. Stage and showcase downloads need a network connection; if it fails, the same zip is on the film's showcase page.
 
 ## The films
 

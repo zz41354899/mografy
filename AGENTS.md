@@ -9,4 +9,5 @@
 - All application writes to projects go through the queue in `packages/server/src/files.ts` and use `atomicWrite`.
 - The player and exports share `@mografy/runtime`, including post-processing in `post.ts`. Changes to output effects must apply to both.
 - `package.json` scripts must work under Windows `cmd` (pnpm runs scripts through it there): quote globs and paths with escaped double quotes (`--filter \"./packages/**\"`), never single quotes, which `cmd` passes through literally (`No projects matched the filters`).
+- A default installation is a sparse checkout without `extras/`, `templates/`, `showreel/` and the `examples/` films other than the intro; the CLI reads those from the checkout when present and otherwise downloads them from GitHub (`packages/cli/src/github.ts`). After adding, removing or renaming files in `examples/`, run `pnpm examples:sync` and commit `examples/catalog.json`.
 - After changes, run `pnpm check` (including real Chromium and FFmpeg tests) and `pnpm test:browser`.
