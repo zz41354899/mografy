@@ -186,8 +186,9 @@ export class SceneHost {
   register(build: SceneBuild) { this.builds.set(build.version, build.code); return `${this.origin}/scene/${build.version}.js`; }
 
   /**
-   * Playwright's bundled Chromium first (`pnpm exec playwright install chromium`);
-   * if it is not installed, fall back to the system Google Chrome.
+   * Playwright's bundled headless shell first (`pnpm exec playwright install chromium --only-shell`; exports and checks
+   * never need the full, headed Chromium); if it is not installed, fall back to the system Google Chrome.
+   * `PLAYWRIGHT_CHANNEL=chrome` (or `msedge`) uses that browser directly.
    */
   private launch(backing: CanvasBacking) {
     const running = this.browsers[backing];
@@ -200,7 +201,7 @@ export class SceneHost {
     const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args, ...signals }).catch(async error => {
       if (channel || !/Executable doesn't exist|install/i.test(String(error))) throw error;
       return chromium.launch({ channel: 'chrome', args, ...signals }).catch(() => {
-        throw new Error('No Chromium found. Run `pnpm exec playwright install chromium`, or install Google Chrome.');
+        throw new Error('No Chromium found. Run `pnpm exec playwright install chromium --only-shell`, or install Google Chrome.');
       });
     });
     this.browsers[backing] = launching;

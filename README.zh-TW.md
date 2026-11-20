@@ -40,7 +40,7 @@ mografy dev
 
 前三行只取出工具執行需要的部分。模板、輔助工具（cinema、cjk、three、music、walkthrough、stage）、十部 Stage 參考影片與 showreel 仍放在同一個 GitHub 儲存庫，等 `mografy add` 第一次用到時才下載，不會佔用你沒要求的空間。直接 `git clone https://github.com/zz41354899/mografy.git` 也可以，會取得完整儲存庫；要修改 Mografy 本身的貢獻者需要完整的工作副本（在精簡版中執行 `git sparse-checkout disable` 即可轉成完整版）。
 
-`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium，再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。
+`pnpm install` 會安裝相依套件，並自動建置 Mografy、下載檢查與匯出所需的 Chromium headless shell（不是完整、有視窗的 Chromium，檢查與匯出都用不到），再將 `mografy` 指令加入 PATH。最後會建議幾個 `mografy add` 指令：可以直接開始做片的模板、可複製的參考影片，以及可加進專案的輔助工具。`mografy dev` 會開啟播放器，顯示 16 種內建動畫。若能看到這些動畫，就代表安裝成功。若想改用電腦上已有的 Google Chrome 或 Microsoft Edge，執行 `mografy` 時設定 `PLAYWRIGHT_CHANNEL=chrome`（或 `msedge`）。改版前安裝的版本可能還留著完整的 Chromium，執行 `pnpm exec playwright uninstall` 再 `pnpm install`，就只會留下 headless shell。
 
 執行 `mografy update --check` 可檢查是否有更新。若要安裝目前分支所追蹤上游的最新提交，請在 Mografy 資料夾中執行 `mografy update`。指令會檢查本機修改、等待進行中的匯出完成、停止目前播放器、以快轉方式更新原始碼、執行 `pnpm install`（包含建置、Chromium 設定與啟動器更新）、同步共用 Skill，最後以相同連接埠重啟原本的專案。重啟後請重新整理瀏覽器。若沒有正在執行的播放器，則只更新安裝內容，不會開啟專案。
 

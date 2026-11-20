@@ -18,6 +18,7 @@ mografy update
 ### 變更
 
 - **精簡安裝** — 安裝步驟改成只取出工具執行需要的部分（約 10 MB，原本連同 Git 歷史約 240 MB）。模板、extras 與十部 Stage 參考影片仍放在同一個儲存庫，`mografy add` 第一次用到時才從 GitHub 下載；`examples/catalog.json` 列出每部影片的檔案。完整的 `git clone` 仍然可用，`git sparse-checkout disable` 可把精簡版轉成完整版。
+- **只裝 headless shell** — `pnpm install` 改為下載 Playwright 的 Chromium headless shell，不再下載完整 Chromium；檢查與匯出本來就是用 shell 執行。舊安裝可用 `pnpm exec playwright uninstall` 再 `pnpm install` 移除完整 Chromium。
 
 ## 2026-11-09
 
