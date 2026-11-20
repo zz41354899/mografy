@@ -5,6 +5,7 @@ Local Canvas motion design for Claude Code and Codex. Scenes are TypeScript modu
 
 ```sh
 npm install -g mografy@beta
+mografy skill        # the agent Skill, for Claude Code and Codex in every folder
 mografy dev
 ```
 

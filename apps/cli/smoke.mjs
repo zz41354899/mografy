@@ -25,6 +25,9 @@ try {
   console.log(mografy('--version').trim());
   console.log(mografy('setup', '--check').trim());
   console.log(mografy('add', 'mografy-intro', join(home, 'intro')).trim().split('\n')[0]);
+  // The Skill goes into a throwaway home, never the real one.
+  const skillHome = join(temp, 'home');
+  console.log(run(process.execPath, [bin, 'skill'], { cwd: temp, env: { ...process.env, HOME: skillHome, USERPROFILE: skillHome }, shell: false }).trim().split('\n')[0]);
   console.log(mografy('check', join(home, 'intro')).trim());
   console.log('✓ The npm package installs and runs.');
 } finally {

@@ -94,6 +94,15 @@ Based on the maintainer's current experience, the Claude workflow is more fully 
 
 The Skill lives at [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) imports it. Both hosts read one maintained copy.
 
+Inside this checkout the agent finds the Skill by itself. For projects elsewhere, install it where agents look in every folder, either from this installation (`mografy skill` copies it to `~/.agents/skills/mografy` and `~/.claude/skills/mografy`, matching your Mografy version, and the npm package keeps that copy up to date) or from GitHub with the [skills CLI](https://github.com/vercel-labs/skills), which also knows other agents:
+
+```sh
+mografy skill                              # this installation's Skill, for Claude Code and Codex
+npx skills add zz41354899/mografy -g       # or: the latest Skill on GitHub, for the agents you choose
+```
+
+An agent that only plans and writes scenes needs the Skill and nothing else; previews, checks and exports need the `mografy` command.
+
 Its English references cover:
 
 | Reference | Use |
@@ -301,6 +310,7 @@ Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or can
 | `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
 | `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` or `--preset share\|high\|fast\|master` | Export the animation |
 | `mografy update [--check]` | Update this source installation, or check for a newer revision |
+| `mografy skill [--check] [--force]` | Install the shared Skill for Claude Code and Codex in every folder, or show what is installed |
 | `mografy setup [ffmpeg\|chromium] [--check]` | Download FFmpeg and the Chromium shell now instead of on first use, or show which ones are used |
 | `mografy stop [project]` | Stop the project's player server |
 | `mografy --help` | Show commands and supported options |

@@ -8,6 +8,7 @@ import { installCommand } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { packageUpdate } from './package-update.js';
 import { refreshSkill } from './skills.js';
+import { refreshInstalledSkill, skillCommand } from './skill-install.js';
 import { addList, planAdd, runAdd } from './add.js';
 import { parse } from './options.js';
 import { fromHome, hasProject, implicitProject, resolveProjectArg } from './project-args.js';
@@ -22,14 +23,14 @@ export { openBrowser };
 
 export async function main(argv = process.argv.slice(2)) {
   const { flags, rest } = parse(argv);
-  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'setup', 'help']);
+  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'setup', 'skill', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(helpText(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR)); return; }
   if (argv.includes('--version')) { console.log(VERSION); return; }
   if (flags.yes) console.warn('--yes is deprecated and ignored: `mografy dev` no longer creates projects. Ask Claude or Codex for a new animation.');
-  if (flags.updateCheck && command !== 'update' && command !== 'setup') throw new Error('--check is only supported by mografy update and mografy setup.');
-  if (flags.force && command !== 'add') throw new Error('--force is only supported by mografy add.');
+  if (flags.updateCheck && command !== 'update' && command !== 'setup' && command !== 'skill') throw new Error('--check is only supported by mografy update, setup and skill.');
+  if (flags.force && command !== 'add' && command !== 'skill') throw new Error('--force is only supported by mografy add and mografy skill.');
   if (flags.motion && command !== 'check') throw new Error('--motion is only supported by mografy check.');
   if (flags.all && command !== 'export' && command !== 'render') throw new Error('--all is only supported by mografy export.');
   // Batch export: several projects, or --all for every project in a folder (default: the projects folder).
@@ -41,6 +42,10 @@ export async function main(argv = process.argv.slice(2)) {
     return exportBatch(dirs, flags);
   }
   if (command === 'setup') return setup(rest, flags.updateCheck);
+  if (command === 'skill') {
+    if (rest.length) throw new Error('Usage: mografy skill [--check] [--force]');
+    return skillCommand(flags.updateCheck, flags.force);
+  }
   if (command === 'update') {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
     if (installation.kind === 'package') return packageUpdate(flags.updateCheck);
@@ -81,6 +86,7 @@ export async function main(argv = process.argv.slice(2)) {
           + `  New animation:    ask Claude or Codex`);
       }
       await refreshSkill(workspaceRoot);
+      await refreshInstalledSkill();
       await ensureAgentFiles(dir);
       await rememberProject(dir);
       const running = await findServer(dir);

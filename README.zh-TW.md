@@ -92,6 +92,15 @@ export MOGRAFY_HOME="$HOME/Animations"
 
 Skill 位於動畫子專案以外的 [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md)。Claude 的 `.claude/skills/mografy` 入口連結到同一個資料夾，[CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) 也會匯入它。兩種代理環境讀取同一份維護中的內容。
 
+在這個工作副本裡，代理會自己找到 Skill。若專案在別的地方，就把 Skill 安裝到代理在任何資料夾都會讀的位置：可以從目前的安裝取得（`mografy skill` 會複製到 `~/.agents/skills/mografy` 與 `~/.claude/skills/mografy`，版本和你的 Mografy 一致，npm 套件版還會自動保持最新），或用 [skills CLI](https://github.com/vercel-labs/skills) 從 GitHub 安裝，它也支援其他代理：
+
+```sh
+mografy skill                              # 目前安裝的 Skill，給 Claude Code 與 Codex
+npx skills add zz41354899/mografy -g       # 或：GitHub 上最新的 Skill，給你選的代理
+```
+
+只負責規劃與撰寫 scene 的代理只需要 Skill；預覽、檢查與匯出才需要 `mografy` 指令。
+
 英文參考文件涵蓋：
 
 | 參考文件 | 用途 |
@@ -299,6 +308,7 @@ CLI 也會顯示進度。直接從 CLI 啟動的匯出可按 Ctrl+C 取消；播
 | `mografy review [project] [--video file.mp4]` | 產生審閱圖片及選用的影片比較 |
 | `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` 或 `--preset share\|high\|fast\|master` | 匯出動畫 |
 | `mografy update [--check]` | 更新目前的原始碼安裝，或檢查是否有新版本 |
+| `mografy skill [--check] [--force]` | 安裝共用 Skill，讓 Claude Code 與 Codex 在任何資料夾都找得到，或顯示目前安裝的內容 |
 | `mografy setup [ffmpeg\|chromium] [--check]` | 現在就下載 FFmpeg 與 Chromium shell（不等第一次使用），或顯示目前使用哪一個 |
 | `mografy stop [project]` | 停止專案的播放器伺服器 |
 | `mografy --help` | 顯示指令與支援的選項 |

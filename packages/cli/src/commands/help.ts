@@ -43,6 +43,7 @@ export function helpText(color: boolean) {
       row('mografy install-command', 'Put the mografy command on PATH'),
       row('mografy setup [ffmpeg|chromium]', 'Download FFmpeg and the Chromium shell now, not on first use'),
       row('mografy setup --check', 'Show which FFmpeg and Chromium exports use'),
+      row('mografy skill [--check]', 'Install the Mografy Skill for Claude Code, Codex and other agents'),
     ]),
     section('Export options', [
       row('--format <mp4|webm|mov|lottie|svga|html>', 'Output format (default: mp4); mov is ProRes; html writes a presentation file'),
