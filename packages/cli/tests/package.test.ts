@@ -33,12 +33,12 @@ test('the npm package holds only what runs: no sources, sourcemaps or dev tools,
     const report = execFileSync(process.execPath, [join(workspace, 'apps/cli/pack.mjs'), '--out', out, '--version', '0.0.0-test'], { cwd: workspace, encoding: 'utf8' });
     assert.match(report, /MB packed/);
     const files = execFileSync('tar', ['tzf', join(out, 'mografy-0.0.0-test.tgz')], { encoding: 'utf8' }).split('\n').filter(Boolean).map(f => f.replace(/^package\//, ''));
-    for (const required of ['bin/mografy.js', 'package.json', 'examples/catalog.json', 'examples/mografy-intro/mografy.json',
+    for (const required of ['bin/mografy.js', 'package.json', 'examples/catalog.json',
       'lib/node_modules/@mografy/cli/dist/index.js', 'lib/node_modules/@mografy/cli/bin/locate.mjs', 'lib/node_modules/@mografy/server/template/mografy.json',
       'lib/node_modules/@mografy/render/dist/host-page.js', 'lib/node_modules/@mografy/runtime/dist/scene.js', 'lib/node_modules/@mografy/web/dist/index.html'])
       assert.ok(files.includes(required), `missing ${required}`);
     assert.deepEqual(files.filter(f => /\.map$|\.tsbuildinfo$|\/src\/|\/tests?\//.test(f)), []);
-    assert.deepEqual(files.filter(f => /^(templates|extras|showreel|docs|\.agents|\.claude)\//.test(f) || /^examples\/stage-/.test(f)), [], 'no optional files and no Skill');
+    assert.deepEqual(files.filter(f => /^(templates|extras|showreel|docs|\.agents|\.claude)\//.test(f) || /^examples\/.+\//.test(f)), [], 'no optional files, no films and no Skill');
     const manifest = JSON.parse(execFileSync('tar', ['xzOf', join(out, 'mografy-0.0.0-test.tgz'), 'package/package.json'], { encoding: 'utf8' }));
     assert.deepEqual(Object.keys(manifest.dependencies).sort(), ['esbuild', 'protobufjs', 'ws', 'zod']);
     assert.equal(manifest.bundleDependencies, undefined);

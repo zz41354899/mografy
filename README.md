@@ -29,7 +29,7 @@ Everything runs on your computer. A film is a folder of plain files you own: a s
 - **A new editor.** A layer timeline where you drag, trim, duplicate, hide, lock and reorder parts of a film and give each one an enter and exit motion; ⌘K search over projects, layers and commands; settings for language, playback, text size and shortcuts.
 - **Every film is editable.** A film that marks its shots gets one layer per shot automatically, with no change to its code. Films the agent writes with `timeline()` get one layer per part, such as a title, a card or a logo.
 - **A design system for the film.** Swap any colour the film draws, apply motions to all layers at once, set each layer's start and length, and try the scene's own controls, with the film playing beside them. Player, review and export all use the changes.
-- **A lighter install.** About 10 MB to check out. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
+- **Install with npm.** `npm install -g mografy`, about 2 MB, no Git needed. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
 - **An MCP server.** `mografy mcp` lets any MCP client check, preview, review and export your films.
 
 Present mode has been removed so Mografy can focus on making films. See the [changelog](CHANGELOG.md) for everything in this release.
@@ -38,31 +38,42 @@ Present mode has been removed so Mografy can focus on making films. See the [cha
 
 You need [Node.js](https://nodejs.org/) 22.12 or later.
 
-```sh
-git clone --filter=blob:none --sparse https://github.com/mografy/mografy.git
-cd mografy
-git sparse-checkout set .agents .claude .github packages scripts projects docs/motion-design examples/mografy-intro
-npm install -g pnpm        # skip if you already have pnpm
-pnpm install
-mografy dev
-```
+1. **Install Mografy.**
 
-`pnpm install` builds Mografy, fetches the headless Chromium shell it renders with and puts the `mografy` command on your PATH. `mografy dev` opens the editor with sixteen built-in animations. If you can see them, the installation works.
+   ```sh
+   npm install -g mografy
+   ```
 
-The sparse checkout downloads only what the tool runs on. Templates, extras and reference films download the first time `mografy add` needs them. A plain `git clone` also works, and `git sparse-checkout disable` turns a slim checkout into a full one, which you need if you are changing Mografy itself.
+   To try it without installing, run `npx mografy dev` instead.
 
-**Updating.** Run `mografy update --check` to see if there is something new, and `mografy update` to install it. It stops the editor, pulls, rebuilds, refreshes the Skill and reopens the same project. It stops without changing anything if you have local changes or your branch has diverged.
+2. **Install the Skill** for Claude Code, Codex and other agents, once:
 
-**Before your first export.** Video exports use the `ffmpeg` on your PATH if it has every encoder they need. If it does not, the first export downloads one (about 25 MB). To download FFmpeg and Chromium in advance, for example before working offline, run `mografy setup`. Settings such as the projects folder (`MOGRAFY_HOME`) and the browser to use are described in [configuration](docs/configuration.md).
+   ```sh
+   npx skills add mografy/mografy -g
+   ```
 
-An npm package for people who only make films (`npm install -g mografy`, no Git needed) is in preparation; see [the npm package](docs/npm-package.md).
+3. **Open the editor.**
+
+   ```sh
+   mografy dev
+   ```
+
+   It opens with sixteen built-in animations. If you can see them, the installation works. Your projects live in `~/Mografy` (set `MOGRAFY_HOME` to change it).
+
+**FFmpeg and Chromium.** Neither is part of the package. Checks and exports render in the Chrome or Edge already on your computer, or in Playwright's headless Chromium shell, which downloads only when there is neither. Video exports use the `ffmpeg` on your PATH when it has every encoder they need (Homebrew's `brew install ffmpeg` and `winget install ffmpeg` do); otherwise the first export downloads one (about 25 MB) into `~/.mografy/tools`. To download both ahead of time, for example before working offline, run `mografy setup`; `mografy setup --check` shows which ones Mografy uses. Other settings are in [configuration](docs/configuration.md).
+
+Templates, extras and reference films download from GitHub the first time `mografy add` needs them.
+
+**Updating.** `mografy update --check` tells you when there is a new version, and `npm install -g mografy` installs it. Keep the Skill current with `npx skills update`.
+
+To change Mografy itself, work from a Git checkout instead; see [Contributing](#contributing).
 
 ## Make your first film
 
 1. Run `mografy dev`.
-2. In Claude Code or Codex, open the Mografy folder and describe the film, including the folder it should go in:
+2. In Claude Code or Codex, open your projects folder (`~/Mografy`) and describe the film, including the folder it should go in:
 
-   > Create an eight-second 9:16 animation in `projects/hello`, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
+   > Create an eight-second 9:16 animation in `~/Mografy/hello`, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
 
 3. The agent creates the project and the editor switches to it. Each time the agent saves, Mografy compiles and trial-renders the change and updates the editor at the same moment in the film. If a change breaks the film, the last working version keeps playing and the error is shown.
 4. Adjust it in the editor, or ask the agent for more changes. When you are happy with it, export.
@@ -84,7 +95,7 @@ Your timeline edits are saved to `scenes/timeline.json` and your colour swaps to
 
 ## The Skill
 
-The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. Inside this checkout the agent finds it automatically. To use it from any other folder, install it once with the [skills CLI](https://github.com/vercel-labs/skills):
+The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. Install it once with the [skills CLI](https://github.com/vercel-labs/skills) and every folder has it; inside a Git checkout of Mografy the agent also finds it without installing:
 
 ```sh
 npx skills add mografy/mografy -g     # once, for Claude Code, Codex and other agents
@@ -211,6 +222,18 @@ Mografy is a pnpm monorepo:
 | `server` | Projects, the write queue, file watching, HTTP and WebSocket |
 | `web` | The editor |
 | `cli` | The `mografy` command and the MCP server |
+
+Work from a Git checkout (Node.js 22.12 or later). `pnpm install` builds Mografy, fetches the headless Chromium shell and puts the checkout's `mografy` command on your PATH; inside a checkout, `mografy update` pulls, rebuilds and refreshes the Skill.
+
+```sh
+git clone https://github.com/mografy/mografy.git
+cd mografy
+npm install -g pnpm        # skip if you already have pnpm
+pnpm install
+mografy dev
+```
+
+Before a change is pushed, run:
 
 ```sh
 pnpm check

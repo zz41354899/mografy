@@ -198,11 +198,13 @@ test('inspector groups scene settings and offers direct effects with keyboard na
   await api('seek', 'POST', { t: 1 });
   await page.waitForFunction(() => Number(document.querySelector<HTMLElement>('[data-testid=stage]')!.dataset.time) === 1);
   const tabs = page.getByRole('tablist', { name: 'Inspector', exact: true });
-  assert.equal(await tabs.getByRole('tab').count(), 3);
+  assert.equal(await tabs.getByRole('tab').count(), 4);
   await tabs.getByRole('tab', { name: 'Scene', exact: true }).click();
   assert.ok(await page.getByRole('heading', { name: 'Colors', exact: true }).isVisible());
   assert.ok(await page.getByRole('heading', { name: 'Controls', exact: true }).isVisible());
   await tabs.getByRole('tab', { name: 'Scene', exact: true }).press('ArrowRight');
+  assert.equal(await tabs.getByRole('tab', { name: 'Design', exact: true }).getAttribute('aria-selected'), 'true');
+  await tabs.getByRole('tab', { name: 'Design', exact: true }).press('ArrowRight');
   assert.equal(await tabs.getByRole('tab', { name: 'Effects', exact: true }).getAttribute('aria-selected'), 'true');
   assert.ok(await page.getByRole('slider', { name: 'Glow', exact: true }).isVisible(), 'effects are available without a disclosure');
   assert.equal((await stage()).t, 1, 'tab arrows do not move the playhead');

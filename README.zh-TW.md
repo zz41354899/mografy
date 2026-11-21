@@ -29,7 +29,7 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 - **全新的編輯器**：圖層時間軸可以拖曳、修剪、複製、隱藏、鎖定、調整順序，也能替每個圖層設定進場和出場動態。另外有 ⌘K 搜尋（專案、圖層和指令都搜得到），以及語系、播放、文字大小和快捷鍵等設定。
 - **每支影片都能編輯**：有標出鏡頭的影片，每個鏡頭會自動變成一個圖層，不用改任何程式碼。代理用 `timeline()` 寫的影片，則是標題、卡片、標誌等每個元素各自一個圖層。
 - **為影片設計的設計系統**：可以換掉影片畫出的任何顏色、一次替所有圖層套用動態、設定每個圖層的開始時間和長度，還能試調場景自己開放的控制項。影片就在旁邊播放，改動會直接反映在播放器、審閱圖和匯出檔上。
-- **更輕的安裝**：只要下載約 10 MB。FFmpeg 和 Chromium shell 第一次用到時才下載，執行時也不再需要 Playwright。
+- **用 npm 安裝**：`npm install -g mografy`，約 2 MB，不需要 Git。FFmpeg 和 Chromium shell 第一次用到時才下載，執行時也不再需要 Playwright。
 - **MCP 伺服器**：`mografy mcp` 讓任何 MCP 客戶端都能檢查、預覽、審閱和匯出你的影片。
 
 為了專心做影片，這個版本移除了簡報模式。完整內容請看[更新紀錄](CHANGELOG.zh-TW.md)。
@@ -38,31 +38,42 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 
 需要 [Node.js](https://nodejs.org/) 22.12 或更新版本。
 
-```sh
-git clone --filter=blob:none --sparse https://github.com/mografy/mografy.git
-cd mografy
-git sparse-checkout set .agents .claude .github packages scripts projects docs/motion-design examples/mografy-intro
-npm install -g pnpm        # 已經有 pnpm 就跳過
-pnpm install
-mografy dev
-```
+1. **安裝 Mografy**
 
-`pnpm install` 會建置 Mografy、下載算繪要用的 Chromium headless shell，並把 `mografy` 指令加進 PATH。`mografy dev` 會開啟編輯器，裡面有 16 個內建動畫，看得到它們就代表安裝成功了。
+   ```sh
+   npm install -g mografy
+   ```
 
-精簡的 sparse checkout 只會下載工具執行需要的檔案。模板、extras 和參考影片要等 `mografy add` 第一次用到時才下載。直接 `git clone` 也可以。如果要修改 Mografy 本身，需要完整的副本，用 `git sparse-checkout disable` 就能把精簡版轉成完整版。
+   不想安裝、只想先試試看，可以改用 `npx mografy dev`。
 
-**更新**：`mografy update --check` 會檢查有沒有新版本，`mografy update` 會安裝它。更新時會依序關掉編輯器、拉取最新版本、重新建置、更新 Skill，最後重開原本的專案。如果你有本機修改，或分支已經分岔，更新會停下來，不會動到任何檔案。
+2. **安裝 Skill**：Claude Code、Codex 等代理共用，裝一次就好。
 
-**第一次匯出前**：匯出影片時，如果 PATH 上的 `ffmpeg` 具備所有需要的編碼器，就會直接使用它；如果沒有，第一次匯出會自動下載一份（約 25 MB）。要事先下載 FFmpeg 和 Chromium（例如準備離線工作時），可以執行 `mografy setup`。專案資料夾（`MOGRAFY_HOME`）、要用哪個瀏覽器等設定，請看[設定說明](docs/configuration.md)。
+   ```sh
+   npx skills add mografy/mografy -g
+   ```
 
-給只想做影片的人用的 npm 套件（`npm install -g mografy`，不需要 Git）正在準備中，詳見 [npm 套件](docs/npm-package.md)。
+3. **開啟編輯器**
+
+   ```sh
+   mografy dev
+   ```
+
+   編輯器裡有 16 個內建動畫，看得到它們就代表安裝成功了。你的專案會放在 `~/Mografy`（可以用 `MOGRAFY_HOME` 改位置）。
+
+**FFmpeg 和 Chromium**：兩者都不包含在套件裡。檢查和匯出會用電腦上已經有的 Chrome 或 Edge 算繪；兩個都沒有時，才會下載 Playwright 的 Chromium headless shell。匯出影片時，如果 PATH 上的 `ffmpeg` 具備所有需要的編碼器就直接使用（用 `brew install ffmpeg` 或 `winget install ffmpeg` 裝的都可以）；沒有的話，第一次匯出會自動下載一份（約 25 MB）到 `~/.mografy/tools`。想事先把兩個都下載好（例如準備離線工作時），可以執行 `mografy setup`；`mografy setup --check` 會顯示目前用的是哪一個。其他設定請看[設定說明](docs/configuration.md)。
+
+模板、extras 和參考影片要等 `mografy add` 第一次用到時，才會從 GitHub 下載。
+
+**更新**：`mografy update --check` 會告訴你有沒有新版本，用 `npm install -g mografy` 安裝新版。Skill 用 `npx skills update` 更新。
+
+要修改 Mografy 本身，請改用 Git 工作副本，見[參與開發](#參與開發)。
 
 ## 做第一支影片
 
 1. 執行 `mografy dev`。
-2. 在 Claude Code 或 Codex 開啟 Mografy 資料夾，描述你要的影片，並告訴它要放在哪個資料夾：
+2. 在 Claude Code 或 Codex 開啟你的專案資料夾（`~/Mografy`），描述你要的影片，並告訴它要放在哪個資料夾：
 
-   > 在 `projects/hello` 做一支 8 秒的 9:16 動畫，1080 × 1920。先像 Typewriter 元件那樣打出「Hello, Mografy.」，再用青綠色強調色帶出標誌。看過實際畫面後匯出 MP4。
+   > 在 `~/Mografy/hello` 做一支 8 秒的 9:16 動畫，1080 × 1920。先像 Typewriter 元件那樣打出「Hello, Mografy.」，再用青綠色強調色帶出標誌。看過實際畫面後匯出 MP4。
 
 3. 代理建立專案後，編輯器會自動切換過去。代理每次存檔，Mografy 都會編譯並試算繪，再停在影片同一個時間點更新畫面。如果某次修改讓影片壞掉，畫面會繼續播放上一個可用的版本，同時顯示錯誤。
 4. 在編輯器裡調整，或請代理繼續修改。滿意了就匯出。
@@ -84,7 +95,7 @@ mografy dev
 
 ## Skill
 
-`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。在這個資料夾裡，代理會自動找到它。要在其他資料夾使用，用 [skills CLI](https://github.com/vercel-labs/skills) 安裝一次就好：
+`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。用 [skills CLI](https://github.com/vercel-labs/skills) 安裝一次，在任何資料夾都能用；在 Mografy 的 Git 工作副本裡，不安裝代理也找得到：
 
 ```sh
 npx skills add mografy/mografy -g     # 安裝一次，Claude Code、Codex 等代理都能用
@@ -211,6 +222,18 @@ Mografy 是一個 pnpm monorepo：
 | `server` | 專案、寫入佇列、檔案監看、HTTP 和 WebSocket |
 | `web` | 編輯器 |
 | `cli` | `mografy` 指令和 MCP 伺服器 |
+
+請用 Git 工作副本開發（需要 Node.js 22.12 或更新版本）。`pnpm install` 會建置 Mografy、下載 Chromium headless shell，並把工作副本的 `mografy` 指令加進 PATH；在工作副本裡，`mografy update` 會拉取最新版本、重新建置並更新 Skill。
+
+```sh
+git clone https://github.com/mografy/mografy.git
+cd mografy
+npm install -g pnpm        # 已經有 pnpm 就跳過
+pnpm install
+mografy dev
+```
+
+推送修改前請執行：
 
 ```sh
 pnpm check

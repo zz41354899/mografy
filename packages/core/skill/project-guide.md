@@ -2,8 +2,10 @@
 
 This folder is a Mografy animation project. Animation belongs only in scene modules; `mografy.json` contains settings. Use synchronous `renderFrame(ctx, time, params)` with deterministic seeking. Scenes run only in the browser; do not introduce GSAP, SVG scene layers, resvg, clocks, or previous-frame state. Use `ctx.draw` for common drawing and `ctx.withCanvas` for native Canvas scopes.
 
-Codex and Claude share the single `mografy` Skill in the Mografy source repository's outer `.agents/skills/mografy/` folder. Read its `SKILL.md` and the local references relevant to the task: scene authoring, storyboards, animation principles, and project development. Do not create Skill copies inside animation projects. The source repository's root `.claude/skills/mografy` entry links Claude to the same Skill.
+Read the shared `mografy` Skill before scene work: its `SKILL.md`, then the references its table names for the task. Codex, Claude Code and other agents install it once with `npx skills add mografy/mografy -g`; with the Mografy MCP tools connected, `read_guide` serves the same files. Do not create Skill copies inside animation projects.
+
+`scenes/timeline.json` and `colors` in `mografy.json` hold the user's own changes from the editor: read them before changing the film, and never write them by hand. The project's `style.md` records its design and motion decisions; read it before every change.
 
 Codex storyboards use image generation; Claude uses Artifacts when available, otherwise a standalone HTML/Canvas preview. Write plans and prompts in English and save project-specific boards under `storyboards/`.
 
-Open the player with `mografy dev`. After scene edits, run `mografy check` and `mografy review`, then inspect the generated PNGs. Export with `mografy export --format mp4|webm|lottie|svga` when requested.
+Open the player with `mografy dev`. After scene edits, run `mografy check --motion` and `mografy review`, then inspect the generated PNGs. Export with `mografy export --format mp4|webm|mov|lottie|svga` when requested.

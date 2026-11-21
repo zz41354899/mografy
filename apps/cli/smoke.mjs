@@ -1,5 +1,6 @@
 // `pnpm test:package`: pack the npm package, install it globally into a temporary prefix the way a user would
-// (`npm install -g`), and run it from outside any checkout: version, setup check, add the intro, check it.
+// (`npm install -g`), and run it from outside any checkout: version, setup check, start a project from a template
+// (downloaded from GitHub, like every film and helper), check it.
 // Needs the npm registry for the package's dependencies. Leaves nothing behind.
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
@@ -24,8 +25,8 @@ try {
   const mografy = (...args) => run(process.execPath, [bin, ...args], { cwd: temp, env: { ...process.env, MOGRAFY_HOME: home }, shell: false });
   console.log(mografy('--version').trim());
   console.log(mografy('setup', '--check').trim());
-  console.log(mografy('add', 'mografy-intro', join(home, 'intro')).trim().split('\n')[0]);
-  console.log(mografy('check', join(home, 'intro')).trim());
+  console.log(mografy('add', 'hook-impact', join(home, 'hook')).trim().split('\n')[0]);
+  console.log(mografy('check', join(home, 'hook')).trim());
   console.log('✓ The npm package installs and runs.');
 } finally {
   rmSync(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });

@@ -61,8 +61,8 @@ A scene that declares no layers still gets editable layers: the build splits it 
 
 ## Colours the user changed
 
-The editor's Design tab (right panel) shows the colours of the shot under the playhead and can swap any colour the film draws for another, without touching scene code. The swaps live in `mografy.json` as `"colors": { "#12b5a5": "#e05d44" }` (from → to, `#rrggbb`) and apply in the player, review sheets and every export. Alpha is kept, and gradients and shadows follow.
+The editor's **Design** tab (設計, in the right panel) shows the colours of the shot under the playhead and can swap any colour the film draws for another, without touching scene code. The swaps live in `mografy.json` as `"colors": { "#12b5a5": "#e05d44" }` (from → to, `#rrggbb`) and apply in the player, review sheets and every export. Alpha is kept, and gradients and shadows follow.
 
 - Read `colors` before changing a film's palette. A swap wins over the scene: when you change a colour the user already swapped, tell them, and leave the swap alone unless they ask you to fold it into the scene (then write the new value in the scene's tokens and delete that key).
 - Keep palette values as tokens in one place in the scene and in `style.md`, so each shot lists a short, clean palette.
-- The same tab edits `style.md` in place. Everything else the user decides about the look (motion, timing, type, rules) goes there, not into editor controls: read `style.md` again before every change, because the user may have edited it since your last turn, and apply new rules to the scene code.
+- The same tab edits `style.md` in place, and its **Open design system** page (設計系統) gathers the film's motions, colours, fonts and `timeline.json` in one view. Everything else the user decides about the look (motion, timing, type, rules) goes there, not into editor controls: read `style.md` again before every change, because the user may have edited it since your last turn, and apply new rules to the scene code.

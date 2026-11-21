@@ -10,7 +10,7 @@ test('the Skill is looked for in the project and the home folder, for both hosts
     join('/p', '.agents', 'skills', 'mografy', 'SKILL.md'), join('/p', '.claude', 'skills', 'mografy', 'SKILL.md'),
     join('/h', '.agents', 'skills', 'mografy', 'SKILL.md'), join('/h', '.claude', 'skills', 'mografy', 'SKILL.md'),
   ]);
-  assert.equal(SKILL_INSTALL, 'npx skills add zz41354899/mografy -g');
+  assert.equal(SKILL_INSTALL, 'npx skills add mografy/mografy -g');
 });
 
 test('a checkout never prints the hint: it carries its own Skill', async () => {

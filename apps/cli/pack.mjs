@@ -1,8 +1,8 @@
 // `pnpm pack:cli`: assemble the `mografy` npm package from this checkout's built packages and pack it.
 //
 // The package is the runtime half of the workspace and nothing else: each @mografy/* package's dist (without
-// sourcemaps), the player's built web app, the built-in components and their previews, the intro film, the reference
-// film catalog. Not the agent Skill: it is installed on its own (`npx skills add mografy/mografy -g`), so agents get
+// sourcemaps), the player's built web app, the built-in components and their previews, the reference film catalog.
+// No film itself: every reference film, the intro included, downloads from GitHub on `mografy add`. Not the agent Skill: it is installed on its own (`npx skills add mografy/mografy -g`), so agents get
 // it whichever way Mografy is installed, and it updates with `npx skills update`. The workspace packages are vendored, unchanged, under lib/node_modules/@mografy/,
 // so Node and esbuild find them by ordinary package resolution and every path they resolve at runtime
 // (import.meta.resolve, the scene host's in-page bundle, the runtime helpers scenes compile against) works exactly as
@@ -34,6 +34,17 @@ const PACKAGES = {
 };
 const read = file => JSON.parse(readFileSync(file, 'utf8'));
 const keep = path => !/\.(map|tsbuildinfo)$/.test(path) && !path.split(/[\\/]/).includes('.DS_Store');
+/**
+ * tsc never deletes output, so dist/ keeps files whose source was removed (an old module, an earlier GitHub URL).
+ * Ship a compiled file only while its source exists; web/dist is a bundle and is kept as built.
+ */
+const compiled = (name, path) => {
+  if (name === 'web') return true;
+  const rel = relative(join(root, 'packages', name, 'dist'), path);
+  if (rel.startsWith('..') || !/\.(js|d\.ts)$/.test(rel)) return true;
+  const base = join(root, 'packages', name, 'src', rel.replace(/\.(js|d\.ts)$/, ''));
+  return ['.ts', '.tsx', '.mts'].some(ext => existsSync(base + ext));
+};
 
 for (const name of Object.keys(PACKAGES))
   if (!existsSync(join(root, 'packages', name, 'dist'))) throw new Error(`packages/${name}/dist is missing. Run pnpm build first.`);
@@ -60,14 +71,12 @@ for (const [name, extra] of Object.entries(PACKAGES)) {
   };
   mkdirSync(dest, { recursive: true });
   writeFileSync(join(dest, 'package.json'), JSON.stringify(shipped, null, 2) + '\n');
-  for (const folder of ['dist', ...extra]) cpSync(join(source, folder), join(dest, folder), { recursive: true, filter: keep });
+  for (const folder of ['dist', ...extra]) cpSync(join(source, folder), join(dest, folder), { recursive: true, filter: path => keep(path) && compiled(name, path) });
 }
 
-// Reference films: the catalog (the rest download on demand) and the intro the player lists.
+// Reference films: only the catalog, so `mografy add` lists them offline at this version; each downloads on demand.
 mkdirSync(join(stage, 'examples'), { recursive: true });
 cpSync(join(root, 'examples', 'catalog.json'), join(stage, 'examples', 'catalog.json'));
-const tracked = execFileSync('git', ['ls-files', '-z', '--', 'examples/mografy-intro'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
-for (const file of tracked) { mkdirSync(dirname(join(stage, file)), { recursive: true }); cpSync(join(root, file), join(stage, file)); }
 cpSync(join(here, 'bin'), join(stage, 'bin'), { recursive: true });
 cpSync(join(root, 'LICENSE'), join(stage, 'LICENSE'));
 cpSync(join(here, 'README.md'), join(stage, 'README.md'));
@@ -80,6 +89,8 @@ writeFileSync(join(stage, 'package.json'), JSON.stringify({
   type: 'module',
   repository: { type: 'git', url: 'git+https://github.com/mografy/mografy.git' },
   homepage: 'https://www.mografy.app',
+  bugs: { url: 'https://github.com/mografy/mografy/issues' },
+  keywords: ['motion-graphics', 'animation', 'canvas', 'video', 'claude-code', 'codex', 'agent-skills', 'cli'],
   engines: read(join(root, 'package.json')).engines,
   bin: { mografy: 'bin/mografy.js' },
   // Read by @mografy/server's `installation` to recognise this layout.

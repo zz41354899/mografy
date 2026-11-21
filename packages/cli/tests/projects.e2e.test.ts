@@ -68,6 +68,8 @@ test('project panel: create a project, switch to it, switch back', { timeout: 12
   previewUrl.searchParams.set('v', 'old-preview');
   assert.equal((await fetch(previewUrl)).headers.get('cache-control'), 'no-cache', 'stale URLs cannot cache changed artwork permanently');
   const versions = new Set<string>();
+  // Built-in components start folded in the project panel.
+  for (const group of await page.locator('.project-group[aria-expanded="false"]').all()) await group.click();
   for (const component of components) {
     await page.getByRole('button', { name: new RegExp(`^${component.name} `) }).click();
     await page.waitForFunction(name => document.querySelector('.topbar .project')?.textContent === name, component.name, { timeout: 30_000 });
