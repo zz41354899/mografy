@@ -1,7 +1,7 @@
 // `mografy check`: compile and trial-render, through the running player when there is one.
 import { access, realpath } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
-import { deckSlides, frameCostReport, readApiResponse, sendApi, shotIssues, smoothnessReport, tempoIssues } from '@mografy/core';
+import { frameCostReport, readApiResponse, sendApi, shotIssues, smoothnessReport, tempoIssues } from '@mografy/core';
 import type { FrameCost, Smoothness, Snapshot } from '@mografy/core';
 import { Project, findServer } from '@mografy/server';
 import { displayPath, requireProject } from '../paths.js';
@@ -14,16 +14,11 @@ export async function checkProject(dir: string, motion = false) {
   const passed = (snapshot: Snapshot & { cost?: FrameCost | undefined }) => {
     if (!snapshot.scene || snapshot.error) throw new Error(snapshot.error?.message ?? 'The scene did not publish.');
     console.log(`✓ Compiled and trial-rendered in Chromium\n  ${snapshot.scene.meta.width}×${snapshot.scene.meta.height}, ${snapshot.scene.meta.duration}s, version ${snapshot.scene.version}`);
-    const { meta, autoShots } = snapshot.scene;
-    if (meta.shots && autoShots) {
-      const count = deckSlides(meta, snapshot.project?.slides).length;
-      const where = snapshot.project?.slides?.shots ? 'slides.shots in mografy.json' : 'the running player';
-      console.log(`• No shots marked in the scene: ${count} slide${count === 1 ? '' : 's'} guessed from the ${autoShots} (${where}). Mark meta.shots to set them.`);
-    } else if (meta.shots) {
+    const { meta } = snapshot.scene;
+    if (meta.shots) {
       const issues = shotIssues(meta);
       if (issues.length) throw new Error(issues.join('\n'));
-      const count = deckSlides(meta, snapshot.project?.slides).length;
-      console.log(`✓ ${meta.shots.length} shot${meta.shots.length === 1 ? '' : 's'}, ${count} presentation slide${count === 1 ? '' : 's'}`);
+      console.log(`✓ ${meta.shots.length} shot${meta.shots.length === 1 ? '' : 's'}`);
     }
     if (meta.tempo) {
       const issues = tempoIssues(meta, snapshot.project?.audio);

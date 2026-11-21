@@ -1,11 +1,10 @@
 // Visual review: raw stills sheet, post-processed sheet, transition strips, browser↔video PSNR.
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { deckSlides, outputFrameCount, resolveParams } from '@mografy/core';
+import { outputFrameCount, resolveParams, shotStops } from '@mografy/core';
 import type { SceneProject } from '@mografy/core';
 import type { SceneBuild } from './build.js';
-import { ffmpegOutput } from './ffmpeg.js';
-import { detectShots, readStoryboard } from './shots.js';
+import { ensureFfmpeg, ffmpegOutput } from './ffmpeg.js';
 import { SceneHost } from './host.js';
 import type { Cell } from './host-page.js';
 
@@ -60,23 +59,12 @@ export async function renderReview(job: ReviewJob): Promise<ReviewResult> {
       title: [`Final frames (${settings.samples}-sample blend, glow, grain)`, ...title], columns, cellWidth: 420, settings,
       cells: times.map((t): Cell => { const k = frameOf(t); return { kind: 'output', k, label: `frame ${k}, ${(k / settings.fps).toFixed(3)}–${((k + 1) / settings.fps).toFixed(3)}s final` }; }),
     }));
-    // Present mode: the frame each slide waits on, so stop times can be judged like any still.
-    // Without meta.shots the slides are Mografy's own guess; the sheet says so, so they can be marked instead.
-    const written = meta.shots?.length ? undefined : project.slides?.shots;
-    const guess = meta.shots?.length || written ? undefined : await (async () => {
-      const small = await host.open(build, project, { renderScale: 0.25 });
-      try { return await detectShots(small, await readStoryboard(job.projectDir)); } finally { await small.close(); }
-    })();
-    {
-      const shots = meta.shots?.length ? meta.shots : written ?? guess?.shots;
-      const slides = deckSlides({ ...meta, shots }, project.slides);
-      const from = guess?.source ?? (written ? project.slides?.guessedFrom : undefined);
-      const origin = from ? ` — guessed from the ${from === 'storyboard' ? 'storyboard shot table' : 'picture'}; mark meta.shots to set them` : written ? ' — from slides.shots in mografy.json' : '';
-      await save(`review-${tag}-slides.png`, await page.sheet({
-        title: [`Slides: the frame each of the ${slides.length} slides stops on (raw)${origin}`, ...title], columns: Math.min(4, slides.length), cellWidth: 420, settings,
-        cells: slides.map((slide, i): Cell => ({ kind: 'raw', t: slide.at, label: `${i + 1}. ${slide.title} · stops at ${slide.at.toFixed(3)}s` })),
-      }));
-    }
+    // The frame each shot settles on (its stop), so the held pictures can be judged like any still.
+    const stops = shotStops(meta);
+    if (stops.length) await save(`review-${tag}-shots.png`, await page.sheet({
+      title: [`Shots: the frame each of the ${stops.length} shots stops on (raw)`, ...title], columns: Math.min(4, stops.length), cellWidth: 420, settings,
+      cells: stops.map((stop, i): Cell => ({ kind: 'raw', t: stop.at, label: `${i + 1}. ${stop.title} · stops at ${stop.at.toFixed(3)}s` })),
+    }));
     for (const [i, tr] of project.review.transitions.entries()) {
       const cells: Cell[] = [];
       for (let t = tr.start; t <= Math.min(tr.end, meta.duration) + 1e-9 && cells.length < 48; t += tr.step) cells.push({ kind: 'raw', t: Math.min(t, meta.duration), label: `t=${t.toFixed(3)}s, frame ${frameOf(t)}` });
@@ -90,6 +78,7 @@ export async function renderReview(job: ReviewJob): Promise<ReviewResult> {
     const comparisons: FrameComparison[] = [];
     const video = job.video;
     if (video && await access(video).then(() => true, () => false)) {
+      await ensureFfmpeg();
       const { width, height } = page.scene;
       for (const k of [...new Set(times.map(frameOf))]) {
         const decoded = await ffmpegOutput(['-i', video, '-vf', `select=eq(n\\,${k})`, '-vsync', '0', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${width}x${height}`, 'pipe:1']);

@@ -1,10 +1,10 @@
 # Product UI on a stage: simplified, framed, caused
 
-[stage.ts](https://github.com/zz41354899/mografy/blob/main/extras/stage/stage.ts) makes short product UI films: hero loops for a landing page, feature cards, a phone moment for social, a dashboard insight. It is built around one sentence:
+[stage.ts](https://github.com/mografy/mografy/blob/main/extras/stage/stage.ts) makes short product UI films: hero loops for a landing page, feature cards, a phone moment for social, a dashboard insight. It is built around one sentence:
 
 **It reads as a real product, simplified to what the viewer needs, framed with intent, and every motion has a cause.**
 
-Use it when the brief is "show how it feels to use" in one to three actions, 4–12 s, often looping. Use [product-walkthrough.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/product-walkthrough.md) instead for a longer tour through several screens (4–8 steps, cards that grow into each other), and both together when a walkthrough needs a stage-style hero shot.
+Use it when the brief is "show how it feels to use" in one to three actions, 4–12 s, often looping. Use [product-walkthrough.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/product-walkthrough.md) instead for a longer tour through several screens (4–8 steps, cards that grow into each other), and both together when a walkthrough needs a stage-style hero shot.
 
 ## Five ways faux UI fails
 
@@ -92,7 +92,7 @@ export function renderFrame(ctx: FrameContext, time: number, p: Values) {
 | `set(values, { duration?, curve? })` | no | A change with no click (a reply arrives, a total updates after a flight) |
 | `focus(name \| null, zoom?, duration?)` | no | Camera push in on a rect and back; runs beside the next steps |
 | `cursor(visible)` | no | Hide the cursor for a beat that runs by itself |
-| `mark(title)` | no | Starts a shot for `meta.shots`, Present mode and review |
+| `mark(title)` | no | Starts a shot for `meta.shots` and review |
 
 Cursor moves take 0.3–0.95 s by distance on a shallow arc, like a hand; never time them by hand. `layout(state)` is the single source of rects: the cursor aims at them, the camera focuses on them, and the drawing should use the same constants.
 

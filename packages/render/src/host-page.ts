@@ -11,6 +11,7 @@ export interface LoadSpec {
   audio?: BeatGrid | undefined;
   outputSize?: ExportSize | undefined;
   aspectRatio?: SceneProject['aspectRatio'];
+  colors?: SceneProject['colors'];
   canvas?: 'cpu' | 'gpu' | undefined;
 }
 export type Cell = { label: string; kind: 'raw'; t: number } | { label: string; kind: 'output'; k: number };
@@ -107,7 +108,7 @@ const host = {
     runtime = await createSceneRuntime(canvas, scene, {
       seed: next.seed, renderScale: next.renderScale, params: next.params, assetBase: next.assetBase, fonts: next.fonts, audio: next.audio,
       outputSize: next.outputSize,
-      aspectRatio: next.aspectRatio,
+      aspectRatio: next.aspectRatio, colors: next.colors,
       canvas: next.canvas,
     });
     return { meta: runtime.meta, params: runtime.definitions, width: canvas.width, height: canvas.height };

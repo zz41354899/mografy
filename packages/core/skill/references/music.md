@@ -14,7 +14,7 @@ The generator is an optional extra, not part of the installed template. It needs
 mografy add music projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `music-src/score.py` and, when the project has none, an example `music-src/music.json` to rewrite for this film. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/music/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `music-src/score.py` and, when the project has none, an example `music-src/music.json` to rewrite for this film. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/music/`.
 
 `music-src/` is outside `scenes/` and `assets/`: the scene never imports it, and only the generated audio file goes in `assets/`.
 

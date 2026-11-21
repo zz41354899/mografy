@@ -25,6 +25,8 @@ const runtimeHelpers = fileURLToPath(import.meta.resolve('@mografy/runtime/scene
 const runtimeDir = dirname(runtimeHelpers);
 const isRuntime = (file: string) => dirname(file) === runtimeDir;
 const SOURCE = /\.[cm]?[jt]sx?$/;
+/** The timeline editor's file; with `shots` in it, the scene is retimed without changing its code. */
+export const TIMELINE_FILE = 'scenes/timeline.json';
 const EXCLUDED = new Set([PROJECT_STATE_DIR, 'renders', 'node_modules', '.git']);
 
 async function hashAssets(root: string, project: SceneProject) {
@@ -61,6 +63,12 @@ async function assetDigest(file: string, path: string) {
   return digest;
 }
 
+/** Shots an older project kept in mografy.json (the former Present mode's guess), used when the scene marks none. */
+function legacyShots(project: SceneProject): unknown[] {
+  const shots = (project.slides as { shots?: unknown } | undefined)?.shots;
+  return Array.isArray(shots) ? shots : [];
+}
+
 /**
  * `overrides` maps project-relative paths to source text, so submitted code is
  * compiled and validated before anything is written to disk.
@@ -74,11 +82,13 @@ export async function buildScene(projectDir: string, project: SceneProject, over
   const guard: Plugin = {
     name: 'mografy-scene',
     setup(b) {
+      b.onResolve({ filter: /^mografy:entry$/ }, () => ({ path: 'entry', namespace: 'mografy-entry' }));
+      b.onLoad({ filter: /.*/, namespace: 'mografy-entry' }, () => ({ contents: wrapper, loader: 'js', resolveDir: root }));
       b.onResolve({ filter: /.*/ }, args => {
         if (args.kind === 'entry-point') return undefined;
         if (args.path === '@mografy/runtime' || args.path === '@mografy/runtime/math') return { path: runtimeHelpers };
         if (args.path.startsWith('.') || isAbsolute(args.path)) {
-          if (isRuntime(args.importer)) return undefined;
+          if (args.namespace !== 'mografy-entry' && isRuntime(args.importer)) return undefined;
           let file = resolve(dirname(args.importer), args.path);
           // TS-style imports name the .js output; map back to an existing source.
           for (const candidate of [file, file.replace(/\.js$/, '.ts'), file.replace(/\.mjs$/, '.mts'), `${file}.ts`, `${file}.js`]) {
@@ -98,14 +108,39 @@ export async function buildScene(projectDir: string, project: SceneProject, over
         for (const issue of checkSceneSource(text)) problems.push(`${local}:${issue.line} ${issue.message}`);
         return { contents: text, loader: /\.[cm]?tsx?$/.test(args.path) ? 'ts' : 'js', resolveDir: dirname(args.path) };
       });
+      // Data files a scene imports, such as the timeline editor's scenes/timeline.json; submitted text wins over disk.
+      b.onLoad({ filter: /\.json$/ }, async args => {
+        if (!inside(args.path)) return { errors: [{ text: `Outside project: ${args.path}` }] };
+        sources.push(relative(root, args.path).split('\\').join('/'));
+        return { contents: overrideFiles.get(args.path) ?? await readFile(args.path, 'utf8'), loader: 'json' };
+      });
     },
   };
   const entry = resolve(root, project.scene);
   if (!overrideFiles.has(entry)) await readFile(entry).catch(() => { throw new SceneBuildError(`Scene entry not found: ${project.scene}`); });
+  // Every scene is wrapped: one that declares no layers gets one layer per shot (shotSequence), so the timeline can
+  // edit any film without touching its code. The editor's file is imported when it exists, so edits compile with it.
+  const timelineFile = resolve(root, TIMELINE_FILE);
+  const hasTimeline = overrideFiles.has(timelineFile) || await readFile(timelineFile).then(() => true, () => false);
+  const wrapper = [
+    `import * as scene from ${JSON.stringify(entry)};`,
+    hasTimeline ? `import edits from ${JSON.stringify(timelineFile)};` : 'const edits = {};',
+    `import { shotSequence, drawShot } from '@mografy/runtime';`,
+    `export * from ${JSON.stringify(entry)};`,
+    `const shots = scene.meta.layers ? [] : scene.meta.shots ?? ${JSON.stringify(legacyShots(project))};`,
+    `const seq = shotSequence(shots, scene.meta.duration, edits, { file: ${JSON.stringify(TIMELINE_FILE)} });`,
+    'export const meta = seq ? { ...scene.meta, duration: seq.duration, shots: seq.shots, layers: seq.layers } : scene.meta;',
+    'export function renderFrame(ctx, time, params) {',
+    '  if (!seq) return scene.renderFrame(ctx, time, params);',
+    '  const f = seq.at(time);',
+    '  if (!f) { ctx.canvas.fillStyle = scene.meta.background; ctx.canvas.fillRect(0, 0, ctx.width, ctx.height); return; }',
+    '  drawShot(ctx, scene.meta.background, f.look, () => scene.renderFrame(ctx, f.sceneTime, params));',
+    '}',
+  ].join('\n');
   let code: string;
   try {
     const options = {
-      entryPoints: [entry], bundle: true, format: 'esm', platform: 'browser', target: 'es2022',
+      entryPoints: ['mografy:entry'], bundle: true, format: 'esm', platform: 'browser', target: 'es2022',
       write: false, logLevel: 'silent', plugins: [guard], sourcemap: 'inline', sourcesContent: false,
       absWorkingDir: root,
     } satisfies BuildOptions;

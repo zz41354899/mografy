@@ -28,7 +28,9 @@ Each installation keeps its own recent-project and active-player state under `~/
 | `MOGRAFY_HOME` | Project library directory |
 | `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
 | `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
-| `MOGRAFY_FFMPEG` | FFmpeg executable override; otherwise use the bundled binary, then `ffmpeg` on PATH. Point it at a build with your GPU's encoders (NVENC, Quick Sync, AMF, VA-API) if the bundled one lacks them; the `fast` preset uses whichever works |
+| `MOGRAFY_FFMPEG` | FFmpeg executable override. Without it, video exports use an FFmpeg Mografy downloaded earlier, else `ffmpeg` on PATH when it has every encoder Mografy uses (libx264, libx265, libvpx-vp9, prores_ks, AAC), else they download a pinned static build (about 20–30 MB, checked by SHA-256) on the first export. `mografy setup` downloads it ahead of time; `mografy setup --check` shows which one is used. Point it at a build with your GPU's encoders (NVENC, Quick Sync, AMF, VA-API) if the downloaded one lacks them; the `fast` preset uses whichever works |
+| `MOGRAFY_BROWSER` | Chromium-based browser to render in (a path to its executable). Without it: Playwright's headless shell when one is installed (a checkout's `pnpm install` sets it up), else Google Chrome, Microsoft Edge or Chromium from their usual install locations, else the headless shell is downloaded once. `PLAYWRIGHT_CHANNEL=chrome` or `msedge` picks the installed Chrome or Edge instead. `mografy setup --check` shows which one is used |
+| `MOGRAFY_TOOLS` | Folder for downloaded tools (default: `~/.mografy/tools`), shared by every installation on the machine |
 | `MOGRAFY_CANVAS` | `cpu` (default) or `gpu`: canvas backing for headless rendering, checks and review. Video exports follow `render.canvas` instead (the `fast` preset sets `gpu`). `cpu` gives identical pixels on every machine; `gpu` uses Metal on macOS and Direct3D 11 on Windows, and its edges may differ slightly |
 
 ## Export settings

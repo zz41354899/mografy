@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "@mografy/core": "workspace:*",
-    "@mografy/server": "workspace:*",
-    "@mografy/render": "workspace:*"
+    "@mografy/render": "workspace:*",
+    "@mografy/server": "workspace:*"
   },
   "bin": {
     "mografy": "./bin/mografy.js"

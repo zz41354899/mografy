@@ -1,6 +1,6 @@
 # Camera, transition and atmosphere helpers
 
-[cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) gives film-style scenes a shared vocabulary. Every helper is a pure function of time and options, uses `ctx.width` / `ctx.height`, and works in landscape and portrait. [cinema-demo.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema-demo.ts) is a fourteen-second tour of six shots joined by six transitions.
+[cinema.ts](https://github.com/mografy/mografy/blob/main/extras/cinema/cinema.ts) gives film-style scenes a shared vocabulary. Every helper is a pure function of time and options, uses `ctx.width` / `ctx.height`, and works in landscape and portrait. [cinema-demo.ts](https://github.com/mografy/mografy/blob/main/extras/cinema/cinema-demo.ts) is a fourteen-second tour of six shots joined by six transitions.
 
 ## Add to a project
 
@@ -10,13 +10,13 @@ The helpers are an optional extra, not part of the installed template. If the pr
 mografy add cinema projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cinema/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/cinema/`.
 
 Import it locally (`import { plate, move, particleWipe } from './cinema.js'`). Copy `cinema-demo.ts` too only when the user wants the tour.
 
 ## Continuity first
 
-These transitions are deliberate breaks: use them between acts, on a musical change, or when the film moves from one plate to another. Within a scene drawn on canvas, prefer a shared-geometry handoff and one film camera ([film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md)); a dissolve or wipe between two unrelated layouts hides a jump instead of making it readable. For a camera over drawn (not plate) content, use the runtime's `cameraPath` and `withCamera`; `move` is for framing a still plate.
+These transitions are deliberate breaks: use them between acts, on a musical change, or when the film moves from one plate to another. Within a scene drawn on canvas, prefer a shared-geometry handoff and one film camera ([film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md)); a dissolve or wipe between two unrelated layouts hides a jump instead of making it readable. For a camera over drawn (not plate) content, use the runtime's `cameraPath` and `withCamera`; `move` is for framing a still plate.
 
 ## Plates and camera
 

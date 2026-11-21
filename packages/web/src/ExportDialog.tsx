@@ -8,6 +8,7 @@ import { exportJobReducer } from './export-state.js';
 import type { ExportJobState } from './export-state.js';
 import type { Session } from './session.js';
 import { useT } from './i18n.js';
+import { Steps } from './Steps.js';
 
 export function ExportDialog({ snapshot, session, open, resume, onClose, onBatch }: { snapshot: Snapshot; session: Session; open: boolean; resume: boolean; onClose(keepJob: boolean): void; onBatch?(): void }) {
   const t = useT();
@@ -37,7 +38,7 @@ export function ExportDialog({ snapshot, session, open, resume, onClose, onBatch
   };
   return <dialog ref={dialog} className={`export-dialog ${activeJob ? 'export-job-dialog' : ''}`} aria-labelledby="export-title"
     onCancel={e => { e.preventDefault(); if (!busy) close(); }} onClick={e => { if (e.target === e.currentTarget && !busy) { const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close(); } }}>
-    <header className="export-header"><h2 id="export-title">{t.xpTitle}</h2>{onBatch && !activeJob ? <button type="button" className="link-button batch-link" disabled={busy} onClick={onBatch}>{t.xdBatch}</button> : null}<button type="button" className="icon-button" aria-label={t.xdClose} title={t.close} disabled={busy} onClick={close}><XIcon size={19} /></button></header>
+    <header className="export-header"><h2 id="export-title">{t.xpTitle}</h2><Steps items={[t.stSettings, t.stExporting, t.stDone]} current={!activeJob ? 0 : activeJob.state === 'running' ? 1 : activeJob.state === 'done' ? 3 : 2} />{onBatch && !activeJob ? <button type="button" className="link-button batch-link" disabled={busy} onClick={onBatch}>{t.xdBatch}</button> : null}<button type="button" className="icon-button" aria-label={t.xdClose} title={t.close} disabled={busy} onClick={close}><XIcon size={19} /></button></header>
     {activeJob ? <ExportJob job={activeJob} preview={preview} session={session} onClose={close} onRetry={() => { if (preview) void submit({ format: activeJob.format, size: preview.size, settings: preview.settings }); }} onEdit={() => { draft.setFormat(activeJob.format); dispatchJob({ type: 'edit' }); setError(''); }} starting={busy} requestError={error} /> : <ExportSettings snapshot={snapshot} draft={draft} busy={busy} error={error} clearError={() => setError('')} onSubmit={() => void submit()} onClose={close} />}
   </dialog>;
 }

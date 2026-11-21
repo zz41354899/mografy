@@ -17,10 +17,7 @@ const SETUP_TIMEOUT = 30_000;
 /** Projects kept loaded after switching away (each keeps its iframe and, for 3D scenes, a WebGL context). */
 const KEEP_LOADED = 2;
 interface Loaded { runtime: SceneRuntime; canvas: HTMLCanvasElement; stage: SceneFrame; version: string; project: SceneProject; key: string; dir: string }
-/** Music fade at presentation stops, in seconds. */
-const STOP_FADE = 0.6;
-const RESUME_FADE = 0.25;
-/** Where scene builds and project files come from. The editor uses the live server; a presentation file embeds them. */
+/** Where scene builds and project files come from (the live server). */
 export interface PlayerSources {
   sceneUrl(version: string): string;
   assetBase: string;
@@ -29,7 +26,6 @@ export interface PlayerSources {
 /** A short, stable tag for a project folder (keeps audio URLs and error messages readable). */
 function projectTag(dir: string) { let h = 5381; for (let i = 0; i < dir.length; i++) h = (h * 33) ^ dir.charCodeAt(i); return (h >>> 0).toString(36); }
 const SERVER: PlayerSources = { sceneUrl: version => apiPath(`scene/${version}.js`), assetBase: apiPath('files/') };
-interface Segment { end: number; loopFrom: number | null; arrived: boolean; onArrive?: (() => void) | undefined }
 
 export class ScenePlayer {
   /** The version on screen. Its iframe holds the version's module: removing it frees that module. */
@@ -42,6 +38,8 @@ export class ScenePlayer {
   private params: ParameterValues = {};
   private effects = { glow: 0, grain: 0 };
   private previewEffects = false;
+  /** Colours the design panel is trying out, over the saved ones, until it saves or cancels. */
+  private draftColors: Record<string, string> | undefined;
   private listeners = new Set<Listener>();
   private frame = 0;
   private startedAt = 0;
@@ -62,15 +60,11 @@ export class ScenePlayer {
   /** Playback stopped because renderFrame threw; resume once a working version loads. */
   private resumeAfterError = false;
   error = '';
-  /** Presentation only: where playback stops (or starts replaying) instead of running to the end. */
-  private segment: Segment | null = null;
-  /** Presentation only: play pictures without starting music (holds, silent decks). */
-  private silent = false;
 
   constructor(private container: HTMLElement, private sources: PlayerSources = SERVER) {
     this.audio.onChange = () => {
       // Sound became available mid-play (unlocked or decoded): join in at the current time.
-      if (this.playing && !this.silent && this.audio.now() === undefined && this.audio.start(this.t)) this.restartClock();
+      if (this.playing && this.audio.now() === undefined && this.audio.start(this.t)) this.restartClock();
       this.notify();
     };
   }
@@ -92,9 +86,13 @@ export class ScenePlayer {
       if (this.disposed || request !== this.loadRequest) return;
       // Version, seed, fonts and the beat grid feed the runtime; anything else (volume, render settings) is applied in place.
       const key = sceneRuntimeKey(version, project);
-      if (key === this.loadedKey) { this.current!.project = project; this.syncAudio(project); this.hidePoster(); return; }
+      if (key === this.loadedKey) {
+        this.current!.project = project; this.syncAudio(project); this.hidePoster();
+        if (!this.draftColors) { this.runtime?.setColors(project.colors); if (!this.playing) this.draw(); }
+        return;
+      }
       const keptKey = `${projectDir}\n${key}`, kept = this.kept.get(keptKey);
-      if (kept) { this.kept.delete(keptKey); this.adopt({ ...kept, version, project }, true); return; }
+      if (kept) { this.kept.delete(keptKey); kept.runtime.setColors(this.draftColors ?? project.colors); this.adopt({ ...kept, version, project }, true); return; }
       for (const [k, old] of this.kept) if (old.dir === projectDir) { this.kept.delete(k); old.runtime.dispose(); old.stage.remove(); }
       const stage = await openSceneFrame(this.container, this.sources.sceneUrl(version), 'stage-frame');
       if (this.disposed || request !== this.loadRequest) { stage.remove(); return; }
@@ -103,7 +101,7 @@ export class ScenePlayer {
       const scale = this.stageScale(width);
       const creating = createSceneRuntime(canvas, scene, {
         seed: project.seed, renderScale: scale, params, assetBase: this.sources.assetBase, assetUrls: this.sources.assetUrls, fonts: project.fonts, audio: project.audio,
-        aspectRatio: project.aspectRatio,
+        aspectRatio: project.aspectRatio, colors: this.draftColors ?? project.colors,
         // The player never reads pixels back, so draw on the GPU: blurs, shadows and 3D layers stay smooth while playing.
         // Exports keep the default CPU canvas for identical output on every machine.
         canvas: 'gpu',
@@ -139,6 +137,17 @@ export class ScenePlayer {
     if (this.stageScale(width) * width <= canvas.width + 1) return;
     current.key = '';
     void this.load(version, project, this.params, this.projectDir).catch(() => {});
+  }
+
+  /**
+   * Set the current version up again in a fresh frame. Edit mode runs its own scene runtimes; a heavy (3D) scene can
+   * lose its WebGL context meanwhile, so coming back to Scene mode rebuilds the picture instead of trusting the old one.
+   */
+  reload() {
+    const { current } = this;
+    if (!current) return;
+    current.key = '';
+    void this.load(current.version, current.project, this.params, this.projectDir).catch(() => {});
   }
 
   /**
@@ -190,6 +199,13 @@ export class ScenePlayer {
     this.poster = null;
     if (now || matchMedia('(prefers-reduced-motion: reduce)').matches) { img.remove(); return; }
     void img.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' }).finished.catch(() => {}).then(() => img.remove());
+  }
+
+  /** Try colour swaps on the live film without saving; undefined goes back to the project's own. */
+  setColors(colors: Record<string, string> | undefined) {
+    this.draftColors = colors;
+    this.runtime?.setColors(colors ?? this.project?.colors);
+    if (!this.playing) this.draw();
   }
 
   setParams(params: ParameterValues) {
@@ -253,21 +269,7 @@ export class ScenePlayer {
     if (!this.playing) return;
     const d = this.duration;
     let t = this.audio.now() ?? this.startT + (now - this.startedAt) / 1000;
-    const segment = this.segment;
-    if (segment && t >= segment.end) {
-      const arriving = !segment.arrived;
-      segment.arrived = true;
-      this.audio.fadeOut(STOP_FADE);
-      if (segment.loopFrom === null) {
-        this.t = segment.end; this.playing = false; this.draw(); this.notify();
-        if (arriving) segment.onArrive?.();
-        return;
-      }
-      this.silent = true;
-      t = segment.loopFrom + (t - segment.end) % (segment.end - segment.loopFrom);
-      this.startT = t; this.startedAt = now;
-      if (arriving) segment.onArrive?.();
-    } else if (t >= d) {
+    if (t >= d) {
       if (this.loop && d > 0) { t = t % d; this.t = t; this.restartClock(); this.audio.start(t); }
       else { this.t = d; this.playing = false; this.audio.stop(); this.draw(); this.notify(); return; }
     }
@@ -279,8 +281,6 @@ export class ScenePlayer {
   play() {
     this.resumeAfterError = false;
     if (this.playing || !this.runtime) return;
-    // Plain playback ends a presentation segment (the editor previews slides with playTo).
-    this.segment = null; this.silent = false;
     if (!this.loop && this.t >= this.duration) this.t = 0;
     this.playing = true; this.restartClock();
     this.audio.start(this.t);
@@ -292,30 +292,6 @@ export class ScenePlayer {
     this.playing = false; cancelAnimationFrame(this.frame);
     this.audio.stop();
     this.draw(); this.notify();
-  }
-  /** Presentation: play from `from` to the stop at `end`, then hold there (freeze, or replay from loopFrom). */
-  playTo(from: number, end: number, loopFrom: number | null, sound: boolean, onArrive?: () => void) {
-    if (!this.runtime) return;
-    cancelAnimationFrame(this.frame); this.audio.fadeOut(RESUME_FADE);
-    this.resumeAfterError = false;
-    this.segment = { end, loopFrom, arrived: false, onArrive };
-    this.silent = !sound;
-    this.t = Math.min(Math.max(0, from), end);
-    this.playing = true; this.restartClock();
-    if (sound) this.audio.start(this.t, RESUME_FADE);
-    this.frame = requestAnimationFrame(this.tick);
-    this.notify();
-  }
-  /** Presentation: show the stop at `at` straight away, held the same way playTo would hold it. */
-  holdAt(at: number, loopFrom: number | null) {
-    if (!this.runtime) return;
-    cancelAnimationFrame(this.frame); this.audio.fadeOut(STOP_FADE);
-    this.segment = { end: at, loopFrom, arrived: true };
-    this.silent = true;
-    if (loopFrom === null) { this.playing = false; this.t = at; this.draw(); this.notify(); return; }
-    this.t = loopFrom; this.playing = true; this.restartClock();
-    this.frame = requestAnimationFrame(this.tick);
-    this.notify();
   }
   toggle() { if (this.playing) this.pause(); else this.play(); }
   seek(t: number) {

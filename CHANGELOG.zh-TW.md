@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) | [繁體中文](CHANGELOG.zh-TW.md)
 
-Mografy 的重要變更。安裝內容仍然只有十六個內建元件；選用的 extras 放在 GitHub 上的 [`extras/`](extras/)，只有專案需要時才會複製進去。
+Mografy 的重要變更。從 **Mografy Triangulum v0.1.0** 開始，每次發布都有版本號，並遵循[語意化版本](https://semver.org/lang/zh-TW/)；`mografy --version` 會顯示你目前的版本。v0.1.0 以前的更新依日期列在後面。安裝內容仍然只有十六個內建元件；選用的 extras 放在 GitHub 上的 [`extras/`](extras/)，只有專案需要時才會複製進去。
 
 在你的 Mografy checkout 中更新：
 
@@ -12,6 +12,32 @@ mografy update
 ```
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
+
+## Mografy Triangulum v0.1.0 — 2026-11-21
+
+第一個有版本號的發布。
+
+### 新增
+
+- **全新的編輯器** — 圖層時間軸：拖曳圖層可以移動，拖兩端可以修剪，也能複製、隱藏、鎖定、重新命名、調整順序和換顏色；每個圖層都有進場和出場動態（淡入淡出、上浮、彈出、模糊、擦入）。修改會吸附到節拍、播放頭和其他圖層，可以復原，並存在 `scenes/timeline.json`，場景的程式碼不會被改動。⌘K 可以搜尋專案、圖層和指令；齒輪按鈕開啟設定，包括語系、播放、文字大小、快捷鍵和 MCP。
+- **每支影片都有圖層** — 有標出鏡頭的場景（`meta.shots`，或舊版 `mografy.json` 留下的 `slides.shots`），每個鏡頭會自動變成一個圖層，不用改任何程式碼。移動一個鏡頭只會動到它自己：空出來的地方顯示背景，鏡頭重疊時，比較晚開始的那個會蓋在上面。場景也可以用 `@mografy/runtime` 的 `timeline()` 自己宣告圖層，寫法請看 Skill 新增的 layers 參考文件。
+- **操作教學動畫** — Skill 新增 how-to 參考文件，把產品裡的一項操作做成教學動畫，每個步驟一支短片，適合放在說明中心、產品內提示和新手引導，另外再加一支完整版。只要你提出要求並提供測試帳號，Claude 或 Codex 會用內建瀏覽器或 computer use 實際操作產品，拍下每個狀態；沒有的話就用你提供的截圖。步驟會用 walkthrough 套件重繪，每個鏡頭的開頭和結尾都停在靜止畫面，匯出後切成編號的步驟短片，並附上每步驟的圖卡和字幕檔。
+- **設計系統面板** — 針對目前影片的色彩、動態、節奏和字型，旁邊的畫面會跟著播放：可以換掉影片畫出的任何顏色（存在 `mografy.json` 的 `colors`，播放器、審閱圖和所有匯出都會套用）、一次替所有圖層或單一圖層套用動態、設定每個圖層的開始時間和長度，還能試調場景的數值控制項。
+
+### 變更
+
+- **精簡安裝** — 安裝步驟改成只取出工具執行需要的部分（約 10 MB，原本連同 Git 歷史約 240 MB）。模板、extras 與十部 Stage 參考影片仍放在同一個儲存庫，`mografy add` 第一次用到時才從 GitHub 下載；`examples/catalog.json` 列出每部影片的檔案。完整的 `git clone` 仍然可用，`git sparse-checkout disable` 可把精簡版轉成完整版。
+- **移除簡報模式** — Mografy 專注在動畫製作：簡報模式、投影片、簡報頁面、`mografy export --format html` 與 `pnpm sync:slides` 都已移除，Skill 的 presentations 參考文件也一併拿掉。鏡頭保留：`meta.shots` 仍會在時間軸上標出每個鏡頭，`mografy review` 改為輸出 `review-<version>-shots.png`，列出每個鏡頭的停格（只在 scene 有標鏡頭時輸出；Mografy 不再自行猜測鏡頭）。舊專案 mografy.json 裡的 `slides` 設定會保留但不再使用。
+- **執行時不再需要 Playwright** — Mografy 改為透過 Chrome DevTools Protocol（走 pipe，不開 port）直接控制 Chromium，安裝不再附 Playwright（約 19 MB）。裝了 Playwright 的 headless shell 就照舊用它，否則用電腦上已有的 Google Chrome 或 Microsoft Edge，兩者都沒有才下載 shell。`MOGRAFY_BROWSER` 可指定任一個 Chromium；`PLAYWRIGHT_CHANNEL=chrome` 或 `msedge` 仍然有效。測試仍用 Playwright 操作播放器。
+- **代理 Skill 另外安裝** — npm 套件不再附 Skill：用 `npx skills add zz41354899/mografy -g` 安裝一次（[skills CLI](https://github.com/vercel-labs/skills)；之後用 `npx skills update` 更新），Claude Code、Codex 等代理在任何資料夾都找得到。從 npm 套件啟動 `mografy dev` 時，若沒有代理找得到 Skill 會提示這個指令，專案 `AGENTS.md` 的指引也寫著同一個指令。工作副本仍會在 `.agents/skills/mografy` 產生自己的 Skill，skills CLI 從 GitHub 安裝的也是這一份。
+- **npm 套件（準備中）** — `pnpm pack:cli` 會從工作副本建出約 2 MB 的 `mografy` npm 套件（連同依賴安裝後約 65 MB），只含建置好的套件、內建元件與介紹影片。專案放在 `~/Mografy`，FFmpeg 與 Chromium shell 第一次使用時才下載，透過 npm 更新。`pnpm test:package` 會實際安裝並執行它。見 [docs/npm-package.md](docs/npm-package.md)。
+- **安裝路徑集中一處** — Mografy 從安裝位置讀取的所有資料夾（內建元件、預覽圖、參考影片、runtime 型別、Skill、進入點）改由 `@mografy/server` 的 `installation` 統一提供。
+- **第一次匯出才下載 FFmpeg** — FFmpeg 不再隨 Mografy 安裝。影片匯出時，若 PATH 上的 `ffmpeg` 具備所需的全部編碼器就直接使用，否則第一次匯出會下載固定版本的靜態 build（以 SHA-256 驗證，快取在 `~/.mografy/tools`，同一台電腦的所有安裝共用），播放器會把下載顯示成匯出的第一個階段。`mografy setup` 可預先下載 FFmpeg 與 Chromium shell，`mografy setup --check` 顯示目前使用哪一個。
+- **只裝 headless shell** — `pnpm install` 改為下載 Playwright 的 Chromium headless shell，不再下載完整 Chromium；檢查與匯出本來就是用 shell 執行。舊安裝可用 `pnpm exec playwright uninstall` 再 `pnpm install` 移除完整 Chromium。
+
+## v0.1.0 以前的更新
+
+在有版本號之前，更新是依日期發布的。
 
 ## 2026-11-09
 

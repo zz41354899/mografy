@@ -92,7 +92,7 @@ export function renderFrame(ctx: FrameContext, time: number, p: Values) {
 | `set(values, { duration?, curve? })` | no | A change with no click (a reply arrives, a total updates after a flight) |
 | `focus(name \| null, zoom?, duration?)` | no | Camera push in on a rect and back; runs beside the next steps |
 | `cursor(visible)` | no | Hide the cursor for a beat that runs by itself |
-| `mark(title)` | no | Starts a shot for `meta.shots`, Present mode and review |
+| `mark(title)` | no | Starts a shot for `meta.shots` and review |
 
 Cursor moves take 0.3–0.95 s by distance on a shallow arc, like a hand; never time them by hand. `layout(state)` is the single source of rects: the cursor aims at them, the camera focuses on them, and the drawing should use the same constants.
 

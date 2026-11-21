@@ -6,6 +6,7 @@ import { Thumb } from './BatchThumb.js';
 import { FORMATS, formatName } from './batch-progress.js';
 import type { BatchEncoder, BatchOptions } from './ExportQueue.js';
 import { useT } from './i18n.js';
+import { Steps } from './Steps.js';
 
 const GROUPS: ProjectSummary['kind'][] = ['recent', 'library', 'example'];
 
@@ -54,7 +55,7 @@ export function BatchPicker({ projects, list, ready, selected, setSelected, opti
         </div>
       </section>
       <form className="bx-main" onSubmit={e => { e.preventDefault(); onSubmit(); }}>
-        <header className="bx-head"><h3>{t.bxFormat}</h3>{jobs.length ? <button type="button" className="bx-link" onClick={() => onQueue()}>{t.bxQueueLink(active)}</button> : null}<button type="button" className="icon-button" aria-label={t.bxClose} title={t.close} disabled={busy} onClick={onClose}><XIcon size={19} /></button></header>
+        <header className="bx-head"><Steps items={[t.stFilms, t.stFormat, t.stExport]} current={selected.length ? 1 : 0} />{jobs.length ? <button type="button" className="bx-link" onClick={() => onQueue()}>{t.bxQueueLink(active)}</button> : null}<button type="button" className="icon-button" aria-label={t.bxClose} title={t.close} disabled={busy} onClick={onClose}><XIcon size={19} /></button></header>
         <div className="bx-body">
           <div className="bx-cards" role="radiogroup" aria-label={t.xfOutput}>
             {FORMATS.map(f => <button key={f.id} type="button" role="radio" aria-checked={options.format === f.id} className={`bx-card ${f.id} ${options.format === f.id ? 'on' : ''}`} disabled={busy}

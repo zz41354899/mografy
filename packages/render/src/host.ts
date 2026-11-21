@@ -4,8 +4,9 @@ import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { chromium } from 'playwright';
-import type { Browser, BrowserContext, Page } from 'playwright';
+import { Browser, locateBrowser } from './cdp.js';
+import type { BrowserContext, Page } from './cdp.js';
+import { installChromiumShell } from './chromium.js';
 import { parameterDefinitionsSchema, resolveParams, sceneMetaForAspect, sceneMetaSchema } from '@mografy/core';
 import type { ExportSize, MotionFrames, ParameterDefinitions, ParameterValues, RenderSettings, SceneMeta, SceneProject } from '@mografy/core';
 import type { Cell, HostApi, LoadSpec, SheetSpec } from './host-page.js';
@@ -71,8 +72,7 @@ async function bounded<T>(work: Promise<T>, ms: number, message: string, abandon
 
 export class HostPage {
   private dead = false;
-    /** `assets` collects the project files this page requests; setup loads every asset a scene draws with. */
-  constructor(private host: SceneHost, private context: BrowserContext, readonly page: Page, readonly scene: LoadedScene, readonly assets: ReadonlySet<string> = new Set()) {}
+  constructor(private host: SceneHost, private context: BrowserContext, readonly page: Page, readonly scene: LoadedScene) {}
   /** True after close, a timeout or a renderer crash; callers holding a cached page must open a new one. */
   get closed() { return this.dead || this.page.isClosed(); }
   private bounded<T>(work: Promise<T>) {
@@ -186,23 +186,31 @@ export class SceneHost {
   register(build: SceneBuild) { this.builds.set(build.version, build.code); return `${this.origin}/scene/${build.version}.js`; }
 
   /**
-   * Playwright's bundled Chromium first (`pnpm exec playwright install chromium`);
-   * if it is not installed, fall back to the system Google Chrome.
+   * Playwright's headless shell when one is installed (what a checkout's `pnpm install` sets up, and the most
+   * consistent pictures), else the Chrome, Edge or Chromium on this computer (see `locateBrowser` in cdp.ts). With
+   * none, the headless shell is downloaded once. MOGRAFY_BROWSER (a path) or PLAYWRIGHT_CHANNEL (chrome, msedge)
+   * chooses one. Chromium is closed when Mografy exits; Ctrl+C is left to the commands, which cancel cleanly.
    */
   private launch(backing: CanvasBacking) {
     const running = this.browsers[backing];
     if (running) return running;
     const args = ['--force-color-profile=srgb', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', ...gpuArgs(backing === 'gpu')];
-    const channel = process.env.PLAYWRIGHT_CHANNEL;
-    // Playwright's own Ctrl+C handling kills Chromium and exits at once, before an export can cancel cleanly (and before
-    // a batch can print its summary). Commands that handle Ctrl+C do so themselves; Chromium still closes on exit.
-    const signals = { handleSIGINT: false, handleSIGTERM: false };
-    const launching: Promise<Browser> = chromium.launch({ ...(channel ? { channel } : {}), args, ...signals }).catch(async error => {
-      if (channel || !/Executable doesn't exist|install/i.test(String(error))) throw error;
-      return chromium.launch({ channel: 'chrome', args, ...signals }).catch(() => {
-        throw new Error('No Chromium found. Run `pnpm exec playwright install chromium`, or install Google Chrome.');
-      });
-    });
+    const launching: Promise<Browser> = (async () => {
+      let { found, looked } = locateBrowser();
+      if (!found.length && !process.env.MOGRAFY_BROWSER && !process.env.PLAYWRIGHT_CHANNEL) {
+        console.log('No Chrome, Edge or Chromium found: downloading the Chromium headless shell (first run only)…');
+        await installChromiumShell().catch(() => {
+          throw new Error('No Chromium found, and the headless shell could not be downloaded. Install Google Chrome or Microsoft Edge, or connect to the internet and run `mografy setup chromium`.');
+        });
+        ({ found, looked } = locateBrowser());
+      }
+      if (!found.length) throw new Error(`No Chromium found. Looked at:\n  ${looked.join('\n  ')}\nInstall Google Chrome or Microsoft Edge, or run \`mografy setup chromium\`.`);
+      let failure: unknown;
+      for (const candidate of found) {
+        try { return await Browser.launch({ executable: candidate.path, args }); } catch (error) { failure = error; }
+      }
+      throw failure;
+    })();
     this.browsers[backing] = launching;
     // A crashed or closed Chromium must not be reused: forget it so the next page launches a fresh one.
     const forget = () => { if (this.browsers[backing] === launching) delete this.browsers[backing]; };
@@ -249,11 +257,6 @@ export class SceneHost {
     const canvas = options.canvas ?? canvasBacking();
     const context = await this.context(canvas);
     const { page, errors } = await watchedPage(context);
-    const assets = new Set<string>();
-    page.on('request', request => {
-      const url = new URL(request.url());
-      if (url.origin === this.origin && url.pathname.startsWith('/project/')) assets.add(decodeURIComponent(url.pathname.slice(9)));
-    });
     try {
       await this.ready(page);
       const spec: LoadSpec = {
@@ -261,13 +264,13 @@ export class SceneHost {
         renderScale: options.renderScale ?? 1, params: options.params ?? project.params,
         fonts: project.fonts, audio: project.audio,
         outputSize: options.outputSize,
-        aspectRatio: project.aspectRatio,
+        aspectRatio: project.aspectRatio, colors: project.colors,
         canvas,
       };
       const scene = await bounded(page.evaluate(s => window.mografyHost.load(s), spec), hostTimeouts.load,
         `Scene setup did not finish within ${seconds(hostTimeouts.load)}. Check setup() for an await that never resolves (image, font or fetch) or a loop that never ends.`,
         () => context.close()) as LoadedScene;
-      return new HostPage(this, context, page, scene, assets);
+      return new HostPage(this, context, page, scene);
     } catch (error) {
       await context.close().catch(() => {});
       throw pageFailure(error, errors);
@@ -322,14 +325,6 @@ export class SceneHost {
       const data = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
       parts.reduce((offset, p) => { data.set(p, offset); return offset + p.length; }, 0);
       return { step, size: data.length / count, data };
-    });
-  }
-
-  /** The project files a scene loads: run setup and a trial render, recording every request. */
-  loadedAssets(build: SceneBuild, project: SceneProject) {
-    return this.withPage(build, project, { renderScale: 0.25 }, async page => {
-      await this.trial(page, `Trial render did not finish within ${seconds(hostTimeouts.trial)}.`);
-      return [...page.assets].sort();
     });
   }
 

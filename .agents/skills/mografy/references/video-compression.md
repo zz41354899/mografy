@@ -22,7 +22,7 @@ python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/
 python3 .agents/skills/mografy/scripts/compress-video.py "projects/my-animation/renders/film.mp4" --target-mb 10
 ```
 
-The maintained source is [scripts/compress-video.py](https://github.com/zz41354899/mografy/blob/main/scripts/compress-video.py); `pnpm sync:skills` copies it into the shared Skill's `scripts/` directory. Edit the repository source, then sync, rather than editing the generated copy. For an animation outside this repository, use the absolute path to the loaded Skill's helper and the actual input video.
+The maintained source is [scripts/compress-video.py](https://github.com/mografy/mografy/blob/main/scripts/compress-video.py); `pnpm sync:skills` copies it into the shared Skill's `scripts/` directory. Edit the repository source, then sync, rather than editing the generated copy. For an animation outside this repository, use the absolute path to the loaded Skill's helper and the actual input video.
 
 ## Choose settings and verify
 

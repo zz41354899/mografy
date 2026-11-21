@@ -50,7 +50,8 @@ test('CLI presents the file-and-skill workflow', async () => {
   assert.match(stdout, /mografy dev/);
   assert.match(stdout, /mografy check/);
   assert.match(stdout, /mografy export/);
-  assert.doesNotMatch(stdout, /\bmcp\b|setup-claude/i);
+  assert.match(stdout, /mografy mcp/);
+  assert.doesNotMatch(stdout, /setup-claude/i);
 });
 
 test('seek from outside pauses the player at that time', async () => {

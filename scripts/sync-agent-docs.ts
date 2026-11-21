@@ -4,9 +4,9 @@ import { createHash } from 'node:crypto';
 import { lstat, mkdir, readdir, readFile, realpath, rmdir, symlink, unlink } from 'node:fs/promises';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// @ts-expect-error plain ESM build script without type declarations
+// @ts-ignore plain ESM build script without type declarations: an error under a strict tsconfig, none in the editor
 import { writeSkillText } from '../packages/core/scripts/skill-text.mjs';
-// @ts-expect-error plain ESM build script without type declarations
+// @ts-ignore plain ESM build script without type declarations: an error under a strict tsconfig, none in the editor
 import { sameText } from '../packages/core/scripts/generated-file.mjs';
 import { atomicWrite, queueProjectWrite } from '../packages/server/src/files.js';
 import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js';

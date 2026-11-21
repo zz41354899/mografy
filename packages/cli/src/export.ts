@@ -42,7 +42,6 @@ export type ExportOutcome = { state: 'done'; output: string } | { state: 'cancel
 export async function exportProject(dir: string, flags: Flags, browsers?: SharedBrowsers): Promise<ExportOutcome | undefined> {
   if (flags.cancel) { await cancelExport(dir); return undefined; }
   await requireProject(dir);
-  if (flags.format === 'html') throw new Error('Presentation files are written by `mografy export --format html`.');
   const preset = flags.preset ? EXPORT_PRESETS[flags.preset] : undefined;
   if (preset && flags.format && flags.format !== preset.format) throw new Error(`--preset ${flags.preset} exports ${preset.format.toUpperCase()}; leave out --format or choose another preset`);
   const format = preset?.format ?? flags.format ?? 'mp4';
@@ -118,7 +117,6 @@ const elapsed = (ms: number) => { const s = Math.round(ms / 1000); return s < 60
 export async function exportBatch(dirs: string[], flags: Flags) {
   if (flags.cancel) throw new Error('--cancel takes one project: mografy export --cancel <project>');
   if (flags.output) throw new Error('--output names one file; a batch writes each project to its own renders/ folder');
-  if (flags.format === 'html') throw new Error('A batch exports videos or animations; presentation files are one project at a time.');
   const unique = [...new Set(dirs)];
   for (const dir of unique) await requireProject(dir);
   console.log(`Batch export: ${unique.length} project${unique.length === 1 ? '' : 's'}, one after another`);

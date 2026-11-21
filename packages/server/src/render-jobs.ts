@@ -47,7 +47,7 @@ export class RenderJobs {
     const controller = new AbortController(); this.controller = controller;
     let last = 0;
     this.publish();
-    const onProgress = (done: number, total: number, stage: 'capture' | 'encode' | 'package') => {
+    const onProgress = (done: number, total: number, stage: 'download' | 'capture' | 'encode' | 'package') => {
       Object.assign(status, { done, total, stage });
       if (!this.closed && (Date.now() - last > 250 || done === total)) { last = Date.now(); this.publish(); }
     };

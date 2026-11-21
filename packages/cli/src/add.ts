@@ -1,5 +1,5 @@
 // `mografy add`: one command for everything optional. A name is either a reference film, copied into
-// the library as a project of its own (from this installation, or downloaded from the website's showcase), a helper
+// the library as a project of its own (from this installation, downloaded from GitHub, or from the website's showcase), a helper
 // (extra), or a template from Mografy Templates, both copied into a project. Several helpers and templates can be
 // added at once, and a folder or project may follow the names.
 import { addExtra, EXTRAS, extrasList, printAdd } from './extras.js';
@@ -45,7 +45,7 @@ export async function planAdd(args: string[]): Promise<AddPlan> {
 
 export async function addList() {
   return [
-    'Reference films in this installation, copied into your library as a new project:',
+    'Reference films, copied into your library as a new project (those marked "from GitHub" download the first time):',
     await examplesList(),
     '',
     `Showcase films, downloaded from ${SHOWCASE_URL} into your library:`,

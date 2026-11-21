@@ -10,7 +10,7 @@ The module and fonts are an optional extra, not part of the installed template. 
 mografy add cjk projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It also copies both font subsets with their licence and registers them under `fonts` in `mografy.json`; remove the one the design does not use. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It also copies both font subsets with their licence and registers them under `fonts` in `mografy.json`; remove the one the design does not use. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/cjk/`.
 
 Copy only the font the design uses when one is enough. Keep the licence file with the fonts.
 

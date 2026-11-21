@@ -2,15 +2,14 @@
 // caption, product screen, end card…), copied with the shared modules and the fonts it uses. When the target has no
 // project yet, one is created for the templates, so `mografy add hook-impact cta-endcard projects/my-film` is a complete
 // way to start a film. Templates come from this checkout's templates/ folder, or from GitHub when the folder is missing.
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createInLibrary, createProject, isProject } from '@mografy/server';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, relative, sep } from 'node:path';
+import { createInLibrary, createProject, installation, isProject } from '@mografy/server';
 import { displayPath } from './paths.js';
+import { exists, repoFile } from './github.js';
 
-/** This installation's checkout (packages/cli/{src,dist} → root). */
-export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..', '..');
-const GITHUB = 'https://raw.githubusercontent.com/zz41354899/mografy/main/';
+/** This installation's root folder (see `installation` in @mografy/server). */
+export const ROOT = installation.root;
 
 export interface TemplateEntry {
   id: string; name: string; category: string; aspect: '9:16' | '16:9'; pair?: string; look?: string;
@@ -26,15 +25,7 @@ const LICENCES = [['templates/fonts/LICENSE-Inter.txt', 'assets/LICENSE-Inter.tx
 /** Modules every template imports. */
 export const TEMPLATE_SHARED = ['kit.ts', 'editorial.ts', 'montage.ts'];
 
-const exists = (file: string) => access(file).then(() => true, () => false);
-
-async function source(workspaceRoot: string, path: string): Promise<Buffer> {
-  const local = join(workspaceRoot, path);
-  if (await exists(local)) return readFile(local);
-  const response = await fetch(GITHUB + path).catch(error => { throw new Error(`Could not download ${path}: ${(error as Error).message}`); });
-  if (!response.ok) throw new Error(`Could not download ${path} (${response.status}).`);
-  return Buffer.from(await response.arrayBuffer());
-}
+const source = (workspaceRoot: string, path: string) => repoFile(workspaceRoot, path);
 
 const cache = new Map<string, TemplateEntry[]>();
 /** The template catalog: templates/catalog.json from this checkout, or from GitHub. */
@@ -121,7 +112,7 @@ export async function templateProject(workspaceRoot: string, dir: string | undef
 export async function writeEditorConfig(workspaceRoot: string, dir: string) {
   const file = join(dir, 'tsconfig.json');
   if (await exists(file)) return false;
-  const types = relative(dir, join(workspaceRoot, 'packages/runtime/dist/index.d.ts')).split(sep).join('/');
+  const types = relative(dir, workspaceRoot === installation.root ? installation.runtimeTypes : join(workspaceRoot, 'packages/runtime/dist/index.d.ts')).split(sep).join('/');
   const config = {
     '//': "Editor support only. Mografy's build resolves @mografy/runtime itself.",
     compilerOptions: {

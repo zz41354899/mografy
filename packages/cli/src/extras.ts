@@ -1,11 +1,10 @@
 // `mografy add <helper>`: copy an optional helper (cinema, cjk, three, music, walkthrough, stage) into a project.
 // Extras are not part of the installed template. They come from this checkout's extras/ folder,
 // or from GitHub when the folder is missing, so an installation stays at the sixteen built-in components.
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { repoFile } from './github.js';
 import { displayPath } from './paths.js';
-
-const GITHUB = 'https://raw.githubusercontent.com/zz41354899/mografy/main/extras/';
 
 interface FontEntry { family: string; path: string; weight: number }
 export interface Extra {
@@ -70,15 +69,7 @@ export function extrasList() {
   return Object.entries(EXTRAS).map(([name, extra]) => `  ${name.padEnd(width)}  ${extra.summary}`).join('\n');
 }
 
-const exists = (file: string) => access(file).then(() => true, () => false);
-
-async function source(workspaceRoot: string, path: string): Promise<Buffer> {
-  const local = join(workspaceRoot, 'extras', path);
-  if (await exists(local)) return readFile(local);
-  const response = await fetch(GITHUB + path).catch(error => { throw new Error(`Could not download ${path}: ${(error as Error).message}`); });
-  if (!response.ok) throw new Error(`Could not download ${path} (${response.status}).`);
-  return Buffer.from(await response.arrayBuffer());
-}
+const source = (workspaceRoot: string, path: string) => repoFile(workspaceRoot, `extras/${path}`);
 
 export interface AddResult { written: string[]; unchanged: string[]; kept: string[]; fonts: string[] }
 

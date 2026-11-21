@@ -21,3 +21,6 @@ dist/
 /.agents/skills/mografy-ref/
 /.agents/skills/mografy-codex-skill/
 /.claude/skills/mografy-ref
+
+# npm package build output (pnpm pack:cli)
+/apps/cli/dist/

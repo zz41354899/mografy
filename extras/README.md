@@ -23,7 +23,7 @@ mografy add cinema projects/my-film
 Without the `mografy` command, download a file directly, for example:
 
 ```sh
-curl -fsSL -o scenes/cinema.ts https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cinema/cinema.ts
+curl -fsSL -o scenes/cinema.ts https://raw.githubusercontent.com/mografy/mografy/main/extras/cinema/cinema.ts
 ```
 
 The scene modules import only `@mografy/runtime` and their local siblings, so they work as soon as they are in a project's `scenes/` folder. `cjk/subset-cjk-fonts.py` rebuilds the font subsets from Noto CJK sources. `three/three.module.js` is Three.js 0.186.1 plus `GLTFLoader`, `RoomEnvironment` and `RoundedBoxGeometry`, bundled and minified with esbuild; it is loaded from `assets/` at runtime because scene modules may import only project sources and `@mografy/runtime`. `music/score.py` is not a scene module: it runs on your machine (`python3 music-src/score.py music-src/music.json assets/music.mp3`) and writes an audio file that `mografy.json` points to.

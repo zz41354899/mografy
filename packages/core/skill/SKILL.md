@@ -1,6 +1,6 @@
 ---
 name: mografy
-description: Make, edit, review and export Mografy Canvas animations (projects with mografy.json), plan their storyboards and scores, and compress exported videos with the bundled Python helper; also develop the Mografy repository. Use when a folder has mografy.json, or the user asks for a motion graphic, product demo from screenshots, teaser, logo reveal, explainer, paper theatre (紙劇場、紙偶、定格), social video, slides or Present mode, or says 做動畫、動態影片、宣傳片、產品示範、分鏡、動態簡報、配樂、匯出 MP4、壓縮影片.
+description: Make, edit, review and export Mografy Canvas animations (projects with mografy.json), plan their storyboards and scores, and compress exported videos with the bundled Python helper; also develop the Mografy repository. Use when a folder has mografy.json, or the user asks for a motion graphic, product demo from screenshots, how-to or tutorial clips, teaser, logo reveal, explainer, paper theatre (紙劇場、紙偶、定格), or social video, or says 做動畫、動態影片、宣傳片、產品示範、操作教學動畫、分鏡、配樂、匯出 MP4、壓縮影片.
 ---
 
 # Mografy
@@ -14,7 +14,7 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 - Put animation, layout or shot descriptions in `mografy.json`. It holds settings, audio and review times; animation lives in scene modules, because the server never evaluates scene code.
 - Read a clock, keep state between frames, or use unseeded randomness, GSAP, SVG scene layers or resvg. The player seeks in any order, and `mografy check` renders each time twice to catch state.
 - Set `ctx.filter` around many draws or create a canvas in `renderFrame`. Each costs a full pass per draw or per frame; use `blurLayer`, `blurText`, `bloom`, `layer` and `buffer`.
-- Operate the user's website or account, or show real customer data or a working private link. Work from screenshots the user provides and invented demo data.
+- Operate the user's website or account unless they asked you to and gave you a test account ([how-to-film.md](references/how-to-film.md)); otherwise work from screenshots the user provides. Never show real customer data or a working private link; use invented demo data.
 - Copy another brand's copy, marks or music, or edit the films in `examples/` (they are the reference other agents read). Copy one with `mografy add <name>` (showcase films download the same way) and change the copy.
 - Export, or overwrite a file in `renders/`, unless the user asks for a file.
 
@@ -22,7 +22,7 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 
 - **film**: the whole animation. **scene**: the module that draws it (`scenes/main.ts` and its imports).
 - **shot**: one idea or composition, one row of the shot table. **beat table**: `beats([...])`, the single source of shot times, `meta.shots` and review times.
-- **handoff**: the object that ends one shot and starts the next. **hold**: time when nothing moves so the viewer can read. **stop frame**: a shot's settled frame, used for slides and review.
+- **handoff**: the object that ends one shot and starts the next. **hold**: time when nothing moves so the viewer can read. **stop frame**: a shot's settled frame, shown in review.
 - **card**: one UI panel or piece of content drawn in the film's world. **extra**: an optional helper module added with `mografy add <extra>`. **template**: a ready-made beat added the same way. **reference film**: a finished film to learn from: installed in `examples/`, or a showcase film on https://www.mografy.app/showcase, downloaded with `mografy add <name>`.
 
 ## Choose the path
@@ -32,6 +32,7 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 | Small fix: copy, one timing, an asset, an export | [scene-authoring.md](references/scene-authoring.md) only | The existing scene; no new concept or storyboard |
 | New film, or redesigning a film's motion | [film-architecture.md](references/film-architecture.md), [motion-design.md](references/motion-design.md), [taste.md](references/taste.md), [examples.md](references/examples.md) | `mografy add film-starter <folder>` (downloaded from the showcase), or the closest reference film from the showcase list in examples.md |
 | Film from an app's screens: demo, tutorial, what's new, mobile preview, 重繪、介面簡化、只拍操作細節 | [product-walkthrough.md](references/product-walkthrough.md) | `mografy add walkthrough <project>` |
+| How-to or tutorial clips that teach a task step by step, one clip per step; 操作教學動畫、教學影片、使用教學、新手引導 | [how-to-film.md](references/how-to-film.md), [product-walkthrough.md](references/product-walkthrough.md) | `mografy add walkthrough <project>` |
 | Short product UI loop or hero (4–12 s, one to three actions): landing-page hero, feature card, phone moment, dashboard insight, faux UI, 假介面、產品動態、UI 動畫、介面舞台 | [ui-stage.md](references/ui-stage.md) | The closest of the ten `stage-*` reference films (`mografy add stage-invoices <folder>`; table in ui-stage.md), or `mografy add stage <project>` |
 | Short product or social video from standard beats: hook, subtitles, device screen, numbers, end card | [templates.md](references/templates.md) | `mografy add <template...> <project>` |
 | Camera moves on stills or key art, wipes, atmosphere | [camera-transitions.md](references/camera-transitions.md) | `mografy add cinema <project>` |
@@ -39,11 +40,11 @@ Precedence: the project's `style.md` overrides the defaults in [references/taste
 | Real 3D: a product that turns, depth, orbiting camera | [three-d.md](references/three-d.md) | `mografy add three <project>` |
 | Paper theatre, 紙劇場, 紙偶, 定格, a narrated concept explainer (心理學、效應), or a character puppet story | [examples.md](references/examples.md) (Paper theatre series) | Showcase films, downloaded by name: `mografy add paper-theatre-shadow <folder>` for an explainer, `paper-theatre-moon-rabbit-opera` / `paper-theatre-sea-moon` for a character film: study it, then build your own |
 | Music wanted and no track supplied | [music.md](references/music.md) | `mografy add music <project>` |
-| Slides, 簡報, Present mode, marking shots | [presentations.md](references/presentations.md) | The scene's beat table |
 | Aspect ratio, 9:16, export sizes and formats | [output.md](references/output.md) | `mografy.json` `aspectRatio` |
 | Exported file too large to share | [video-compression.md](references/video-compression.md) | `scripts/compress-video.py` |
 | Slow or choppy playback (卡, 不順, 掉幀), or `mografy check` warns about frame cost or motion | [performance.md](references/performance.md) | `mografy check --motion`: the slowest frames and the choppy moments it prints |
 | Logo sting or short intro; borrowing a built-in motif | [intro.md](references/intro.md), [built-in-components.md](references/built-in-components.md) | The component's source file |
+| Make a film editable in the timeline, layer an existing film, or the user changed it in the editor (timeline, colours, subtitles); 圖層、時間軸、設計系統 | [layers.md](references/layers.md) | `scenes/timeline.json` and `colors` in `mografy.json` |
 | Changing Mografy itself | [project.md](references/project.md) | The current checkout |
 
 When the request fits more than one row, read every matching reference. When it fits none, follow the steps below with the first two rows' references.
@@ -52,10 +53,10 @@ When the request fits more than one row, read every matching reference. When it 
 
 Each step names its output. Skip steps the request does not need, and say which ones you skipped.
 
-1. **Read the project.** `mografy.json`, the scene entry and its imports, `style.md`, `assets/`. If a project with an existing scene has no `style.md`, write one first from what the scene already does (its colour and type tokens, layout, motion character, timing), so your changes keep its look; tell the user you added it. Pick the closest reference film from [examples.md](references/examples.md) (fetch the showcase list it links when the installed films do not fit), add it, and read the files its table names.
+1. **Read the project.** `mografy.json` (including `colors`), the scene entry and its imports, `scenes/timeline.json` (what the user adjusted in the timeline), `style.md`, `assets/`. If a project with an existing scene has no `style.md`, write one first from what the scene already does (its colour and type tokens, layout, motion character, timing), so your changes keep its look; tell the user you added it. Pick the closest reference film from [examples.md](references/examples.md) (fetch the showcase list it links when the installed films do not fit), add it, and read the files its table names.
 2. **Brief.** Message, audience, length, aspect ratio, language of the on-screen copy (follow the brief; write plans in English), music. Infer what the request implies and state the assumptions. Output: the top of `storyboards/storyboard.md`.
 3. **Storyboard.** Read [storyboard.md](references/storyboard.md) and [animation-principles.md](references/animation-principles.md). First write the film's idea in one sentence: one visual thing that travels through every shot and causes each change (a thread of light that fills each cup in turn, a line that becomes every card's edge). A row of separate cards with crossfades is not an idea; a film without one looks like a template. Then fix the design system (type roles, palette, the layout repeated shots share) as tokens, following [taste.md](references/taste.md), and record it with the film's idea in `style.md`. Output: `style.md`, the shot table in `storyboards/storyboard.md` and a visual board (image generation in Codex, an Artifact or `storyboards/storyboard.html` in Claude). **Stop** here when the user asked only for a storyboard; when they asked for the film, continue without an approval step.
-4. **Build.** One world, one camera, one beat table ([film-architecture.md](references/film-architecture.md)). Take motion from `@mografy/runtime` and parts from the extras and templates above. Output: `scenes/`, `mografy.json` with `review.times` and `review.transitions` from the beat table.
+4. **Build.** One world, one camera, one beat table ([film-architecture.md](references/film-architecture.md)). Declare every part the user may want to adjust as a layer whose `in` and `out` come from the beat table ([layers.md](references/layers.md)). Take motion from `@mografy/runtime` and parts from the extras and templates above. Output: `scenes/`, `mografy.json` with `review.times` and `review.transitions` from the beat table.
 5. **Music** (only when wanted). Output: `music-src/music.json`, `assets/music.mp3`, `audio` in `mografy.json`.
 6. **Check and review.** Run `mografy check --motion [project]` and fix every warning (a deliberate cut it reports may stay); run `mografy review [project]` and look at every PNG, including each transition strip. Walk **Before delivery**. Output: the review PNGs and a short note of what you checked.
 7. **Export** only when asked: `mografy export [project] --format mp4|webm|lottie|svga` (settings in [output.md](references/output.md)). Output: a file in `renders/`.

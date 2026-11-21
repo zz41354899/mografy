@@ -22,14 +22,17 @@ export async function atomicWrite(path: string, data: string | Buffer | AsyncIte
 }
 
 const SOURCE = /\.(ts|mts|cts|js|mjs|cjs)$/;
+/** Data a scene imports, such as the timeline editor's scenes/timeline.json. */
+const DATA = /\.json$/;
 const RESERVED = new Set([PROJECT_STATE_DIR, 'renders', 'node_modules', '.git', 'assets']);
 /** Validate a project-relative scene source path from a client. */
-export function sourcePath(root: string, path: string) {
+export function sourcePath(root: string, path: string, data = false) {
   const parts = path.split('/');
   if (!path || isAbsolute(path) || path.includes('\\') || path.includes(':') || parts.some(p => !p || p === '.' || p === '..' || p.startsWith('.')))
     throw new Error(`Invalid source path: ${path}`);
   if (RESERVED.has(parts[0]!)) throw new Error(`Source files cannot live in ${parts[0]}/: ${path}`);
-  if (!SOURCE.test(path)) throw new Error(`Source files must be .ts or .js: ${path}`);
+  if (!SOURCE.test(path) && !(data && DATA.test(path))) throw new Error(`Source files must be .ts or .js: ${path}`);
+  if (data && path === 'mografy.json') throw new Error('mografy.json holds settings, not scene data');
   const file = resolve(root, path), local = relative(root, file);
   if (local.startsWith('..') || isAbsolute(local)) throw new Error(`Outside project: ${path}`);
   return file;

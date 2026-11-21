@@ -1,0 +1,7 @@
+{
+  "name": "mografy-package",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Canvas motion design for Claude Code and Codex: scenes in TypeScript, a live player, MP4/WebM/Lottie/SVGA export.",
+  "type": "module"
+}

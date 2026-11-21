@@ -28,12 +28,19 @@
     "fps": 30,
     "samples": 4,
     "mixing": "srgb",
+    "shutter": 360,
+    "sampleWindow": "after",
+    "adaptiveSamples": false,
+    "canvas": "cpu",
+    "dither": false,
     "bitrate": "12M",
     "glow": 0,
     "grain": 0,
+    "codec": "h265",
     "encoding": "two-pass",
     "preset": "medium",
     "crf": 18,
+    "hardwareQuality": 65,
     "includeAudio": true
   },
   "review": {
@@ -59,8 +66,8 @@
       },
       {
         "name": "Logo",
-        "start": 9.8,
-        "end": 11.4,
+        "start": 10.3,
+        "end": 11.9,
         "step": 0.1
       }
     ]

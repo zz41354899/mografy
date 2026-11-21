@@ -2,13 +2,13 @@
 import { projectPaths } from '@mografy/render/fs-util';
 import { createHash } from 'node:crypto';
 import { access, readFile, readdir } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
 import { atomicWrite, readJson } from './files.js';
 import { queueProjectWrite } from './files.js';
+import { installation } from './installation.js';
 
-export const COMPONENT_THUMBNAILS_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../thumbnails');
+export const COMPONENT_THUMBNAILS_DIR = installation.thumbnails;
 
 /** Git on Windows checks source out with CRLF; latin1 keeps every other byte as it was. Assets are compared as they are. */
 const comparable = (path: string, data: Buffer) => path.startsWith('scenes/') ? Buffer.from(data.toString('latin1').replaceAll('\r\n', '\n'), 'latin1') : data;
@@ -16,7 +16,7 @@ const comparable = (path: string, data: Buffer) => path.startsWith('scenes/') ? 
 /** Stable across clones and platforms; covers source files, assets and settings used by raw previews. */
 export async function thumbnailFingerprint(dir: string) {
   const project = validateSceneProject(JSON.parse(await readFile(join(dir, 'mografy.json'), 'utf8')));
-  const hash = createHash('sha256').update(JSON.stringify({ scene: project.scene, seed: project.seed, params: project.params, fonts: project.fonts, audio: project.audio, aspectRatio: project.aspectRatio }));
+  const hash = createHash('sha256').update(JSON.stringify({ scene: project.scene, seed: project.seed, params: project.params, fonts: project.fonts, audio: project.audio, aspectRatio: project.aspectRatio, colors: project.colors }));
   const walk = async (path: string): Promise<void> => {
     for (const entry of (await readdir(join(dir, path), { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
       const local = `${path}/${entry.name}`;

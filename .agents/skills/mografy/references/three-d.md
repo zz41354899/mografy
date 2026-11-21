@@ -1,6 +1,6 @@
 # 3D layers with Three.js
 
-[three.ts](https://github.com/zz41354899/mografy/blob/main/extras/three/three.ts) renders a [Three.js](https://threejs.org/) scene as a layer inside a normal Mografy frame: draw 2D backgrounds first, then the 3D layer, then type and overlays. [three-demo.ts](https://github.com/zz41354899/mografy/blob/main/extras/three/three-demo.ts) is an eight-second tour: a device with a drawn screen orbits into a hero pose among floating shapes.
+[three.ts](https://github.com/mografy/mografy/blob/main/extras/three/three.ts) renders a [Three.js](https://threejs.org/) scene as a layer inside a normal Mografy frame: draw 2D backgrounds first, then the 3D layer, then type and overlays. [three-demo.ts](https://github.com/mografy/mografy/blob/main/extras/three/three-demo.ts) is an eight-second tour: a device with a drawn screen orbits into a hero pose among floating shapes.
 
 ## When to use it
 
@@ -14,7 +14,7 @@ The helper and library are an optional extra, not part of the installed template
 mografy add three projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `scenes/three.ts`, `assets/three.module.js` and its licence. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/three/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It copies `scenes/three.ts`, `assets/three.module.js` and its licence. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/three/`.
 
 `three.module.js` is a single minified Three.js r186 bundle (about 0.8 MB, MIT) that also exports `GLTFLoader`, `RoomEnvironment` and `RoundedBoxGeometry`. It lives in `assets/` because scene modules may import only project sources and `@mografy/runtime`; `prepareStage` loads it at runtime from the project. Import the helper locally (`import { prepareStage, stage, orbit } from './three.js'`). Copy `three-demo.ts` too only when the user wants the tour.
 
@@ -80,4 +80,4 @@ export function renderFrame(ctx: FrameContext, time: number) {
   - End the `build` callback with `await renderer.compileAsync?.(scene, camera)` (make `build` async) so shaders compile in parallel during setup rather than on the first frames.
   - Create one texture for identical objects and share it; keep repeating textures at the size they are seen (256–512 px for small props). Set `generateMipmaps = false` on canvas textures that are redrawn during the film.
   - Move objects offstage instead of toggling `visible` when they leave for a few shots, if toggling changes what is compiled.
-- Bloom and glow around 3D objects go through the runtime's `bloom` on the 2D side, or a single post pass; see [performance.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md). Run `mografy check` after adding the stage and compare the frame cost with and without it.
+- Bloom and glow around 3D objects go through the runtime's `bloom` on the 2D side, or a single post pass; see [performance.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/performance.md). Run `mografy check` after adding the stage and compare the frame cost with and without it.

@@ -200,9 +200,9 @@ test('video + review: frame count, duration, audio, PSNR', { timeout: 300_000 },
   assert.ok(Math.abs(pcm.length / 2 / 8000 - 8) < 0.1, `audio padded to 8s, got ${pcm.length / 16000}s`);
 
   const review = await renderReview({ projectDir: dir, project: p, build, host, video: output });
-  // Stills, final frames and the slides sheet (always written), plus one strip per review transition.
-  assert.equal(review.files.length, 3 + p.review.transitions.length);
-  assert.ok(review.files.some(f => f.endsWith('-slides.png')), 'the slides sheet is always written');
+  // Stills and final frames, plus one strip per review transition; the shots sheet only for a scene that marks shots.
+  assert.equal(review.files.length, 2 + p.review.transitions.length);
+  assert.ok(!review.files.some(f => f.endsWith('-shots.png')), 'no shots sheet without meta.shots');
   assert.equal(review.comparisons.length, 4);
   for (const c of review.comparisons) assert.ok(c.psnr > 30, `frame ${c.frame} PSNR ${c.psnr}`);
   console.log('PSNR', review.comparisons.map(c => `#${c.frame}:${c.psnr}`).join(' '));

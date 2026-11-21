@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) | [繁體中文](CHANGELOG.zh-TW.md)
 
-Notable changes to Mografy. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
+Notable changes to Mografy. From **Mografy Triangulum v0.1.0**, releases are numbered and follow [semantic versioning](https://semver.org); `mografy --version` prints yours. Updates before v0.1.0 are listed by date below it. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
 
 Update from your Mografy checkout:
 
@@ -12,6 +12,32 @@ mografy update
 ```
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
+
+## Mografy Triangulum v0.1.0 — 2026-11-21
+
+The first numbered release.
+
+### Added
+
+- **A new editor** — a layer timeline: drag a layer to move it, drag its ends to trim it, and duplicate, hide, lock, rename, reorder or recolour it; each layer has an enter and an exit motion (fade, fade up, pop, blur in, wipe). Edits snap to beats, the playhead and other layers, can be undone, and are saved to `scenes/timeline.json`, so the scene code is never changed. ⌘K searches projects, layers and commands; the gear opens settings for language, playback, text size, shortcuts and MCP.
+- **Layers for every film** — a scene that marks its shots (`meta.shots`, or `slides.shots` left in an older `mografy.json`) gets one layer per shot with no change to its code. Moving a shot moves only that shot: a gap shows the background, and where shots overlap the one that starts later is on top. Scenes declare their own layers with `timeline()` from `@mografy/runtime`; the Skill's new layers reference explains how.
+- **How-to films** — the Skill's new how-to reference teaches a product task as an animation with one clip per step, for help centres, in-app hints and onboarding, plus a full cut. When you ask and give a test account, Claude or Codex operate the product with their built-in browser or computer use and capture every state; otherwise they work from your screenshots. The steps are redrawn with the walkthrough kit, each shot starts and ends on a still frame, and the export is cut into numbered step clips with stills and captions.
+- **Design system panel** — colour, motion, timing and type for the open film, beside a frame that plays: swap any colour the film draws (saved as `colors` in `mografy.json` and used by the player, review and every export), apply a motion to every layer at once or per layer, set each layer's start and length, and try the scene's number controls.
+
+### Changed
+
+- **Slim installation** — the install steps now check out only what the tool runs on (about 10 MB instead of about 240 MB with Git history). Templates, extras and the ten Stage reference films stay in the same repository and download from GitHub the first time `mografy add` needs them; `examples/catalog.json` lists each film's files. A full `git clone` still works, and `git sparse-checkout disable` turns a slim checkout into a full one.
+- **Present mode removed** — Mografy concentrates on making films: the Present mode, its slides, the presentation page, `mografy export --format html` and `pnpm sync:slides` are gone, with the Skill's presentations reference. Shots stay: `meta.shots` still marks each shot on the timeline, and `mografy review` now writes `review-<version>-shots.png` with each shot's stop frame (only for scenes that mark shots; Mografy no longer guesses them). A `slides` entry an older project has in mografy.json is kept and ignored.
+- **No Playwright at runtime** — Mografy now drives Chromium itself over the Chrome DevTools Protocol (a pipe, no port), so the installation no longer carries Playwright (about 19 MB). It renders in Playwright's headless shell when one is installed, as before, else in the Google Chrome or Microsoft Edge already on the computer, and downloads the shell only when there is neither. `MOGRAFY_BROWSER` points at any Chromium; `PLAYWRIGHT_CHANNEL=chrome` or `msedge` still works. The tests keep using Playwright to drive the player.
+- **The agent Skill installs on its own** — the npm package no longer carries the Skill: install it once with `npx skills add zz41354899/mografy -g` (the [skills CLI](https://github.com/vercel-labs/skills); `npx skills update` keeps it current), for Claude Code, Codex and other agents in every folder. `mografy dev` from the npm package says so when no agent can find the Skill, and project `AGENTS.md` pointers name the same command. A checkout keeps generating its own Skill in `.agents/skills/mografy`, which is also what the skills CLI installs from GitHub.
+- **npm package (in preparation)** — `pnpm pack:cli` builds a `mografy` npm package of about 2 MB (about 65 MB installed with its dependencies) from a checkout: only the built packages, the built-in components and the intro. It installs projects to `~/Mografy`, downloads FFmpeg and the Chromium shell on first use, and updates through npm. `pnpm test:package` installs and runs it. See [docs/npm-package.md](docs/npm-package.md).
+- **One place for installation paths** — every folder Mografy reads from its installation (built-in components, previews, reference films, runtime types, Skill, entry script) now comes from `installation` in `@mografy/server`.
+- **FFmpeg on first export** — FFmpeg is no longer installed with Mografy. Video exports use `ffmpeg` on PATH when it has every encoder they need, otherwise the first export downloads a pinned static build (checked by SHA-256, cached in `~/.mografy/tools`, shared by every installation) and the player shows the download as the first export stage. `mografy setup` downloads FFmpeg and the Chromium shell ahead of time; `mografy setup --check` shows what is used.
+- **Headless shell only** — `pnpm install` downloads Playwright's headless Chromium shell instead of the full Chromium; checks and exports already ran on the shell. Older installations can drop the full Chromium with `pnpm exec playwright uninstall` and `pnpm install`.
+
+## Updates before v0.1.0
+
+Before numbered releases, updates were published by date.
 
 ## 2026-11-09
 

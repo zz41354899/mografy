@@ -9,7 +9,7 @@ Read this before a storyboard and again before delivery. These are Mografy's def
 - **One action per shot**, 2.5–4 s per shot for UI and explanation, longer for a reading hold. Two actions at once split attention and neither reads.
 - **Length changes come from holds.** To hit a length, shorten or lengthen still holds; never speed up an action, because a rushed action looks like a glitch. If the copy cannot be read in the requested length, cut copy or say so; do not speed up the whole film.
 - **Camera and cursor.** Start a camera move up to 0.5 s before the action it serves; never move the camera during a click or a reading hold. Give a cursor up to 1.1 s per move on a gentle arc and let it rest on the control before clicking. The eye needs to arrive before the event.
-- **Smooth, not fast.** A move across more than half the frame takes at least 0.6 s, and an exit at least 0.4 s; ease through every key instead of stopping and starting again. A whip that crosses the frame in a few frames reads as a stutter on most screens, even when every frame renders on time. `mografy check --motion` finds the hard starts, hard stops and jumps ([performance.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md)).
+- **Smooth, not fast.** A move across more than half the frame takes at least 0.6 s, and an exit at least 0.4 s; ease through every key instead of stopping and starting again. A whip that crosses the frame in a few frames reads as a stutter on most screens, even when every frame renders on time. `mografy check --motion` finds the hard starts, hard stops and jumps ([performance.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/performance.md)).
 - **Overlap cuts.** Start the incoming action 0.2–0.5 s before the outgoing exit ends, so no frame is empty.
 
 ## Type and layout: legible at the size it is watched
@@ -18,7 +18,7 @@ Read this before a storyboard and again before delivery. These are Mografy's def
 - **Portrait (1080 × 1920):** headlines ≥ 110 px, captions ≥ 44 px, captions in the top third. Phones are held at arm's length and the bottom is covered by platform UI.
 - **Redrawn UI at 1.3–1.6× the app's own type size,** with 3–4 rows per list. A real screen shrunk into a frame is unreadable.
 - **Few words at once:** at most about 12 English words or 20 CJK characters on screen outside the product UI. More is a slide, not a film.
-- **Safe margins:** keep copy and logos at least 96 px from the sides and 72 px from the top and bottom in 16:9; use the portrait margins in [output.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md). Players and platforms crop and overlay the edges.
+- **Safe margins:** keep copy and logos at least 96 px from the sides and 72 px from the top and bottom in 16:9; use the portrait margins in [output.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/output.md). Players and platforms crop and overlay the edges.
 - **One card style:** one corner radius, one shadow, one padding (≥ 48 px inside a card) across the film. Mixed styles read as different products.
 - **No text over text.** Captions never overlap UI or other captions, and text never cross-dissolves over UI. Overlapping type is unreadable for the overlap's whole duration.
 
@@ -44,4 +44,4 @@ A film looks designed when every shot is built from the same few decisions. Writ
 ## Sound
 
 - **Sustained, warm music:** long pads, warm piano, one long bass note per bar, few hits on the moments that change the story. Busy patterns fight the picture.
-- **No sharp high sounds:** no bells, sparkles, ticks or pops; soft whooshes and low hits instead. They are tiring on repeat and on headphones. Details in [music.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/music.md).
+- **No sharp high sounds:** no bells, sparkles, ticks or pops; soft whooshes and low hits instead. They are tiring on repeat and on headphones. Details in [music.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/music.md).

@@ -4,4 +4,3 @@ packages:
 # Only these packages may run install scripts.
 allowBuilds:
   esbuild: true
-  ffmpeg-static: true
