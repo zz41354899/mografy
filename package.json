@@ -30,9 +30,8 @@
     "check": "pnpm build && pnpm typecheck && pnpm test",
     "mografy": "node packages/cli/bin/mografy.js",
     "install:tool": "pnpm install --filter mografy-workspace --filter \"./packages/**\"",
-    "postinstall": "pnpm build && playwright install chromium --only-shell && node packages/cli/bin/mografy.js install-command",
-    "bootstrap": "pnpm install",
-    "install-command": "node packages/cli/bin/mografy.js install-command"
+    "postinstall": "pnpm build && playwright install chromium --only-shell",
+    "bootstrap": "pnpm install"
   },
   "devDependencies": {
     "typescript": "7.0.2",

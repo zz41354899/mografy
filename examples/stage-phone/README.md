@@ -3,9 +3,9 @@
 A Mografy Stage reference film: 7.6 s loop, 9:16, English UI, light (look param: light, dark).
 
 ```sh
-mografy dev ./stage-phone
-mografy check ./stage-phone --motion
-mografy review ./stage-phone
+npx mografy dev ./stage-phone
+npx mografy check ./stage-phone --motion
+npx mografy review ./stage-phone
 ```
 
 - `scenes/main.ts`: the state, the layout, the script and the drawing. `scenes/stage.ts` is a copy of `extras/stage/stage.ts`.

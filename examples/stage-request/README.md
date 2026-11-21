@@ -3,9 +3,9 @@
 A Mografy Stage reference film: 10 s loop, 16:9, light, web + phone.
 
 ```sh
-mografy dev ./stage-request
-mografy check ./stage-request --motion
-mografy review ./stage-request
+npx mografy dev ./stage-request
+npx mografy check ./stage-request --motion
+npx mografy review ./stage-request
 ```
 
 - `scenes/main.ts`: the state, the layout, the script and the drawing. `scenes/stage.ts` is a copy of `extras/stage/stage.ts`.

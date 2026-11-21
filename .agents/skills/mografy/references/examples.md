@@ -2,21 +2,21 @@
 
 Reference films are finished films kept as references for quality. Before planning a new film, read the one whose brief is closest to yours, watch it in the player, and reuse its structure; then compare your own frames against it at review.
 
-- **In the repository's `examples/`**: `mografy-intro`, installed and listed in the player under Examples, and the ten `stage-*` films ([ui-stage.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/ui-stage.md)), listed in `examples/catalog.json` and downloaded from GitHub by `mografy add <name>` the first time (a full checkout has them locally).
-- **Showcase films** live on the website, not in the installation: watch them at **https://www.mografy.app/showcase** and download one by name with `mografy add <name> [folder]`. When a brief needs a longer film, a narrated explainer, 3D, or a model to start a multi-shot film from, fetch the showcase first: the page shows every film with its preview, and **https://www.mografy.app/showcase/films.json** lists the same films for agents (name, title, length, aspect ratio, what to read it for, where to look, download URL). Pick from that list, then download the closest one. The tables below describe the showcase films as of this Mografy version; the website's list wins when they differ.
+- **In the repository's `examples/`**: `mografy-intro`, installed and listed in the player under Examples, and the ten `stage-*` films ([ui-stage.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/ui-stage.md)), listed in `examples/catalog.json` and downloaded from GitHub by `npx mografy add <name>` the first time (a full checkout has them locally).
+- **Showcase films** live on the website, not in the installation: watch them at **https://www.mografy.app/showcase** and download one by name with `npx mografy add <name> [folder]`. When a brief needs a longer film, a narrated explainer, 3D, or a model to start a multi-shot film from, fetch the showcase first: the page shows every film with its preview, and **https://www.mografy.app/showcase/films.json** lists the same films for agents (name, title, length, aspect ratio, what to read it for, where to look, download URL). Pick from that list, then download the closest one. The tables below describe the showcase films as of this Mografy version; the website's list wins when they differ.
 
 They follow the [quality floor](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/SKILL.md) and the [film architecture](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md): drawing is a pure function of time, one table drives the shot times and `meta.shots`, and the runtime's `keys`, `cameraPath`, `layer`, `blurLayer`, `bloom` and `blurText` do the camera, fades, blur and glow. Each has a composed, sustained score in `music-src/` and its fonts and licences in `assets/`.
 
 ## Copy one to work on
 
 ```sh
-mografy add                           # list reference films, showcase films and helpers
-mografy add stage-invoices ./hero     # copy a Stage film (downloaded from GitHub when not checked out)
-mografy add film-starter ~/Films/new  # download a showcase film: the model for a new multi-shot film
-mografy add mografy-montage           # into the library (projects/mografy-montage when running from source)
+npx mografy add                           # list reference films, showcase films and helpers
+npx mografy add stage-invoices ./hero     # copy a Stage film (downloaded from GitHub when not checked out)
+npx mografy add film-starter ~/Films/new  # download a showcase film: the model for a new multi-shot film
+npx mografy add mografy-montage           # into the library (projects/mografy-montage when running from source)
 ```
 
-The copy is an ordinary project: open it with `mografy dev <folder>`, and edit, check, review and export it like any other. Never edit the films in `examples/` themselves; they are the reference other agents read. Stage and showcase downloads need a network connection; if it fails, the same zip is on the film's showcase page.
+The copy is an ordinary project: open it with `npx mografy dev <folder>`, and edit, check, review and export it like any other. Never edit the films in `examples/` themselves; they are the reference other agents read. Stage and showcase downloads need a network connection; if it fails, the same zip is on the film's showcase page.
 
 ## The films
 
@@ -57,14 +57,14 @@ Two character films use the same paper theatre language with a printed puppet in
 | `paper-theatre-moon-rabbit-opera` (showcase) | 60 s, the theatre built in real 3D inside an opera house, cut against flat 2D inserts | `world3d.ts` (`resetWorld`, `setHouse`, drapes, shadows drawn once per frame), `paper.ts` (`dieCut`, `on2`, 2D inserts, `chapterCard`) |
 | `paper-theatre-sea-moon` (showcase) | 72 s, full 3D undersea castle; the puppet is a printed card on threads, swapped by emotion; real dissolves | `world.ts` (cards, rim and mask passes), `castle.ts`, `theatre.ts` (pearl shell theatre), `post.ts`, `DISSOLVE` in `main.ts` |
 
-To make a new one: `mografy add paper-theatre-shadow <folder>` (or the closest film; it downloads from the showcase), keep the theatre, lamp, post and stop-motion rules, and replace the props, story, copy and narration with the new idea. For a character film start from the closer of the two and bring your own puppet art (one transparent PNG per pose). Re-subset the fonts after any copy change (`extras/cjk/subset-film-fonts.py`).
+To make a new one: `npx mografy add paper-theatre-shadow <folder>` (or the closest film; it downloads from the showcase), keep the theatre, lamp, post and stop-motion rules, and replace the props, story, copy and narration with the new idea. For a character film start from the closer of the two and bring your own puppet art (one transparent PNG per pose). Re-subset the fonts after any copy change (`extras/cjk/subset-film-fonts.py`).
 
 ## What to take from them
 
 - **Timing.** One table per film. Change a shot's end there and every key, shot stop and review time follows.
-- **Continuity.** Each shot ends on the geometry the next one starts from: the comet's head becomes the underline, the underline becomes the prompt pill, the pill becomes the window's field. Read the transitions in the montage (`mografy add mografy-montage`) before designing your own.
+- **Continuity.** Each shot ends on the geometry the next one starts from: the comet's head becomes the underline, the underline becomes the prompt pill, the pill becomes the window's field. Read the transitions in the montage (`npx mografy add mografy-montage`) before designing your own.
 - **Camera.** Moves start before the action, ease through every key and never stop on a pose that is not a story beat. Cards and windows have their own local transforms inside the camera.
-- **Cost.** Blur goes through layers or the text's shadow, glow through `bloom`, and buffers are pooled. Run `mografy check` on a copy to see what a frame costs, and keep your own film in the same range.
+- **Cost.** Blur goes through layers or the text's shadow, glow through `bloom`, and buffers are pooled. Run `npx mografy check` on a copy to see what a frame costs, and keep your own film in the same range.
 - **Taste.** Calm pacing, big type, still holds, one logo at the end, and sustained music without sharp high sounds; the numbers are in [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md). The project's `style.md` overrides them.
 
 Do not copy their copy, brand marks or music into another brand's film. Take the structure and the techniques, and build the new film from its own brief, assets and style.

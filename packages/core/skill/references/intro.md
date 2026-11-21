@@ -31,9 +31,9 @@ Save a project-specific English storyboard under `storyboards/` when requested, 
 From the owning repository, use:
 
 ```sh
-mografy dev examples/mografy-intro
-mografy check examples/mografy-intro
-mografy review examples/mografy-intro
+npx mografy dev examples/mografy-intro
+npx mografy check examples/mografy-intro
+npx mografy review examples/mografy-intro
 ```
 
-The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using `mografy export examples/mografy-intro --format mp4|webm|lottie|svga`.
+The existing review times are 1.8, 3.6, 5.4, 8.9, and 11.8 seconds. Transition strips cover 2.0–3.2, 8.4–9.4, and 9.8–11.4 seconds at 0.1-second steps. Inspect the generated PNGs, including output frames with sampling or effects. Validate repeat and random seeks, caption layout, chat-bubble stability, logo identity, and the final hold. Export only when requested, using `npx mografy export examples/mografy-intro --format mp4|webm|lottie|svga`.

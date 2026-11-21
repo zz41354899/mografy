@@ -15,10 +15,10 @@ Use plates from `cinema.ts` ([camera-transitions.md](camera-transitions.md)) whe
 The helper is an optional extra, not part of the installed template. If the project already has `scenes/walkthrough.ts`, read and reuse it. Otherwise copy it from the current Mografy checkout (`extras/walkthrough/`) or download it:
 
 ```sh
-mografy add walkthrough projects/<name>
+npx mografy add walkthrough projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/walkthrough/`.
+`npx mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/walkthrough/`.
 
 Import it locally (`import { createKit, camAt, withCamera as withCardZoom, cursorAt } from './walkthrough.js'`), and take `springs`, `cameraPath`, `withCamera`, `beats` and `blurText` from `@mografy/runtime`. The extra's `withCamera` is a card-local zoom, so rename it on import to keep it apart from the runtime's film camera. Copy `walkthrough-demo.ts` too when you want a working starting point; it shows every helper in context. For Chinese or Japanese UI copy, add the CJK fonts from [cjk-typography.md](cjk-typography.md) and put `"Noto Sans TC"` (or the project's CJK family) in the theme's `font` stack.
 
@@ -43,13 +43,13 @@ When the brief is unclear, ask which scenario it is and for how long; otherwise 
 2. **Choose the fidelity.** A *faithful rebuild* draws the whole app as it looks and films it with a camera; use it when viewers must recognise the real screens. A *simplified redraw* is the default when the user asks to redraw, simplify, or film only the interactions. Both use the real product: its layout logic, labels, colours and the order of states. Never invent features or screens.
 3. **Inventory each screenshot.** For every step write three lists: the *target* (the control the action touches: a field, button, row, dialog), the *context* needed to understand it (the card title, one neighbouring row), and *everything else* (navigation, filters, footers, badges, extra columns, tooltips).
 4. **Redraw.** Keep the brand tokens, the logo, the real labels and values of the target, its proportions and its state sequence (empty → focus → typing → loading → result → success). Drop everything else, collapse lists to 3–4 rows and tables to the columns the story needs, and turn copy the action does not need into `skeleton` bars. Raise type to about 1.3–1.6× the app's size so it reads at 1080p, keep at least 48 px of padding inside a card, and use one card style throughout ([taste.md](taste.md)). Build every step from the same kit parts so the film stays consistent.
-5. **Approve before animating.** Render one still per step (from a storyboard page or `mografy review`) and put it beside its screenshot in a sheet: screenshot | redraw. Show it to the user and adjust what to keep or drop before the motion work.
+5. **Approve before animating.** Render one still per step (from a storyboard page or `npx mografy review`) and put it beside its screenshot in a sheet: screenshot | redraw. Show it to the user and adjust what to keep or drop before the motion work.
 6. **Film one action per shot.** Show the action, not just its arrival: the caret typing, the button squashing, rows sliding in, numbers counting up, a check mark drawing, a status chip changing colour. Hold each result 0.6–1.0 s before the next move.
 7. **Hand off between shots.** The control that finished the step grows into the next card (`kit.grow`): a button into a dialog, the send button into the sent message, a picked row into the field it fills, a copied link into the phone that opens it. Avoid plain cuts and cross-dissolves of text over UI.
 8. **One film camera, a local zoom per card.** Lay the cards out in one world and move one `cameraPath` across it ([film-architecture.md](film-architecture.md)); it carries the hand-offs from card to card. Inside each card's own transform, give the card a local zoom from its own `camAt` keys: hold, push in on the control about to be used (zoom 1.3–1.9), click, then pull back as the next card arrives. The cursor keys use functions of time so the pointer stays on its target while either moves.
 9. **Opener and ending.** Open on the brand (icon, title) and let its logo match-cut into the logo on the first card. End on the logo, the tagline and the public URL. Ask the user for the official tagline and URL.
 10. **Music and timing.** Follow [music.md](music.md) when the film needs a score, and put the clicks on bar lines. To change the length without rushing actions, borrow time from holds.
-11. **Verify.** `mografy check`, then `mografy review` with a transition strip over every hand-off. Look for overlapping cards, a push-in that crops the control, blank frames during a camera move, text too small at 1080p, and a cursor that drifts off its target. Show the user a preview with music before the final export.
+11. **Verify.** `npx mografy check`, then `npx mografy review` with a transition strip over every hand-off. Look for overlapping cards, a push-in that crops the control, blank frames during a camera move, text too small at 1080p, and a cursor that drifts off its target. Show the user a preview with music before the final export.
 
 ## API
 

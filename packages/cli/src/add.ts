@@ -10,15 +10,6 @@ import { addTemplate, isTemplate, listTemplates, printTemplate, printTemplatesDo
 export type AddKind = 'film' | 'helper' | 'template';
 export interface AddPlan { films: string[]; helpers: string[]; templates?: string[]; target?: string }
 
-/** What `mografy install-command` suggests next: [arguments, why]. Films first, then helpers for a project. */
-const SUGGESTED: [string, string][] = [
-  ['hook-impact cta-endcard projects/my-post', 'Start a 9:16 post from Mografy Templates (creates the project)'],
-  ['stage-invoices', 'Start a product UI loop from a Stage reference film'],
-  ['film-starter', 'Download the 20 s model film from the showcase: one camera, one shot table, one light to follow'],
-  ['mografy-montage', 'Download a 60 s reference film from the showcase to watch and study'],
-  ['music cjk', 'In a project: the score generator, Chinese and Japanese type'],
-];
-
 export async function addKind(name: string): Promise<AddKind | undefined> {
   if (EXTRAS[name]) return 'helper';
   if ((await listExamples()).some(e => e.name === name) || isShowcaseFilm(name)) return 'film';
@@ -101,12 +92,3 @@ export async function runAdd(plan: AddPlan, workspaceRoot: string, target: (name
   printTemplatesDone(dir, templates, created, aspect, created ? templates.filter(id => all.find(s => s.id === id)!.aspect !== aspect) : []);
 }
 
-export async function addSuggestions() {
-  const films = new Set((await listExamples()).map(e => e.name)), templates = new Set((await listTemplates(ROOT)).map(t => t.id));
-  // Every name must exist in this installation; a trailing folder (projects/…) is not a name.
-  const rows = SUGGESTED.filter(([args]) => args.split(' ').filter(name => !name.includes('/')).every(name => EXTRAS[name] || films.has(name) || isShowcaseFilm(name) || templates.has(name)));
-  if (!rows.length) return '';
-  const all: [string, string][] = [...rows.map(([args, why]): [string, string] => [`mografy add ${args}`, why]), ['mografy add', 'List every template, reference film and helper']];
-  const width = Math.max(...all.map(([command]) => command.length));
-  return `\n\nNext, add what your films need:\n${all.map(([command, why]) => `  ${command.padEnd(width)}  ${why}`).join('\n')}`;
-}

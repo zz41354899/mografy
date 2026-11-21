@@ -2,7 +2,7 @@
 
 This folder is a Mografy project. Animation content lives only in scene modules (normally `scenes/main.ts`). `mografy.json` stores project settings; never put layers, keyframes, or animation data in it.
 
-Run `mografy dev` to open the player. After a file change passes compilation and a real Chromium trial render, the player switches to the new version and stays at the same time.
+Run `npx mografy dev` to open the player. After a file change passes compilation and a real Chromium trial render, the player switches to the new version and stays at the same time.
 
 ## File format
 
@@ -30,7 +30,7 @@ export function renderFrame(ctx: FrameContext, time: number, p: any) {
 }
 ```
 
-This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](film-architecture.md) and start from the `film-starter` showcase film (`mografy add film-starter <folder>` downloads it).
+This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](film-architecture.md) and start from the `film-starter` showcase film (`npx mografy add film-starter <folder>` downloads it).
 
 ## Aspect ratio
 
@@ -82,7 +82,7 @@ export const meta = { width: 1920, height: 1080, duration: grid.onBar(12), fps: 
 const LOGO_IN = grid.onBar(10, 2);             // bar 10, beat 3
 ```
 
-`grid.onBar(n, k)` is the start of bar `n` plus `k` beats, `grid.onBeat(n)` a beat, and `grid.snap(t)` the nearest beat to a hand-picked moment. `ctx.beat(time)` returns `{ beat, bar, beatInBar, phase, period }` from the project audio, or from `meta.tempo` when the project has no audio yet, so pulses written against it work before the music exists. Keep `audio.bpm`, `audio.offset` and `audio.beatsPerBar` in mografy.json equal to `meta.tempo`; `mografy check` reports any difference. When the tempo changes, change `meta.tempo` only and every cut moves with it.
+`grid.onBar(n, k)` is the start of bar `n` plus `k` beats, `grid.onBeat(n)` a beat, and `grid.snap(t)` the nearest beat to a hand-picked moment. `ctx.beat(time)` returns `{ beat, bar, beatInBar, phase, period }` from the project audio, or from `meta.tempo` when the project has no audio yet, so pulses written against it work before the music exists. Keep `audio.bpm`, `audio.offset` and `audio.beatsPerBar` in mografy.json equal to `meta.tempo`; `npx mografy check` reports any difference. When the tempo changes, change `meta.tempo` only and every cut moves with it.
 
 ## FrameContext
 
@@ -210,19 +210,19 @@ New projects include `scenes/components.ts`, `scenes/social-components.ts`, and 
 
 ## Edit and visual-review workflow
 
-For a new animation, create the project first with `mografy init projects/<name>` (an internal command for agents; it starts as a blank stage with the component modules), then replace `scenes/main.ts` and open it with `mografy dev projects/<name>` so the running player switches to it. `mografy dev` only opens existing projects and fails on a folder without `mografy.json`. Do not tell the user to run `init` themselves.
+For a new animation, create the project first with `npx mografy init projects/<name>` (an internal command for agents; it starts as a blank stage with the component modules), then replace `scenes/main.ts` and open it with `npx mografy dev projects/<name>` so the running player switches to it. `npx mografy dev` only opens existing projects and fails on a folder without `mografy.json`. Do not tell the user to run `init` themselves.
 
 1. Read `mografy.json`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
 2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render and review settings.
-3. Run `mografy check [project]`. This compiles the scene, trial-renders it in real Chromium and measures frame cost. Fix every reported error, and every `!` frame-cost warning, before judging the design.
-4. Run `mografy review [project]`. Inspect every generated PNG in `renders/`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
+3. Run `npx mografy check [project]`. This compiles the scene, trial-renders it in real Chromium and measures frame cost. Fix every reported error, and every `!` frame-cost warning, before judging the design.
+4. Run `npx mografy review [project]`. Inspect every generated PNG in `renders/`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
 5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity (the followed object is visible in every frame of a transition strip, nothing jumps, no frame is empty), and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
-6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use `mografy dev [project]` when the user should watch the live result.
-7. Export with `mografy export [project] --format mp4|webm|lottie|svga` when the user asks for a file. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `mografy dev` is running, player exports also print progress in that terminal and can be stopped with `mografy export [project] --cancel`.
+6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use `npx mografy dev [project]` when the user should watch the live result.
+7. Export with `npx mografy export [project] --format mp4|webm|lottie|svga` when the user asks for a file. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `npx mografy dev` is running, player exports also print progress in that terminal and can be stopped with `npx mografy export [project] --cancel`.
 
 ## Shots
 
-Export `meta.shots` (`[{ end, stop?, title? }, …]`, from the beat table) so the player's timeline marks each shot and `mografy review` writes `review-<version>-shots.png` with the frame each one settles on. `stop` is that settled frame; by default one frame before `end`. Video export ignores shots.
+Export `meta.shots` (`[{ end, stop?, title? }, …]`, from the beat table) so the player's timeline marks each shot and `npx mografy review` writes `review-<version>-shots.png` with the frame each one settles on. `stop` is that settled frame; by default one frame before `end`. Video export ignores shots.
 
 Only important subtitles belong in `role: 'subtitle'` params. Let the user edit those in Scene → Subtitles; make other copy changes in source when requested.
 

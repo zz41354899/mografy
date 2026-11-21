@@ -4,9 +4,9 @@ Most people never need these settings. A default installation creates projects i
 
 ## The mografy command
 
-`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders where `pnpm install` has run (it records the checkout in `~/.mografy/trusted-checkouts`), the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. The launcher itself finds the checkout each time it runs: if the installing checkout was moved or deleted, it still works from inside any other checkout, and outside one it prints the single repair command (`node packages/cli/bin/mografy.js install-command`, run from your Mografy folder) instead of a Node stack trace. It uses `node` from PATH, so upgrading Node does not break it. Run `mografy update --check` to check the installation selected by the launcher, or `mografy update` to update it and restart its active player. The command prints the checkout path and revision. Older installations need a one-time `git pull --ff-only` and `pnpm install` after stopping the player. The updater handles shared Skill synchronization automatically.
+`install-command` installs a launcher into a writable PATH directory. When run inside a Mografy checkout or its subfolders where `pnpm install` has run (it records the checkout in `~/.mografy/trusted-checkouts`), the command uses that checkout's build, even if the PATH launcher was installed by an older clone. An unbuilt checkout reports the required install/build commands. Outside a checkout, it uses the installation that created the launcher. The launcher itself finds the checkout each time it runs: if the installing checkout was moved or deleted, it still works from inside any other checkout, and outside one it prints the single repair command (`node packages/cli/bin/mografy.js install-command`, run from your Mografy folder) instead of a Node stack trace. It uses `node` from PATH, so upgrading Node does not break it. Run `npx mografy update --check` to check the installation selected by the launcher, or `npx mografy update` to update it and restart its active player. The command prints the checkout path and revision. Older installations need a one-time `git pull --ff-only` and `pnpm install` after stopping the player. The updater handles shared Skill synchronization automatically.
 
-Inside the source checkout, `mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
+Inside the source checkout, `npx mografy dev` opens the current project when the folder contains `mografy.json`, otherwise the last project used by that installation. First launch opens Stagger text and initializes the sixteen independent built-in animations. Outside the checkout, pass a project path or run the command from a folder containing `mografy.json`.
 
 ## Where projects live
 
@@ -16,7 +16,7 @@ All paths are resolved on your computer. Explicit project arguments resolve from
 
 ```sh
 export MOGRAFY_HOME="$HOME/Animations"
-mografy dev
+npx mografy dev
 ```
 
 Each installation keeps its own recent-project and active-player state under `~/.mografy/installations/`.
@@ -28,15 +28,15 @@ Each installation keeps its own recent-project and active-player state under `~/
 | `MOGRAFY_HOME` | Project library directory |
 | `MOGRAFY_PROJECT` | Default project when no path is passed; explicit paths take priority |
 | `MOGRAFY_STATE` | State directory; using the same override across installations shares their history and active player |
-| `MOGRAFY_FFMPEG` | FFmpeg executable override. Without it, video exports use an FFmpeg Mografy downloaded earlier, else `ffmpeg` on PATH when it has every encoder Mografy uses (libx264, libx265, libvpx-vp9, prores_ks, AAC), else they download a pinned static build (about 20–30 MB, checked by SHA-256) on the first export. `mografy setup` downloads it ahead of time; `mografy setup --check` shows which one is used. Point it at a build with your GPU's encoders (NVENC, Quick Sync, AMF, VA-API) if the downloaded one lacks them; the `fast` preset uses whichever works |
-| `MOGRAFY_BROWSER` | Chromium-based browser to render in (a path to its executable). Without it: Playwright's headless shell when one is installed (a checkout's `pnpm install` sets it up), else Google Chrome, Microsoft Edge or Chromium from their usual install locations, else the headless shell is downloaded once. `PLAYWRIGHT_CHANNEL=chrome` or `msedge` picks the installed Chrome or Edge instead. `mografy setup --check` shows which one is used |
+| `MOGRAFY_FFMPEG` | FFmpeg executable override. Without it, video exports use an FFmpeg Mografy downloaded earlier, else `ffmpeg` on PATH when it has every encoder Mografy uses (libx264, libx265, libvpx-vp9, prores_ks, AAC), else they download a pinned static build (about 20–30 MB, checked by SHA-256) on the first export. `npx mografy setup` downloads it ahead of time; `npx mografy setup --check` shows which one is used. Point it at a build with your GPU's encoders (NVENC, Quick Sync, AMF, VA-API) if the downloaded one lacks them; the `fast` preset uses whichever works |
+| `MOGRAFY_BROWSER` | Chromium-based browser to render in (a path to its executable). Without it: Playwright's headless shell when one is installed (a checkout's `pnpm install` sets it up), else Google Chrome, Microsoft Edge or Chromium from their usual install locations, else the headless shell is downloaded once. `PLAYWRIGHT_CHANNEL=chrome` or `msedge` picks the installed Chrome or Edge instead. `npx mografy setup --check` shows which one is used |
 | `MOGRAFY_TOOLS` | Folder for downloaded tools (default: `~/.mografy/tools`, shared by every installation on the machine). A project made with `npx mografy@latest init` runs its own copy of Mografy, which uses `node_modules/.cache/mografy/tools` inside the project instead, and puts a Chromium shell (only needed without Chrome or Edge) in `node_modules/.cache/mografy/browsers` |
 | `MOGRAFY_SYSTEM_FFMPEG` | `0` never uses the `ffmpeg` on PATH and downloads Mografy's pinned build instead. A project's own copy of Mografy sets it, so its exports do not depend on what is on PATH |
 | `MOGRAFY_CANVAS` | `cpu` (default) or `gpu`: canvas backing for headless rendering, checks and review. Video exports follow `render.canvas` instead (the `fast` preset sets `gpu`). `cpu` gives identical pixels on every machine; `gpu` uses Metal on macOS and Direct3D 11 on Windows, and its edges may differ slightly |
 
 ## Export settings
 
-Video export settings live under `render` in `mografy.json`; the Export dialog and `mografy export --preset` override them for one export without saving.
+Video export settings live under `render` in `mografy.json`; the Export dialog and `npx mografy export --preset` override them for one export without saving.
 
 | Setting | Default | Purpose |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ Video export settings live under `render` in `mografy.json`; the Export dialog a
 | `crf`, `preset`, `bitrate` | `18`, `medium`, `12M` | Software encoder quality and speed; MP4 values are on the H.264 scale |
 | `hardwareQuality` | `65` | Hardware encoder quality, 1–100 |
 | `canvas` | `cpu` | Where export frames are drawn: `cpu` or `gpu` (macOS and Windows; elsewhere `cpu`) |
-| `workers` | `auto` | Parallel capture segments, or a number from 1 to 8. `auto`: one per two CPU cores (at most 6), within 40% of the computer's memory (0.9 GB shared plus about 1.3 GB per segment at 1080p). `1` uses the least memory; `mografy export --workers 1` sets it for one export |
+| `workers` | `auto` | Parallel capture segments, or a number from 1 to 8. `auto`: one per two CPU cores (at most 6), within 40% of the computer's memory (0.9 GB shared plus about 1.3 GB per segment at 1080p). `1` uses the least memory; `npx mografy export --workers 1` sets it for one export |
 | `samples`, `mixing` | `4`, `srgb` | Motion samples per frame and the space they mix in |
 | `shutter` | `360` | Shutter angle in degrees; `180` gives shorter, film-like motion blur |
 | `sampleWindow` | `after` | `centred` places each frame's samples around its own time, in step with the audio |

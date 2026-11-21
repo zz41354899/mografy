@@ -58,7 +58,7 @@ Treat the easing and text-duration estimates in scene authoring as starting heur
 
 ## Review design separately from technical correctness
 
-Run the existing `mografy check` and `mografy review` workflow. Technical validity, deterministic seeking, loop equality, or successful encoding proves those properties only. Judge the actual rendered animation against the visual direction:
+Run the existing `npx mografy check` and `npx mografy review` workflow. Technical validity, deterministic seeking, loop equality, or successful encoding proves those properties only. Judge the actual rendered animation against the visual direction:
 
 | Criterion | Evidence to inspect |
 | --- | --- |

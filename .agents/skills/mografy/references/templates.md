@@ -24,14 +24,14 @@ a 16:9 film.
 ## Add templates
 
 ```sh
-mografy add hook-impact three-steps cta-endcard projects/<name>
+npx mografy add hook-impact three-steps cta-endcard projects/<name>
 ```
 
-- When the folder is not a project yet, `mografy add` creates it: a project with the templates' aspect ratio, a
+- When the folder is not a project yet, `npx mografy add` creates it: a project with the templates' aspect ratio, a
   `scenes/main.ts` that plays the templates in the order given, output glow and grain off, and review times. This is a
-  complete way to start a film; open it with `mografy dev projects/<name>`.
+  complete way to start a film; open it with `npx mografy dev projects/<name>`.
 - Without a folder, inside a project, the templates go into that project. Outside a project, the first template names a new
-  project in the library. `mografy add` never falls back to another (last opened) project.
+  project in the library. `npx mografy add` never falls back to another (last opened) project.
 - Each template lands in `scenes/templates/<id>.ts` with the shared `kit.ts`, `editorial.ts` and `montage.ts`. Inter
   (500–800) and Anton are copied to `assets/` with their licences and registered under `fonts` in `mografy.json`.
   Files the user changed are kept unless `--force` is passed. If the project already has `scenes/templates/`, read
@@ -77,9 +77,9 @@ cuts.
   exists; the agent hint names the file.
 - Brand templates draw a placeholder mark. Replace it with the real logo (load `assets/logo.png` in `setup` and draw it
   in the same box).
-- The fonts are Latin subsets. For Chinese or Japanese copy, add `mografy add cjk` and a CJK font, and check the
+- The fonts are Latin subsets. For Chinese or Japanese copy, add `npx mografy add cjk` and a CJK font, and check the
   frames for fallback glyphs.
-- After editing, run `mografy check` and `mografy review` and look at the stills, as for any scene.
+- After editing, run `npx mografy check` and `npx mografy review` and look at the stills, as for any scene.
 
 ## Catalog
 

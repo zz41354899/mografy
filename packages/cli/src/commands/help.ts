@@ -43,7 +43,6 @@ export function helpText(color: boolean) {
     section('Manage', [
       row('mografy stop [project]', "Stop a project's player"),
       row('mografy update [--check]', 'Update Mografy, or only check for updates'),
-      row('mografy install-command', 'Put the mografy command on PATH'),
       row('mografy setup [ffmpeg|chromium]', 'Download FFmpeg and the Chromium shell now, not on first use'),
       row('mografy setup --check', 'Show which FFmpeg and Chromium exports use'),
       row('mografy mcp', 'Local MCP server on stdio: check, frames, review, export for MCP clients'),

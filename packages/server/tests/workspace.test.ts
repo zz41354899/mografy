@@ -46,6 +46,7 @@ test('projects: create in the library, remember, list without duplicates', async
     assert.match(await readFile(join(a, 'AGENTS.md'), 'utf8'), /renderFrame/);
     const outside = await createProject(join(sandbox, 'elsewhere'), 'Elsewhere');
     await rememberProject(outside);
+    await rememberProject(a); // opened, but it lives in the library: it stays in the library section
     const list = await listProjects(a);
     const mine = list.projects.filter(p => p.kind !== 'example' && p.kind !== 'component');
     assert.deepEqual(mine.map(p => [p.name, p.kind]), [['Elsewhere', 'recent'], ['Intro', 'library'], ['Intro', 'library']]);

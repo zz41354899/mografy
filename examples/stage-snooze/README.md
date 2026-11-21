@@ -3,9 +3,9 @@
 A Mografy Stage reference film: 8 s loop, 16:9, light (look param: light, dark, minimal), quiet card.
 
 ```sh
-mografy dev ./stage-snooze
-mografy check ./stage-snooze --motion
-mografy review ./stage-snooze
+npx mografy dev ./stage-snooze
+npx mografy check ./stage-snooze --motion
+npx mografy review ./stage-snooze
 ```
 
 - `scenes/main.ts`: the state, the layout, the script and the drawing. `scenes/stage.ts` is a copy of `extras/stage/stage.ts`.

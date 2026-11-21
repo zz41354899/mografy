@@ -3,9 +3,9 @@
 A Mografy Stage reference film: 5.7 s loop, 16:9, dark (look param: dark, light), no cursor.
 
 ```sh
-mografy dev ./stage-bento
-mografy check ./stage-bento --motion
-mografy review ./stage-bento
+npx mografy dev ./stage-bento
+npx mografy check ./stage-bento --motion
+npx mografy review ./stage-bento
 ```
 
 - `scenes/main.ts`: the state, the layout, the script and the drawing. `scenes/stage.ts` is a copy of `extras/stage/stage.ts`.

@@ -5,16 +5,16 @@ Everything about exporting a film: presets, codecs, sizes, fit, frame rates and 
 Export from the player or CLI:
 
 ```sh
-mografy export ./projects/my-animation --format mp4
-mografy export ./projects/my-animation --format mp4 --codec h264
-mografy export ./projects/my-animation --preset fast
-mografy export ./projects/my-animation --preset master
-mografy export ./projects/my-animation --format webm
-mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
-mografy export ./projects/my-animation --format lottie -o preview.lottie.json
-mografy export ./projects/my-animation --format svga -o preview.svga
-mografy export ./projects/intro ./projects/launch --preset share   # batch: one after another
-mografy export --all                                             # batch: every project in projects/
+npx mografy export ./projects/my-animation --format mp4
+npx mografy export ./projects/my-animation --format mp4 --codec h264
+npx mografy export ./projects/my-animation --preset fast
+npx mografy export ./projects/my-animation --preset master
+npx mografy export ./projects/my-animation --format webm
+npx mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
+npx mografy export ./projects/my-animation --format lottie -o preview.lottie.json
+npx mografy export ./projects/my-animation --format svga -o preview.svga
+npx mografy export ./projects/intro ./projects/launch --preset share   # batch: one after another
+npx mografy export --all                                             # batch: every project in projects/
 ```
 
 **Batch export.** Name several projects, or `--all [folder]` for every project in a folder (default: your projects folder; folders starting with `_` are skipped). They export one after another with the same options, share one Chromium, and a project that fails is reported while the rest go on; Ctrl+C stops the batch and prints a summary. In the player, **Batch** next to **Export** opens the batch export dialog: tick films, choose format, encoder, resolution and frame rate (*Use less memory* is a switch), and they queue in the background; a card in the corner follows the queue while the dialog is closed, and switching projects does not stop it.
@@ -84,4 +84,4 @@ After starting a player export, the same dialog shows an animated robot, actual 
 
 Completed MP4 and WebM videos can be played and downloaded in the dialog. **Done** dismisses the result, and **Last export** reopens it while the player retains that job. **Export** opens fresh settings. Failed or cancelled jobs offer **Settings** and, for exports started in this dialog, **Retry**.
 
-Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
+Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `npx mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.

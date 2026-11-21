@@ -1,10 +1,10 @@
 # The Mografy MCP tools
 
-`mografy mcp` runs a local MCP server over stdio, so an agent can make and check films through tool calls instead of a shell. Connect it once:
+`npx mografy mcp` runs a local MCP server over stdio, so an agent can make and check films through tool calls instead of a shell. Connect it once:
 
 ```sh
-claude mcp add mografy -- mografy mcp
-codex mcp add mografy -- mografy mcp
+claude mcp add mografy -- npx mografy mcp
+codex mcp add mografy -- npx mografy mcp
 ```
 
 Every tool takes `project`: an absolute folder, or a folder name from `list_projects`; it defaults to `MOGRAFY_PROJECT` or the current folder. While the player has the project open, the tools work through the player, so the user sees each change there; otherwise the server opens the project itself and rebuilds it from disk before each call.
@@ -18,11 +18,11 @@ Every tool takes `project`: an absolute folder, or a folder name from `list_proj
 | `create_project` | (the player's New project) | Start a project from the starter scene; `aspect_ratio: "9:16"` for a portrait film. Then write `style.md`, the scene, and check it |
 | `read_source` | (read the files) | Read the scene entry and every file of its current build |
 | `write_source` | (edit the files) | Replace scene files. They are compiled and trial-rendered first and written only if that passes; a failure returns the error and changes nothing |
-| `check` | `mografy check [--motion]` | Shot table, tempo, frame cost, `style.md`; `motion: true` adds the jump, hard start and hard stop scan |
-| `render_frame` | (none; `mografy review` writes sheets) | Look at one moment as a PNG; `kind: "output"` is the exported frame, `"raw"` the scene at exactly that time |
-| `review` | `mografy review` | Write the stop-frame and transition sheets to `renders/` and return them as images |
-| `open_player` | `mografy dev` | Show the project in the player, or switch the open player to it |
-| `export` | `mografy export` | Write a file to `renders/` (only when the user asks for one); `format`, `preset`, `codec`, `orientation`, `output` |
+| `check` | `npx mografy check [--motion]` | Shot table, tempo, frame cost, `style.md`; `motion: true` adds the jump, hard start and hard stop scan |
+| `render_frame` | (none; `npx mografy review` writes sheets) | Look at one moment as a PNG; `kind: "output"` is the exported frame, `"raw"` the scene at exactly that time |
+| `review` | `npx mografy review` | Write the stop-frame and transition sheets to `renders/` and return them as images |
+| `open_player` | `npx mografy dev` | Show the project in the player, or switch the open player to it |
+| `export` | `npx mografy export` | Write a file to `renders/` (only when the user asks for one); `format`, `preset`, `codec`, `orientation`, `output` |
 | `read_guide` | (this Skill) | Read `SKILL.md` or a reference, when the Skill is not installed for the host |
 
 ## How to work with them

@@ -1,6 +1,6 @@
 # Film architecture: one world, one camera, one table
 
-Read this before writing any animation with more than one shot or a moving camera. It is how a film stays continuous: the viewer follows one thing from the first frame to the last, and nothing resets between shots. The model is the `film-starter` showcase film (`scenes/main.ts`, about 270 lines; `mografy add film-starter <folder>` downloads the whole project, fonts included): read it before writing a new film and copy its structure, or start the new film from the download. For finished films at full length (a 60 s promo, a 42 s teaser, a 71 s story), see [examples.md](examples.md).
+Read this before writing any animation with more than one shot or a moving camera. It is how a film stays continuous: the viewer follows one thing from the first frame to the last, and nothing resets between shots. The model is the `film-starter` showcase film (`scenes/main.ts`, about 270 lines; `npx mografy add film-starter <folder>` downloads the whole project, fonts included): read it before writing a new film and copy its structure, or start the new film from the download. For finished films at full length (a 60 s promo, a 42 s teaser, a 71 s story), see [examples.md](examples.md).
 
 ## The shape of a film module
 
@@ -78,4 +78,4 @@ The board then shows the actual pixels of the film at each stop, and the scene i
 
 ## Review
 
-Add `BEATS.reviewTimes` to `review.times` and `BEATS.transitions` to `review.transitions` (step 0.033 s), run `mografy check` and `mografy review`, and look at every transition strip. For each handoff confirm: the followed object is visible in every frame of the strip, nothing jumps between consecutive frames, no frame is empty, and the camera does not stop at a key that is not a story beat.
+Add `BEATS.reviewTimes` to `review.times` and `BEATS.transitions` to `review.transitions` (step 0.033 s), run `npx mografy check` and `npx mografy review`, and look at every transition strip. For each handoff confirm: the followed object is visible in every frame of the strip, nothing jumps between consecutive frames, no frame is empty, and the camera does not stop at a key that is not a story beat.

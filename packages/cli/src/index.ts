@@ -4,7 +4,6 @@ import { sendApi } from '@mografy/core';
 import { createProject, ensureAgentFiles, findServer, installation, libraryDir, rememberProject } from '@mografy/server';
 import { displayPath, workspaceRoot } from './paths.js';
 import { exportBatch, exportProject, projectsIn } from './export.js';
-import { installCommand } from './launcher.js';
 import { updateInstallation } from './update.js';
 import { packageUpdate } from './package-update.js';
 import { refreshSkill } from './skills.js';
@@ -27,7 +26,7 @@ export { openBrowser };
 export async function main(argv = process.argv.slice(2)) {
   useProjectTools();
   const { flags, rest } = parse(argv);
-  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'setup', 'mcp', 'help']);
+  const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'update', 'add', 'setup', 'mcp', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
   const explicit = rest[0] !== undefined;
   if (argv.includes('--help') || argv.includes('-h') || command === 'help') { console.log(helpText(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR)); return; }
@@ -54,11 +53,6 @@ export async function main(argv = process.argv.slice(2)) {
     if (rest.length) throw new Error('Usage: mografy update [--check] (updates the executing installation).');
     if (installation.kind === 'package') return packageUpdate(flags.updateCheck);
     return updateInstallation(workspaceRoot, flags.updateCheck);
-  }
-  // Installation must not initialize components or consult a previous project's state.
-  if (command === 'install-command') {
-    if (installation.kind === 'package') { console.log('npm already put the mografy command on PATH.'); return; }
-    return installCommand(workspaceRoot);
   }
   if (command === 'add') {
     if (!rest.length) { console.log(await addList()); return; }

@@ -47,7 +47,7 @@ export const meta = { /* width, height, duration, fps, background */ shots: BEAT
 1. Name the parts the user would want to adjust; one layer each. Parts that cannot be separated stay one layer.
 2. Give each the window it is on screen, from the beat table.
 3. Wrap its existing drawing in `draw`, `drawFrame` or `each`, reading time from `own`.
-4. Verify the layered film is unchanged: with an empty `timeline.json`, compare frame hashes at 12 times spread over the film against the original (`mografy review` sheets side by side as a fallback). Every frame must match.
+4. Verify the layered film is unchanged: with an empty `timeline.json`, compare frame hashes at 12 times spread over the film against the original (`npx mografy review` sheets side by side as a fallback). Every frame must match.
 
 ## Films without layers
 

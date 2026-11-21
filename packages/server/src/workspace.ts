@@ -70,10 +70,14 @@ export async function listProjects(current?: string): Promise<ProjectList> {
   };
   const examples = new Set((await subfolders(EXAMPLES_DIR)).map(d => resolve(d)));
   for (const preset of COMPONENT_PRESETS) await add(join(componentRoot(), preset.id), 'component');
+  // Projects in the library folder always list as library, opened or not, so that section never empties out.
+  const library = await subfolders(libraryDir());
+  const inLibrary = new Set(await Promise.all(library.map(d => realpath(d).catch(() => resolve(d)))));
   for (const dir of (await readRecent()).projects) {
-    if (resolve(dir) !== componentRoot()) await add(dir, examples.has(resolve(dir)) ? 'example' : 'recent');
+    if (resolve(dir) === componentRoot() || inLibrary.has(await realpath(dir).catch(() => resolve(dir)))) continue;
+    await add(dir, examples.has(resolve(dir)) ? 'example' : 'recent');
   }
-  for (const dir of await subfolders(libraryDir())) await add(dir, 'library');
+  for (const dir of library) await add(dir, 'library');
   for (const dir of examples) await add(dir, 'example');
   return { current: current ?? null, library: libraryDir(), projects };
 }

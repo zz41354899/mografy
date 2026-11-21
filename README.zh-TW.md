@@ -30,7 +30,7 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 - **每支影片都能編輯**：有標出鏡頭的影片，每個鏡頭會自動變成一個圖層，不用改任何程式碼。代理用 `timeline()` 寫的影片，則是標題、卡片、標誌等每個元素各自一個圖層。
 - **為影片設計的設計系統**：可以換掉影片畫出的任何顏色、一次替所有圖層套用動態、設定每個圖層的開始時間和長度，還能試調場景自己開放的控制項。影片就在旁邊播放，改動會直接反映在播放器、審閱圖和匯出檔上。
 - **用 npm 安裝**：`npx mografy@latest init`，約 2 MB，不需要 Git，也不用全域安裝。FFmpeg 和 Chromium shell 第一次用到時才下載，執行時也不再需要 Playwright。
-- **MCP 伺服器**：`mografy mcp` 讓任何 MCP 客戶端都能檢查、預覽、審閱和匯出你的影片。
+- **MCP 伺服器**：`npx mografy mcp` 讓任何 MCP 客戶端都能檢查、預覽、審閱和匯出你的影片。
 
 為了專心做影片，這個版本移除了簡報模式。完整內容請看[更新紀錄](CHANGELOG.zh-TW.md)。
 
@@ -52,7 +52,7 @@ npx mografy dev
 
 **FFmpeg 和 Chromium**：都不用自己安裝。檢查和匯出會用電腦上的 Chrome 或 Edge 算繪；第一次匯出影片時，FFmpeg 會自動下載到專案資料夾裡（沒有 Chrome 或 Edge 時，Chromium shell 也一樣）。想事先下載可以執行 `npx mografy setup`，細節請看[設定說明](docs/configuration.md)。
 
-模板、extras 和參考影片要等 `mografy add` 第一次用到時，才會從 GitHub 下載。
+模板、extras 和參考影片要等 `npx mografy add` 第一次用到時，才會從 GitHub 下載。
 
 **選用：全域安裝**：`npm install -g mografy` 會把 `mografy` 指令加進 PATH，在任何資料夾都能用；`npx skills add mografy/mografy -g` 會替電腦上所有代理安裝 Skill。用 `npm install -g mografy@latest` 和 `npx skills update` 更新。
 
@@ -92,16 +92,16 @@ npx skills add mografy/mografy -g     # 選用：任何資料夾都能用，Clau
 npx skills update                        # 之後要更新時執行
 ```
 
-Skill 的原稿寫在 [`packages/core/skill/`](packages/core/skill/)，產生到 [`.agents/skills/mografy/`](.agents/skills/mografy/SKILL.md)。`pnpm build`、`pnpm install` 和 `mografy update` 都會重新產生它。Claude 透過 `.claude/skills/mografy` 和 `CLAUDE.md` 讀的也是同一份。
+Skill 的原稿寫在 [`packages/core/skill/`](packages/core/skill/)，產生到 [`.agents/skills/mografy/`](.agents/skills/mografy/SKILL.md)。`pnpm build`、`pnpm install` 和 `npx mografy update` 都會重新產生它。Claude 透過 `.claude/skills/mografy` 和 `CLAUDE.md` 讀的也是同一份。
 
 ## 從哪裡開始
 
-- **模板**：43 個做產品影片用的現成場景，包括開場、字幕、裝置畫面、步驟、數字、評價、結尾卡和轉場，其中 22 個為 9:16 設計，21 個為 16:9 設計。`mografy add hook-impact three-steps cta-endcard projects/my-film` 會用它們組出一支可以播放的影片。全部模板可以在 [mografy.app/library/templates](https://www.mografy.app/library/templates) 瀏覽。
-- **參考影片**：12 秒的[介紹影片](examples/mografy-intro)會跟著安裝。十支 `stage-*` 產品介面短片，以及[作品集](https://www.mografy.app/showcase)上較長的影片，都是加入時才下載，例如 `mografy add film-starter projects/my-film`。
+- **模板**：43 個做產品影片用的現成場景，包括開場、字幕、裝置畫面、步驟、數字、評價、結尾卡和轉場，其中 22 個為 9:16 設計，21 個為 16:9 設計。`npx mografy add hook-impact three-steps cta-endcard projects/my-film` 會用它們組出一支可以播放的影片。全部模板可以在 [mografy.app/library/templates](https://www.mografy.app/library/templates) 瀏覽。
+- **參考影片**：12 秒的[介紹影片](examples/mografy-intro)會跟著安裝。十支 `stage-*` 產品介面短片，以及[作品集](https://www.mografy.app/showcase)上較長的影片，都是加入時才下載，例如 `npx mografy add film-starter projects/my-film`。
 - **內建元件**：16 個可以播放、也可以拿來改的小動畫，分成文字與數字、品牌與版面、互動、指示器四類。
-- **Extras**：影片需要時，代理才會複製進專案的輔助工具。包括 `cinema`（攝影機運動與轉場）、`cjk`（直排中日文）、`three`（Three.js 3D）、`music`（對準影片段落的配樂）、`walkthrough` 和 `stage`（產品介面），例如 `mografy add cinema cjk projects/my-film`。
+- **Extras**：影片需要時，代理才會複製進專案的輔助工具。包括 `cinema`（攝影機運動與轉場）、`cjk`（直排中日文）、`three`（Three.js 3D）、`music`（對準影片段落的配樂）、`walkthrough` 和 `stage`（產品介面），例如 `npx mografy add cinema cjk projects/my-film`。
 
-直接執行 `mografy add` 可以列出全部項目。
+直接執行 `npx mografy add` 可以列出全部項目。
 
 ## 場景怎麼運作
 
@@ -131,8 +131,8 @@ export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Re
 `@mografy/runtime` 提供緩動與彈簧、影片攝影機、鏡頭表（`beats`）、圖層、模糊與光暈、文字出場和節拍格線。代理修改場景之後，會用下面的指令檢查結果：
 
 ```sh
-mografy check projects/my-film          # 編譯並在 Chromium 試算繪（加 --motion 會找出跳動）
-mografy review projects/my-film         # 在 renders/ 產生靜態畫面、輸出畫面和轉場圖
+npx mografy check projects/my-film          # 編譯並在 Chromium 試算繪（加 --motion 會找出跳動）
+npx mografy review projects/my-film         # 在 renders/ 產生靜態畫面、輸出畫面和轉場圖
 ```
 
 完整的規範請看 [scene-authoring 參考文件](.agents/skills/mografy/references/scene-authoring.md)。
@@ -142,11 +142,11 @@ mografy review projects/my-film         # 在 renders/ 產生靜態畫面、輸�
 可以從編輯器匯出，也可以用指令：
 
 ```sh
-mografy export projects/my-film                       # MP4，H.265 10-bit
-mografy export projects/my-film --preset share        # MP4，H.264，哪裡都能播
-mografy export projects/my-film --format webm
-mografy export projects/my-film --format lottie
-mografy export --all                                  # 全部專案依序匯出
+npx mografy export projects/my-film                       # MP4，H.265 10-bit
+npx mografy export projects/my-film --preset share        # MP4，H.264，哪裡都能播
+npx mografy export projects/my-film --format webm
+npx mografy export projects/my-film --format lottie
+npx mografy export --all                                  # 全部專案依序匯出
 ```
 
 | 預設 | 輸出 | 適合 |
@@ -162,24 +162,24 @@ Mografy 也能匯出 WebM、Lottie 和 SVGA。影片最高 60 fps，支援動態
 
 | 指令 | 用途 |
 | --- | --- |
-| `mografy dev [project]` | 開啟編輯器 |
-| `mografy check [project] [--motion]` | 編譯並試算繪；`--motion` 會另外找出跳動和急停 |
-| `mografy review [project]` | 產生審閱圖 |
-| `mografy export [project...]` | 匯出一支影片，或批次匯出（`--all`） |
-| `mografy add [name...] [project]` | 加入模板、extras 或參考影片 |
-| `mografy update [--check]` | 更新 Mografy |
-| `mografy setup [--check]` | 現在就下載 FFmpeg 和 Chromium，或查看目前使用哪一個 |
-| `mografy stop [project]` | 停止編輯器的伺服器 |
-| `mografy mcp` | 啟動 MCP 伺服器 |
+| `npx mografy dev [project]` | 開啟編輯器 |
+| `npx mografy check [project] [--motion]` | 編譯並試算繪；`--motion` 會另外找出跳動和急停 |
+| `npx mografy review [project]` | 產生審閱圖 |
+| `npx mografy export [project...]` | 匯出一支影片，或批次匯出（`--all`） |
+| `npx mografy add [name...] [project]` | 加入模板、extras 或參考影片 |
+| `npx mografy update [--check]` | 更新 Mografy |
+| `npx mografy setup [--check]` | 現在就下載 FFmpeg 和 Chromium，或查看目前使用哪一個 |
+| `npx mografy stop [project]` | 停止編輯器的伺服器 |
+| `npx mografy mcp` | 啟動 MCP 伺服器 |
 | `mografy --version`、`--help` | 顯示版本和所有選項 |
 
 ### MCP 伺服器
 
-`mografy mcp` 透過 stdio，把 CLI 的功能開放給任何 MCP 客戶端使用：列出和建立專案、檢查、算繪單一畫面、審閱、讀寫場景（新的程式碼會先編譯和試算繪，通過了才存檔）、開啟編輯器、匯出，以及讀取 Skill。如果編輯器正開著同一個專案，這些工具會透過編輯器執行，所以你在編輯器看到的是同一個結果。
+`npx mografy mcp` 透過 stdio，把 CLI 的功能開放給任何 MCP 客戶端使用：列出和建立專案、檢查、算繪單一畫面、審閱、讀寫場景（新的程式碼會先編譯和試算繪，通過了才存檔）、開啟編輯器、匯出，以及讀取 Skill。如果編輯器正開著同一個專案，這些工具會透過編輯器執行，所以你在編輯器看到的是同一個結果。
 
 ```sh
-claude mcp add mografy -- mografy mcp
-codex mcp add mografy -- mografy mcp
+claude mcp add mografy -- npx mografy mcp
+codex mcp add mografy -- npx mografy mcp
 ```
 
 ## 專案的結構
@@ -213,14 +213,14 @@ Mografy 是一個 pnpm monorepo：
 | `web` | 編輯器 |
 | `cli` | `mografy` 指令和 MCP 伺服器 |
 
-請用 Git 工作副本開發（需要 Node.js 22.12 或更新版本）。`pnpm install` 會建置 Mografy、下載 Chromium headless shell，並把工作副本的 `mografy` 指令加進 PATH；在工作副本裡，`mografy update` 會拉取最新版本、重新建置並更新 Skill。
+請用 Git 工作副本開發（需要 Node.js 22.12 或更新版本）。`pnpm install` 會建置 Mografy、下載 Chromium headless shell，並把工作副本的 `mografy` 指令加進 PATH；在工作副本裡，`npx mografy update` 會拉取最新版本、重新建置並更新 Skill。
 
 ```sh
 git clone https://github.com/mografy/mografy.git
 cd mografy
 npm install -g pnpm        # 已經有 pnpm 就跳過
 pnpm install
-mografy dev
+npx mografy dev
 ```
 
 推送修改前請執行：

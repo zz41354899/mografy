@@ -4,8 +4,8 @@
 
 | Problem | What you see | How to find it | Fix with |
 | --- | --- | --- | --- |
-| **Slow frames** | The preview drops frames; the same film exported to MP4 plays smoothly | `mografy check`: frame cost, filters per frame, canvases per frame | The cost tables below |
-| **Choppy motion** | The exported MP4 also looks rough: something jumps, starts at full speed or stops dead | `mografy check --motion`: jumps, hard starts and hard stops with their times | **Smooth motion** below, [film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md) |
+| **Slow frames** | The preview drops frames; the same film exported to MP4 plays smoothly | `npx mografy check`: frame cost, filters per frame, canvases per frame | The cost tables below |
+| **Choppy motion** | The exported MP4 also looks rough: something jumps, starts at full speed or stops dead | `npx mografy check --motion`: jumps, hard starts and hard stops with their times | **Smooth motion** below, [film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md) |
 
 Most stutter reports on finished films turn out to be choppy motion, not slow frames. Run both checks before delivery.
 
@@ -13,7 +13,7 @@ Most stutter reports on finished films turn out to be choppy motion, not slow fr
 
 Slow frames:
 
-- [ ] `mografy check` shows no frame-cost warning: median well under 33 ms at 1920 × 1080 on a desktop, nothing over 100 ms, at most 8 filters per frame, no canvases created per frame.
+- [ ] `npx mografy check` shows no frame-cost warning: median well under 33 ms at 1920 × 1080 on a desktop, nothing over 100 ms, at most 8 filters per frame, no canvases created per frame.
 - [ ] No `ctx.filter` around a group of draws; groups go through `blurLayer`, type through `blurText` / `blurWords`, light through `bloom`.
 - [ ] Every `layer`, `blurLayer` and `bloom` smaller than about half the frame has `bounds`.
 - [ ] Everything that does not change is made once in `setup`: paths, text layout, UI card textures (cached per visual state), sprites, backgrounds, noise tiles.
@@ -22,7 +22,7 @@ Slow frames:
 
 Choppy motion:
 
-- [ ] `mografy check --motion` reports no jump, hard start or hard stop you did not intend.
+- [ ] `npx mografy check --motion` reports no jump, hard start or hard stop you did not intend.
 - [ ] Each followed object is one track across a handoff: where one shot's version ends, the next one's starts, at the same position, size and colour.
 - [ ] Moves through several poses are one `keys` curve, not separately eased segments.
 - [ ] Entrances use `springs.*` / `spring()` over their whole duration; no entrance moves on its first frame more than on its second.
@@ -72,7 +72,7 @@ Inside a `layer`, `blurLayer` or `bloom` callback, draw with the context the cal
 
 ## Smooth motion
 
-`mografy check --motion` draws the whole film at 30 frames per second at quarter size and compares each frame with the next. It reports:
+`npx mografy check --motion` draws the whole film at 30 frames per second at quarter size and compares each frame with the next. It reports:
 
 | Report | What it usually is | Fix |
 | --- | --- | --- |
@@ -92,8 +92,8 @@ Other causes of choppy motion it cannot see: a spring that settles in a third of
 
 ## Measuring
 
-1. Run `mografy check [project]`. It prints `Frame cost at W×H (CPU canvas, N frames): median … ms, slowest … ms at …s` and the warnings. Add `--motion` to scan the motion as well; it draws every frame at quarter size (about 15 s for a 60 s film on a cloud CPU).
+1. Run `npx mografy check [project]`. It prints `Frame cost at W×H (CPU canvas, N frames): median … ms, slowest … ms at …s` and the warnings. Add `--motion` to scan the motion as well; it draws every frame at quarter size (about 15 s for a 60 s film on a cloud CPU).
 2. For the slowest times, find the cause by switching parts off: comment out a layer, a blur or a particle system and check again. The cost is almost always one of the rows above.
-3. When the preview is slow but `mografy check` is fine, check the player: `MOGRAFY_HMR=0 mografy dev` serves the production build of the player instead of the development one.
+3. When the preview is slow but `npx mografy check` is fine, check the player: `MOGRAFY_HMR=0 npx mografy dev` serves the production build of the player instead of the development one.
 
 Frame cost in the cloud or in CI is several times higher than on a desktop GPU; compare numbers from the same machine, and look at the ratio between frames rather than the absolute value.

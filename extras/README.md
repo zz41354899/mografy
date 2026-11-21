@@ -16,8 +16,8 @@ Optional helpers that are **not installed** with Mografy. Common motion and draw
 Add one to a project with the CLI; it copies from this checkout (or GitHub), registers CJK fonts in `mografy.json`, and keeps files you changed unless you pass `--force`:
 
 ```sh
-mografy add             # list the extras
-mografy add cinema projects/my-film
+npx mografy add             # list the extras
+npx mografy add cinema projects/my-film
 ```
 
 Without the `mografy` command, download a file directly, for example:

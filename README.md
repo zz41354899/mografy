@@ -30,7 +30,7 @@ Everything runs on your computer. A film is a folder of plain files you own: a s
 - **Every film is editable.** A film that marks its shots gets one layer per shot automatically, with no change to its code. Films the agent writes with `timeline()` get one layer per part, such as a title, a card or a logo.
 - **A design system for the film.** Swap any colour the film draws, apply motions to all layers at once, set each layer's start and length, and try the scene's own controls, with the film playing beside them. Player, review and export all use the changes.
 - **Install with npm.** `npx mografy@latest init`, about 2 MB, no Git and no global install needed. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
-- **An MCP server.** `mografy mcp` lets any MCP client check, preview, review and export your films.
+- **An MCP server.** `npx mografy mcp` lets any MCP client check, preview, review and export your films.
 
 Present mode has been removed so Mografy can focus on making films. See the [changelog](CHANGELOG.md) for everything in this release.
 
@@ -52,7 +52,7 @@ Everything lives in that folder: nothing is installed globally, and deleting the
 
 **FFmpeg and Chromium.** You don't install either: Chrome or Edge on your computer renders checks and exports, and FFmpeg downloads into the project the first time you export a video (a Chromium shell too, only if there is no Chrome or Edge). `npx mografy setup` downloads them ahead of time; details are in [configuration](docs/configuration.md).
 
-Templates, extras and reference films download from GitHub the first time `mografy add` needs them.
+Templates, extras and reference films download from GitHub the first time `npx mografy add` needs them.
 
 **Optional: install globally.** `npm install -g mografy` puts a `mografy` command on your PATH for every folder, and `npx skills add mografy/mografy -g` installs the Skill for every agent on the computer. Update them with `npm install -g mografy@latest` and `npx skills update`.
 
@@ -92,16 +92,16 @@ npx skills add mografy/mografy -g     # optional: every folder, for Claude Code,
 npx skills update                        # later, to get the latest version
 ```
 
-The Skill is written in [`packages/core/skill/`](packages/core/skill/) and generated into [`.agents/skills/mografy/`](.agents/skills/mografy/SKILL.md). `pnpm build`, `pnpm install` and `mografy update` regenerate it, and Claude reads the same files through `.claude/skills/mografy` and `CLAUDE.md`.
+The Skill is written in [`packages/core/skill/`](packages/core/skill/) and generated into [`.agents/skills/mografy/`](.agents/skills/mografy/SKILL.md). `pnpm build`, `pnpm install` and `npx mografy update` regenerate it, and Claude reads the same files through `.claude/skills/mografy` and `CLAUDE.md`.
 
 ## Starting points
 
-- **Templates.** 43 ready-made scenes for product videos: hooks, captions, device screens, steps, numbers, reviews, end cards and transitions. 22 are designed for 9:16 and 21 for 16:9. `mografy add hook-impact three-steps cta-endcard projects/my-film` creates a playable film from them. You can browse them at [mografy.app/library/templates](https://www.mografy.app/en/library/templates).
-- **Reference films.** The twelve-second [intro](examples/mografy-intro) comes with the install. The ten `stage-*` product UI loops and the longer films on the [showcase](https://www.mografy.app/showcase) download when you add them, for example `mografy add film-starter projects/my-film`.
+- **Templates.** 43 ready-made scenes for product videos: hooks, captions, device screens, steps, numbers, reviews, end cards and transitions. 22 are designed for 9:16 and 21 for 16:9. `npx mografy add hook-impact three-steps cta-endcard projects/my-film` creates a playable film from them. You can browse them at [mografy.app/library/templates](https://www.mografy.app/en/library/templates).
+- **Reference films.** The twelve-second [intro](examples/mografy-intro) comes with the install. The ten `stage-*` product UI loops and the longer films on the [showcase](https://www.mografy.app/showcase) download when you add them, for example `npx mografy add film-starter projects/my-film`.
 - **Built-in components.** Sixteen small animations you can play and adapt: text and numbers, brand and layout, interactions, and indicators.
-- **Extras.** Helpers the agent copies into a project only when the film needs them: `cinema` (camera moves and transitions), `cjk` (vertical Chinese and Japanese type), `three` (Three.js 3D), `music` (a score composed to the film's moments), `walkthrough` and `stage` (product UI). For example, `mografy add cinema cjk projects/my-film`.
+- **Extras.** Helpers the agent copies into a project only when the film needs them: `cinema` (camera moves and transitions), `cjk` (vertical Chinese and Japanese type), `three` (Three.js 3D), `music` (a score composed to the film's moments), `walkthrough` and `stage` (product UI). For example, `npx mografy add cinema cjk projects/my-film`.
 
-Run `mografy add` on its own to list all of them.
+Run `npx mografy add` on its own to list all of them.
 
 ## How a scene works
 
@@ -131,8 +131,8 @@ export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Re
 `@mografy/runtime` provides easing and springs, a film camera, a shot table (`beats`), layers, blur and bloom, text reveals and a tempo grid. After the agent edits a scene it checks the result:
 
 ```sh
-mografy check projects/my-film          # compile and trial-render in Chromium (--motion also finds jumps)
-mografy review projects/my-film         # stills, output frames and transition sheets in renders/
+npx mografy check projects/my-film          # compile and trial-render in Chromium (--motion also finds jumps)
+npx mografy review projects/my-film         # stills, output frames and transition sheets in renders/
 ```
 
 The full contract is in the [scene-authoring reference](.agents/skills/mografy/references/scene-authoring.md).
@@ -142,11 +142,11 @@ The full contract is in the [scene-authoring reference](.agents/skills/mografy/r
 Export from the editor, or from the command line:
 
 ```sh
-mografy export projects/my-film                       # MP4, H.265 10-bit
-mografy export projects/my-film --preset share        # MP4, H.264, plays everywhere
-mografy export projects/my-film --format webm
-mografy export projects/my-film --format lottie
-mografy export --all                                  # every project, one after another
+npx mografy export projects/my-film                       # MP4, H.265 10-bit
+npx mografy export projects/my-film --preset share        # MP4, H.264, plays everywhere
+npx mografy export projects/my-film --format webm
+npx mografy export projects/my-film --format lottie
+npx mografy export --all                                  # every project, one after another
 ```
 
 | Preset | Output | Use it for |
@@ -162,24 +162,24 @@ Mografy also exports WebM, Lottie and SVGA. It exports up to 60 fps for video, w
 
 | Command | What it does |
 | --- | --- |
-| `mografy dev [project]` | Open the editor |
-| `mografy check [project] [--motion]` | Compile and trial-render; `--motion` also finds jumps and hard stops |
-| `mografy review [project]` | Write review images |
-| `mografy export [project...]` | Export one film or a batch (`--all`) |
-| `mografy add [name...] [project]` | Add templates, extras or a reference film |
-| `mografy update [--check]` | Update Mografy |
-| `mografy setup [--check]` | Download FFmpeg and Chromium now, or show which ones are used |
-| `mografy stop [project]` | Stop the editor's server |
-| `mografy mcp` | Run the MCP server |
+| `npx mografy dev [project]` | Open the editor |
+| `npx mografy check [project] [--motion]` | Compile and trial-render; `--motion` also finds jumps and hard stops |
+| `npx mografy review [project]` | Write review images |
+| `npx mografy export [project...]` | Export one film or a batch (`--all`) |
+| `npx mografy add [name...] [project]` | Add templates, extras or a reference film |
+| `npx mografy update [--check]` | Update Mografy |
+| `npx mografy setup [--check]` | Download FFmpeg and Chromium now, or show which ones are used |
+| `npx mografy stop [project]` | Stop the editor's server |
+| `npx mografy mcp` | Run the MCP server |
 | `mografy --version`, `--help` | Show the version and all options |
 
 ### MCP server
 
-`mografy mcp` makes the CLI's operations available to any MCP client over stdio: list and create projects, check, render a frame, review, read and write the scene (the new code is compiled and trial-rendered before it is saved), open the editor, export, and read the Skill. While the editor has a project open, the tools work through it, so you see the same result there.
+`npx mografy mcp` makes the CLI's operations available to any MCP client over stdio: list and create projects, check, render a frame, review, read and write the scene (the new code is compiled and trial-rendered before it is saved), open the editor, export, and read the Skill. While the editor has a project open, the tools work through it, so you see the same result there.
 
 ```sh
-claude mcp add mografy -- mografy mcp
-codex mcp add mografy -- mografy mcp
+claude mcp add mografy -- npx mografy mcp
+codex mcp add mografy -- npx mografy mcp
 ```
 
 ## A project
@@ -213,14 +213,14 @@ Mografy is a pnpm monorepo:
 | `web` | The editor |
 | `cli` | The `mografy` command and the MCP server |
 
-Work from a Git checkout (Node.js 22.12 or later). `pnpm install` builds Mografy, fetches the headless Chromium shell and puts the checkout's `mografy` command on your PATH; inside a checkout, `mografy update` pulls, rebuilds and refreshes the Skill.
+Work from a Git checkout (Node.js 22.12 or later). `pnpm install` builds Mografy, fetches the headless Chromium shell and puts the checkout's `mografy` command on your PATH; inside a checkout, `npx mografy update` pulls, rebuilds and refreshes the Skill.
 
 ```sh
 git clone https://github.com/mografy/mografy.git
 cd mografy
 npm install -g pnpm        # skip if you already have pnpm
 pnpm install
-mografy dev
+npx mografy dev
 ```
 
 Before a change is pushed, run:

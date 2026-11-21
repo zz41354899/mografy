@@ -3,9 +3,9 @@
 A Mografy Stage reference film: 7.4 s loop, 16:9, blueprint (look param: blueprint, light, dark), no cursor.
 
 ```sh
-mografy dev ./stage-upload
-mografy check ./stage-upload --motion
-mografy review ./stage-upload
+npx mografy dev ./stage-upload
+npx mografy check ./stage-upload --motion
+npx mografy review ./stage-upload
 ```
 
 - `scenes/main.ts`: the state, the layout, the script and the drawing. `scenes/stage.ts` is a copy of `extras/stage/stage.ts`.
