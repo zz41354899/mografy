@@ -19,6 +19,9 @@ export function helpText(color: boolean) {
   return [
     `  ${teal('●')} ${bold('Mografy')} ${dim(VERSION)}\n  ${dim('Local Canvas animation for Claude Code and Codex. Claude creates. Mografy shows.')}`,
     section('Start', [
+      row('npx mografy@latest init [folder]', 'New project in ./mografy (or [folder]) with its own Mografy, no global install'),
+      row('npx mografy dev', 'Inside that project (cd mografy): open the player'),
+      row('npx mografy@latest', "Inside that project: update its Mografy, then open the player"),
       row('mografy dev', 'Open the player: built-in animations and your projects'),
       row('mografy dev <project>', 'Open a project in the player'),
     ]),

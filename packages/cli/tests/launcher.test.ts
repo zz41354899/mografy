@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launcherScript, windowsLauncherScript } from '../src/launcher.js';
+import { VERSION } from '../src/commands/help.js';
 
 const BIN = resolve(dirname(fileURLToPath(import.meta.url)), '../bin/mografy.js');
 function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
@@ -32,7 +33,7 @@ test('an older PATH launcher uses the current installed clone and fails clearly 
     await writeFile(join(checkout, 'packages/cli/dist/index.js'), 'export function main() { console.log("imitation"); }\n');
     const untrusted = await run(checkout, ['--version'], env);
     assert.equal(untrusted.code, 0, untrusted.stderr);
-    assert.equal(untrusted.stdout.trim(), '0.1.0', 'a checkout that was never installed here does not run');
+    assert.equal(untrusted.stdout.trim(), VERSION, 'a checkout that was never installed here does not run');
     assert.match(untrusted.stderr, /was not installed on this computer/);
     await rm(join(checkout, 'packages'), { recursive: true });
     await mkdir(join(home, '.mografy'), { recursive: true });
@@ -49,17 +50,19 @@ test('an older PATH launcher uses the current installed clone and fails clearly 
     }
     const outside = await run(sandbox, ['--version'], env);
     assert.equal(outside.code, 0, outside.stderr);
-    assert.equal(outside.stdout.trim(), '0.1.0');
+    assert.equal(outside.stdout.trim(), VERSION);
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 
-test('bare dev outside a Mografy project does not reopen an unrelated scene', async () => {
+test('bare project commands outside a Mografy project ask for one (dev opens the library instead)', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-unrelated-repo-'));
   try {
-    const result = await run(sandbox, ['dev', '--no-open']);
-    assert.equal(result.code, 1);
-    assert.match(result.stderr, /No mografy\.json found/);
-    assert.match(result.stderr, /mografy dev <project>/);
+    for (const command of ['check', 'review', 'export']) {
+      const result = await run(sandbox, [command]);
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /No mografy\.json found/);
+      assert.match(result.stderr, new RegExp(`mografy ${command} <project>`));
+    }
   } finally { await rm(sandbox, { recursive: true, force: true }); }
 });
 

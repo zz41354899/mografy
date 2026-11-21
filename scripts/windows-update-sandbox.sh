@@ -49,7 +49,7 @@ round 2
 
 cd "$work"
 cmd //c "where mografy"
-[ "$(cmd //c "mografy --version" | tr -d '\r')" = '0.1.0' ] || { echo 'mografy.cmd did not run'; exit 1; }
+[ "$(cmd //c "mografy --version" | tr -d '\r')" = "$(node -p "require(process.argv[1]).version" "$work/installed/package.json")" ] || { echo 'mografy.cmd did not run'; exit 1; }
 echo 'ok: mografy.cmd runs outside the checkout'
 if cmd //c "mografy dev no-such-project --no-open"; then echo 'mografy.cmd lost the exit code'; exit 1; fi
 echo 'ok: mografy.cmd passes on the exit code'

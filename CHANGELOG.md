@@ -13,6 +13,16 @@ mografy update
 
 Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
 
+## Mografy Triangulum v0.1.1 — 2026-11-21
+
+### Added
+
+- **`npx mografy@latest init`** — the new way to start: it creates a `mografy` folder with a new project and installs Mografy and its Skill for Claude Code, Codex and other agents into that folder, not globally; then `cd mografy` and `npx mografy dev` (or `npm run dev`), and describe the animation to your agent in that folder. To update, run `npx mografy@latest` in the folder: it moves its Mografy and Skill to the newest version and opens the player. `init <folder>` names the folder, and deleting the folder removes everything. `npm install -g mografy` and `npx skills add mografy/mografy -g` remain as the optional global route. Its exports use an FFmpeg downloaded into the project (`node_modules/.cache/mografy/tools`) the first time, never the one on PATH, and checks use Chrome or Edge as before.
+
+### Fixed
+
+- **`mografy dev` from any folder** — run outside a project (for example in `~/Documents`, or as `npx mografy@latest dev`), it now opens the player with the built-in components and your library (the last project you opened there) instead of stopping with "No mografy.json found". It never reopens a project from another repository. `check`, `review` and `export` still ask for a project, and `mografy dev <path>` still reports a path that is not a project.
+
 ## Mografy Triangulum v0.1.0 — 2026-11-21
 
 The first numbered release.

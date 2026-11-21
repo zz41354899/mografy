@@ -3,10 +3,29 @@ import assert from 'node:assert/strict';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, listProjects, rememberProject, stateDir, readRecent, writeActive, clearActive } from '../src/workspace.js';
+import { COMPONENT_PRESETS, createInLibrary, createProject, defaultProject, ensureAgentFiles, ensureComponentProjects, ensureComponentsProject, TEMPLATE_DIR, folderName, installationStateDir, libraryProject, listProjects, rememberProject, stateDir, readRecent, writeActive, clearActive } from '../src/workspace.js';
 import { projectGuide, SKILL_REFERENCES, sharedSkillFiles } from '@mografy/core';
 import { Project } from '../src/project.js';
 import { seedComponentThumbnail, thumbnailFingerprint } from '../src/component-thumbnails.js';
+
+test('dev outside a project opens the library: its last project, never one from another repository', async () => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'mografy-lib-'));
+  process.env.MOGRAFY_HOME = join(sandbox, 'library');
+  process.env.MOGRAFY_STATE = join(sandbox, 'state');
+  try {
+    const components = join(sandbox, 'library', '.components', 'stagger-text');
+    assert.equal(await libraryProject(), components, 'first launch: the built-in components');
+    const elsewhere = await createProject(join(sandbox, 'other-repo'), 'Elsewhere');
+    await rememberProject(elsewhere);
+    assert.equal(await libraryProject(), components, 'a project outside the library is not reopened');
+    const mine = await createInLibrary('Mine');
+    await rememberProject(mine);
+    assert.equal(await libraryProject(), mine);
+  } finally {
+    delete process.env.MOGRAFY_HOME; delete process.env.MOGRAFY_STATE;
+    await rm(sandbox, { recursive: true, force: true });
+  }
+});
 
 test('projects: create in the library, remember, list without duplicates', async () => {
   const sandbox = await mkdtemp(join(tmpdir(), 'mografy-ws-'));

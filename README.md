@@ -29,7 +29,7 @@ Everything runs on your computer. A film is a folder of plain files you own: a s
 - **A new editor.** A layer timeline where you drag, trim, duplicate, hide, lock and reorder parts of a film and give each one an enter and exit motion; ⌘K search over projects, layers and commands; settings for language, playback, text size and shortcuts.
 - **Every film is editable.** A film that marks its shots gets one layer per shot automatically, with no change to its code. Films the agent writes with `timeline()` get one layer per part, such as a title, a card or a logo.
 - **A design system for the film.** Swap any colour the film draws, apply motions to all layers at once, set each layer's start and length, and try the scene's own controls, with the film playing beside them. Player, review and export all use the changes.
-- **Install with npm.** `npm install -g mografy`, about 2 MB, no Git needed. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
+- **Install with npm.** `npx mografy@latest init`, about 2 MB, no Git and no global install needed. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
 - **An MCP server.** `mografy mcp` lets any MCP client check, preview, review and export your films.
 
 Present mode has been removed so Mografy can focus on making films. See the [changelog](CHANGELOG.md) for everything in this release.
@@ -38,47 +38,37 @@ Present mode has been removed so Mografy can focus on making films. See the [cha
 
 You need [Node.js](https://nodejs.org/) 22.12 or later.
 
-1. **Install Mografy.**
+```sh
+npx mografy@latest init
+cd mografy
+npx mografy dev
+```
 
-   ```sh
-   npm install -g mografy
-   ```
+`init` creates a `mografy` folder with your first project, installs Mografy and its Skill for Claude Code, Codex and other agents into that folder, and `npx mografy dev` opens the editor. Then open Claude Code or Codex in the `mografy` folder and describe the animation.
 
-   To try it without installing, run `npx mografy dev` instead.
+Everything lives in that folder: nothing is installed globally, and deleting the folder removes it. `npx mografy@latest init my-film` names the folder yourself. `npm run dev` works too.
 
-2. **Install the Skill** for Claude Code, Codex and other agents, once:
+**Updating.** Run `npx mografy@latest` inside the folder. It moves the folder's Mografy and Skill to the newest version and opens the editor.
 
-   ```sh
-   npx skills add mografy/mografy -g
-   ```
-
-3. **Open the editor.**
-
-   ```sh
-   mografy dev
-   ```
-
-   It opens with sixteen built-in animations. If you can see them, the installation works. Your projects live in `~/Mografy` (set `MOGRAFY_HOME` to change it).
-
-**FFmpeg and Chromium.** Neither is part of the package. Checks and exports render in the Chrome or Edge already on your computer, or in Playwright's headless Chromium shell, which downloads only when there is neither. Video exports use the `ffmpeg` on your PATH when it has every encoder they need (Homebrew's `brew install ffmpeg` and `winget install ffmpeg` do); otherwise the first export downloads one (about 25 MB) into `~/.mografy/tools`. To download both ahead of time, for example before working offline, run `mografy setup`; `mografy setup --check` shows which ones Mografy uses. Other settings are in [configuration](docs/configuration.md).
+**FFmpeg and Chromium.** You don't install either: Chrome or Edge on your computer renders checks and exports, and FFmpeg downloads into the project the first time you export a video (a Chromium shell too, only if there is no Chrome or Edge). `npx mografy setup` downloads them ahead of time; details are in [configuration](docs/configuration.md).
 
 Templates, extras and reference films download from GitHub the first time `mografy add` needs them.
 
-**Updating.** `mografy update --check` tells you when there is a new version, and `npm install -g mografy` installs it. Keep the Skill current with `npx skills update`.
+**Optional: install globally.** `npm install -g mografy` puts a `mografy` command on your PATH for every folder, and `npx skills add mografy/mografy -g` installs the Skill for every agent on the computer. Update them with `npm install -g mografy@latest` and `npx skills update`.
 
 To change Mografy itself, work from a Git checkout instead; see [Contributing](#contributing).
 
 ## Make your first film
 
-1. Run `mografy dev`.
-2. In Claude Code or Codex, open your projects folder (`~/Mografy`) and describe the film, including the folder it should go in:
+1. In the `mografy` folder, run `npx mografy dev`. The editor opens on your project.
+2. Open Claude Code or Codex in the same folder and describe the film:
 
-   > Create an eight-second 9:16 animation in `~/Mografy/hello`, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
+   > Make an eight-second 9:16 animation, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
 
-3. The agent creates the project and the editor switches to it. Each time the agent saves, Mografy compiles and trial-renders the change and updates the editor at the same moment in the film. If a change breaks the film, the last working version keeps playing and the error is shown.
+3. The agent writes the scene, and each time it saves, Mografy compiles and trial-renders the change and updates the editor at the same moment in the film. If a change breaks the film, the last working version keeps playing and the error is shown.
 4. Adjust it in the editor, or ask the agent for more changes. When you are happy with it, export.
 
-For anything longer than a few shots, ask for a storyboard first. The agent writes `storyboards/storyboard.md` and a visual board, then builds the film from it.
+For another film, run `npx mografy@latest init another-film` next to the first one. For anything longer than a few shots, ask for a storyboard first. The agent writes `storyboards/storyboard.md` and a visual board, then builds the film from it.
 
 ## The editor
 
@@ -95,10 +85,10 @@ Your timeline edits are saved to `scenes/timeline.json` and your colour swaps to
 
 ## The Skill
 
-The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. Install it once with the [skills CLI](https://github.com/vercel-labs/skills) and every folder has it; inside a Git checkout of Mografy the agent also finds it without installing:
+The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. `npx mografy@latest init` puts it in the project folder for Claude Code (`.claude/skills/mografy`) and for Codex and other agents (`.agents/skills/mografy`), and `npx mografy@latest` keeps it current. Inside a Git checkout of Mografy the agent finds it without installing. To have it in every folder instead, install it with the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```sh
-npx skills add mografy/mografy -g     # once, for Claude Code, Codex and other agents
+npx skills add mografy/mografy -g     # optional: every folder, for Claude Code, Codex and other agents
 npx skills update                        # later, to get the latest version
 ```
 

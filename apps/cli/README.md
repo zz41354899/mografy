@@ -4,15 +4,20 @@ Local Canvas motion design for Claude Code and Codex. Scenes are TypeScript modu
 `mografy dev` previews them live and `mografy export` writes MP4, WebM, MOV, Lottie or SVGA.
 
 ```sh
-npm install -g mografy
-npx skills add mografy/mografy -g   # the agent Skill, for Claude Code, Codex and others
-mografy dev
+npx mografy@latest init   # creates ./mografy: a project with Mografy and its agent Skill inside
+cd mografy
+npx mografy dev           # open the editor (or: npm run dev)
 ```
 
-Or try it without installing: `npx mografy dev`.
+Then open Claude Code or Codex in the `mografy` folder and describe the animation. Everything lives in that folder:
+nothing is installed globally, and deleting the folder removes it. `npx mografy@latest init my-film` names the folder.
+To update, run `npx mografy@latest` inside it.
 
-Projects live in `~/Mografy` (set `MOGRAFY_HOME` to change it). FFmpeg and the headless Chromium shell are not part of
-the package: they download the first time a check or export needs them, or ahead of time with `mografy setup`.
-Templates, helpers and reference films download from GitHub when `mografy add` needs them.
+You don't install FFmpeg or Chromium: Chrome or Edge renders checks and exports, and FFmpeg downloads into the
+project the first time you export a video (a Chromium shell too, only without Chrome or Edge), or ahead of time with
+`npx mografy setup`. Templates, helpers and reference films download from GitHub
+when `mografy add` needs them.
 
-Documentation, the shared agent Skill and the source: https://github.com/mografy/mografy
+Optional, for every folder: `npm install -g mografy` and `npx skills add mografy/mografy -g`.
+
+Documentation and the source: https://github.com/mografy/mografy

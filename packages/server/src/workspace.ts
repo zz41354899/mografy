@@ -1,7 +1,7 @@
 // Read-only discovery and explicit library-level operations.
 import { projectPaths } from '@mografy/render/fs-util';
 import { mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises';
-import { basename, join, resolve } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
 import type { AspectRatio, ProjectList, ProjectSummary } from '@mografy/core';
 import { EXAMPLES_DIR, libraryDir } from './installation.js';
@@ -21,6 +21,16 @@ export async function defaultProject(cwd = process.cwd()) {
   const last = await lastProject();
   // Upgrade the former six-in-one showcase without overwriting its scene or user edits.
   return last && resolve(last) !== componentRoot() ? last : await ensureComponentsProject();
+}
+
+/**
+ * What `mografy dev` opens from a folder that is not a project: the last project when it is in the library
+ * (~/Mografy, or projects/ in a checkout), else the built-in components. Never a project from another repository.
+ */
+export async function libraryProject() {
+  const last = await lastProject();
+  if (last && resolve(last).startsWith(resolve(libraryDir()) + sep) && resolve(last) !== componentRoot()) return last;
+  return ensureComponentsProject();
 }
 
 /** Create a project named `name` in the library folder, picking a free folder name. */

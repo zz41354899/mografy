@@ -13,6 +13,16 @@ mografy update
 
 還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
 
+## Mografy Triangulum v0.1.1 — 2026-11-21
+
+### 新增
+
+- **`npx mografy@latest init`**：新的開始方式。它會建立 `mografy` 資料夾和新專案，並把 Mografy 和給 Claude Code、Codex 等代理用的 Skill 裝在這個資料夾裡（不是全域）；接著 `cd mografy`、執行 `npx mografy dev`（或 `npm run dev`），在這個資料夾裡請代理做動畫。要更新時，在資料夾裡執行 `npx mografy@latest`，會把資料夾裡的 Mografy 和 Skill 換成最新版並打開播放器。`init <資料夾>` 可以自訂資料夾名稱，刪掉資料夾就清乾淨。`npm install -g mografy` 和 `npx skills add mografy/mografy -g` 仍然可以當作選用的全域安裝方式。這種專案匯出影片時，第一次會把 FFmpeg 下載到專案裡（`node_modules/.cache/mografy/tools`），不會用 PATH 上的 ffmpeg；檢查照舊用 Chrome 或 Edge。
+
+### 修正
+
+- **在任何資料夾執行 `mografy dev`**：在專案以外的地方執行（例如 `~/Documents`，或 `npx mografy@latest dev`），現在會打開播放器，顯示內建元件和你的作品庫（上次在作品庫開啟的專案），不再顯示「No mografy.json found」而停止。它不會重新打開其他 repository 裡的專案。`check`、`review`、`export` 仍然需要指定專案，`mografy dev <路徑>` 指到不是專案的地方時也照樣會提示。
+
 ## Mografy Triangulum v0.1.0 — 2026-11-21
 
 第一個有版本號的發布。

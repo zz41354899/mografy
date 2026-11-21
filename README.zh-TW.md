@@ -29,7 +29,7 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 - **全新的編輯器**：圖層時間軸可以拖曳、修剪、複製、隱藏、鎖定、調整順序，也能替每個圖層設定進場和出場動態。另外有 ⌘K 搜尋（專案、圖層和指令都搜得到），以及語系、播放、文字大小和快捷鍵等設定。
 - **每支影片都能編輯**：有標出鏡頭的影片，每個鏡頭會自動變成一個圖層，不用改任何程式碼。代理用 `timeline()` 寫的影片，則是標題、卡片、標誌等每個元素各自一個圖層。
 - **為影片設計的設計系統**：可以換掉影片畫出的任何顏色、一次替所有圖層套用動態、設定每個圖層的開始時間和長度，還能試調場景自己開放的控制項。影片就在旁邊播放，改動會直接反映在播放器、審閱圖和匯出檔上。
-- **用 npm 安裝**：`npm install -g mografy`，約 2 MB，不需要 Git。FFmpeg 和 Chromium shell 第一次用到時才下載，執行時也不再需要 Playwright。
+- **用 npm 安裝**：`npx mografy@latest init`，約 2 MB，不需要 Git，也不用全域安裝。FFmpeg 和 Chromium shell 第一次用到時才下載，執行時也不再需要 Playwright。
 - **MCP 伺服器**：`mografy mcp` 讓任何 MCP 客戶端都能檢查、預覽、審閱和匯出你的影片。
 
 為了專心做影片，這個版本移除了簡報模式。完整內容請看[更新紀錄](CHANGELOG.zh-TW.md)。
@@ -38,47 +38,37 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 
 需要 [Node.js](https://nodejs.org/) 22.12 或更新版本。
 
-1. **安裝 Mografy**
+```sh
+npx mografy@latest init
+cd mografy
+npx mografy dev
+```
 
-   ```sh
-   npm install -g mografy
-   ```
+`init` 會建立 `mografy` 資料夾和你的第一個專案，並把 Mografy 和給 Claude Code、Codex 等代理用的 Skill 裝進這個資料夾；`npx mografy dev` 會打開編輯器。接著在 `mografy` 資料夾裡打開 Claude Code 或 Codex，描述你要的動畫就可以了。
 
-   不想安裝、只想先試試看，可以改用 `npx mografy dev`。
+所有東西都在這個資料夾裡，不會全域安裝；刪掉資料夾就清乾淨了。想自己取資料夾名稱，用 `npx mografy@latest init 我的動畫`。也可以用 `npm run dev` 開啟。
 
-2. **安裝 Skill**：Claude Code、Codex 等代理共用，裝一次就好。
+**更新**：在資料夾裡執行 `npx mografy@latest`，會把資料夾裡的 Mografy 和 Skill 換成最新版，並打開編輯器。
 
-   ```sh
-   npx skills add mografy/mografy -g
-   ```
-
-3. **開啟編輯器**
-
-   ```sh
-   mografy dev
-   ```
-
-   編輯器裡有 16 個內建動畫，看得到它們就代表安裝成功了。你的專案會放在 `~/Mografy`（可以用 `MOGRAFY_HOME` 改位置）。
-
-**FFmpeg 和 Chromium**：兩者都不包含在套件裡。檢查和匯出會用電腦上已經有的 Chrome 或 Edge 算繪；兩個都沒有時，才會下載 Playwright 的 Chromium headless shell。匯出影片時，如果 PATH 上的 `ffmpeg` 具備所有需要的編碼器就直接使用（用 `brew install ffmpeg` 或 `winget install ffmpeg` 裝的都可以）；沒有的話，第一次匯出會自動下載一份（約 25 MB）到 `~/.mografy/tools`。想事先把兩個都下載好（例如準備離線工作時），可以執行 `mografy setup`；`mografy setup --check` 會顯示目前用的是哪一個。其他設定請看[設定說明](docs/configuration.md)。
+**FFmpeg 和 Chromium**：都不用自己安裝。檢查和匯出會用電腦上的 Chrome 或 Edge 算繪；第一次匯出影片時，FFmpeg 會自動下載到專案資料夾裡（沒有 Chrome 或 Edge 時，Chromium shell 也一樣）。想事先下載可以執行 `npx mografy setup`，細節請看[設定說明](docs/configuration.md)。
 
 模板、extras 和參考影片要等 `mografy add` 第一次用到時，才會從 GitHub 下載。
 
-**更新**：`mografy update --check` 會告訴你有沒有新版本，用 `npm install -g mografy` 安裝新版。Skill 用 `npx skills update` 更新。
+**選用：全域安裝**：`npm install -g mografy` 會把 `mografy` 指令加進 PATH，在任何資料夾都能用；`npx skills add mografy/mografy -g` 會替電腦上所有代理安裝 Skill。用 `npm install -g mografy@latest` 和 `npx skills update` 更新。
 
 要修改 Mografy 本身，請改用 Git 工作副本，見[參與開發](#參與開發)。
 
 ## 做第一支影片
 
-1. 執行 `mografy dev`。
-2. 在 Claude Code 或 Codex 開啟你的專案資料夾（`~/Mografy`），描述你要的影片，並告訴它要放在哪個資料夾：
+1. 在 `mografy` 資料夾執行 `npx mografy dev`，編輯器會打開你的專案。
+2. 在同一個資料夾打開 Claude Code 或 Codex，描述你要的影片：
 
-   > 在 `~/Mografy/hello` 做一支 8 秒的 9:16 動畫，1080 × 1920。先像 Typewriter 元件那樣打出「Hello, Mografy.」，再用青綠色強調色帶出標誌。看過實際畫面後匯出 MP4。
+   > 做一支 8 秒的 9:16 動畫，1080 × 1920。先像 Typewriter 元件那樣打出「Hello, Mografy.」，再用青綠色強調色帶出標誌。看過實際畫面後匯出 MP4。
 
-3. 代理建立專案後，編輯器會自動切換過去。代理每次存檔，Mografy 都會編譯並試算繪，再停在影片同一個時間點更新畫面。如果某次修改讓影片壞掉，畫面會繼續播放上一個可用的版本，同時顯示錯誤。
+3. 代理會寫好場景。它每次存檔，Mografy 都會編譯並試算繪，再停在影片同一個時間點更新畫面。如果某次修改讓影片壞掉，畫面會繼續播放上一個可用的版本，同時顯示錯誤。
 4. 在編輯器裡調整，或請代理繼續修改。滿意了就匯出。
 
-超過幾個鏡頭的影片，建議先請代理做分鏡。它會寫好 `storyboards/storyboard.md` 和視覺分鏡板，再照著分鏡做出影片。
+要做另一支影片，在第一個資料夾旁邊執行 `npx mografy@latest init 另一支影片`。超過幾個鏡頭的影片，建議先請代理做分鏡。它會寫好 `storyboards/storyboard.md` 和視覺分鏡板，再照著分鏡做出影片。
 
 ## 編輯器
 
@@ -95,10 +85,10 @@ Mografy 讓你用程式代理（coding agent）做動態設計。你跟 Claude C
 
 ## Skill
 
-`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。用 [skills CLI](https://github.com/vercel-labs/skills) 安裝一次，在任何資料夾都能用；在 Mografy 的 Git 工作副本裡，不安裝代理也找得到：
+`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。`npx mografy@latest init` 會把它放進專案資料夾，給 Claude Code（`.claude/skills/mografy`）和 Codex 等代理（`.agents/skills/mografy`）使用，`npx mografy@latest` 會讓它保持最新。在 Mografy 的 Git 工作副本裡，不安裝代理也找得到。想在任何資料夾都能用，可以用 [skills CLI](https://github.com/vercel-labs/skills) 安裝：
 
 ```sh
-npx skills add mografy/mografy -g     # 安裝一次，Claude Code、Codex 等代理都能用
+npx skills add mografy/mografy -g     # 選用：任何資料夾都能用，Claude Code、Codex 等代理共用
 npx skills update                        # 之後要更新時執行
 ```
 

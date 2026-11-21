@@ -63,7 +63,7 @@ let choosing: Promise<FfmpegChoice> | undefined;
 /**
  * Pick the FFmpeg exports use, downloading Mografy's pinned build only when nothing usable is installed:
  * $MOGRAFY_FFMPEG → an earlier download → a legacy ffmpeg-static binary → ffmpeg on PATH when it has every encoder in
- * REQUIRED_ENCODERS → download. When the download is impossible (offline, or no build for this platform), an incomplete
+ * REQUIRED_ENCODERS (unless MOGRAFY_SYSTEM_FFMPEG=0) → download. When the download is impossible (offline, or no build for this platform), an incomplete
  * system FFmpeg is still used (an export that needs a missing encoder then says which). The choice is made once per process.
  */
 export function ensureFfmpeg(options: ToolOptions = {}): Promise<FfmpegChoice> {
@@ -73,7 +73,8 @@ export function ensureFfmpeg(options: ToolOptions = {}): Promise<FfmpegChoice> {
     if (existsSync(downloaded)) return { path: downloaded, source: 'downloaded' };
     const bundled = legacyBundled();
     if (bundled) return { path: bundled, source: 'bundled' };
-    const system = await listEncoders('ffmpeg');
+    // A project's own installation (`npx mografy@latest init`) sets MOGRAFY_SYSTEM_FFMPEG=0: it never uses PATH's ffmpeg.
+    const system = process.env.MOGRAFY_SYSTEM_FFMPEG === '0' ? undefined : await listEncoders('ffmpeg');
     const missing = system ? REQUIRED_ENCODERS.filter(name => !system.has(name)) : REQUIRED_ENCODERS;
     if (system && !missing.length) return { path: 'ffmpeg', source: 'system' };
     try {

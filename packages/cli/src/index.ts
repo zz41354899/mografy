@@ -18,10 +18,14 @@ import { HELP, VERSION, helpText } from './commands/help.js';
 import { reviewProject } from './commands/review.js';
 import { setup } from './commands/setup.js';
 import { runMcp } from './mcp/index.js';
+import { installIntoProject, updateProjectCopy, useProjectTools } from './project-install.js';
+import { readFile } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 export { displayPath } from './paths.js';
 export { openBrowser };
 
 export async function main(argv = process.argv.slice(2)) {
+  useProjectTools();
   const { flags, rest } = parse(argv);
   const commands = new Set(['dev', 'init', 'check', 'review', 'export', 'render', 'stop', 'install-command', 'update', 'add', 'setup', 'mcp', 'help']);
   const command = rest[0] && commands.has(rest[0]) ? rest.shift()! : 'dev';
@@ -70,7 +74,8 @@ export async function main(argv = process.argv.slice(2)) {
   const dir = explicit
     ? command === 'init' ? resolve(rest[0]!) : await resolveProjectArg(rest[0]!)
     : command === 'init'
-      ? process.cwd()
+      // Bare `init`: the current folder when it is already a project (update its Mografy), else a new ./mografy.
+      ? await hasProject(process.cwd()) ? process.cwd() : resolve('mografy')
       : configured
         ? resolve(configured)
         : await implicitProject(command);
@@ -85,6 +90,8 @@ export async function main(argv = process.argv.slice(2)) {
           + `  Open the player:  mografy dev   (built-in animations and your projects)\n`
           + `  New animation:    ask Claude or Codex`);
       }
+      // `npx mografy@latest` inside a project with its own older copy: move that copy to this version first.
+      if (!explicit) await updateProjectCopy(dir);
       await refreshSkill(workspaceRoot);
       skillHint(dir);
       await ensureAgentFiles(dir);
@@ -95,11 +102,22 @@ export async function main(argv = process.argv.slice(2)) {
       if (switched) { console.log(`Opened the project in the current player: ${switched}`); if (flags.open) openBrowser(switched); return; }
       return dev(dir, flags);
     }
-    // Internal: agents create a new animation's project with this; it is not in --help or the README.
-    case 'init':
-      await createProject(dir);
-      console.log(`Created project: ${displayPath(dir)}\nRun \`mografy dev ${displayPath(dir)}\` to open it, then describe the animation to Claude or Codex.`);
+    // `mografy init [folder]`: a new project (agents use it too). From the npm package the project also gets its own
+    // copy of Mografy, so `npx mografy dev` inside it needs no global install; running init again only updates that copy.
+    case 'init': {
+      const existed = await hasProject(dir);
+      if (existed) console.log(`${displayPath(dir)} is already a Mografy project; its scenes and settings stay as they are.`);
+      else { await createProject(dir); console.log(`Created project: ${displayPath(dir)}`); }
+      const name = (JSON.parse(await readFile(join(dir, 'mografy.json'), 'utf8')) as { name?: string }).name ?? 'mografy-project';
+      if (await installIntoProject(dir, name)) {
+        const folder = relative(process.cwd(), dir);
+        const into = folder ? `  cd ${/\s/.test(folder) ? JSON.stringify(folder) : folder}\n` : '';
+        console.log(`\nMografy ${VERSION} and its Skill are installed in this project, not globally. Next:\n${into}  npx mografy dev     open the player (or: npm run dev)\nThen open Claude Code or Codex in this folder and describe the animation.\nTo update later, run \`npx mografy@latest\` in this folder.`);
+      } else if (installation.kind !== 'package') {
+        console.log(`Run \`mografy dev ${displayPath(dir)}\` to open it, then describe the animation to Claude or Codex.`);
+      }
       return;
+    }
     case 'check': return checkProject(dir, flags.motion);
     case 'review': return reviewProject(dir, flags.video);
     case 'export':
