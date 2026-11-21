@@ -99,5 +99,5 @@ export async function installShowcase(name: string, target?: string, fetchImpl: 
 
 export function printShowcase(name: string, dest: string, bytes: number) {
   console.log(`Downloaded the showcase film ${name} (${(bytes / 1048576).toFixed(1)} MB) to ${displayPath(dest)}`);
-  console.log(`\nWatch it:   mografy dev ${displayPath(dest)}\nRead first: scenes/ and style.md, then .agents/skills/mografy/references/examples.md`);
+  console.log(`\nWatch it:   mografy dev ${displayPath(dest)}\nRead first: scenes/ and style.md, then references/examples.md in the Mografy Skill`);
 }

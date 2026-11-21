@@ -115,5 +115,5 @@ export async function downloadExample(name: string, dest: string, fetchImpl: typ
 
 export function printExample(name: string, dest: string) {
   console.log(`Copied the reference film ${name} to ${displayPath(dest)}`);
-  console.log(`\nWatch it:   mografy dev ${displayPath(dest)}\nRead first: scenes/ (the shot table, the camera, the drawing), then .agents/skills/mografy/references/examples.md`);
+  console.log(`\nWatch it:   mografy dev ${displayPath(dest)}\nRead first: scenes/ (the shot table, the camera, the drawing), then references/examples.md in the Mografy Skill`);
 }

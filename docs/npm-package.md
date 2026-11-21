@@ -12,7 +12,7 @@ installed on this computer, the package's `mografy` command runs that checkout i
 | --- | --- |
 | `bin/mografy.js` | The command |
 | `lib/node_modules/@mografy/*` | The six workspace packages, vendored as built: `dist/` without sourcemaps, plus the server's built-in components and previews, the CLI's `bin/`, and the player's `web/dist` |
-| `examples/` | `catalog.json` and the intro film; the Stage films download on demand |
+| `examples/` | `catalog.json` only; every reference film, the intro included, downloads on demand |
 
 npm installs the third-party dependencies beside them (esbuild, protobufjs, ws, zod). There is no install script and no
 browser library: Mografy drives Chromium over the DevTools Protocol and renders in the Chrome or Edge already on the
@@ -20,7 +20,7 @@ computer (or Playwright's headless shell, when one is installed). FFmpeg downloa
 it, into `~/.mografy/tools`; the headless shell downloads (through `npx playwright-core`, into Playwright's browser
 folder) only on a computer with no Chromium at all. Both are shared by every installation; `mografy setup` fetches
 them ahead of time. Templates,
-helpers and Stage films download from GitHub at the release tag `v<version>`, falling back to `main`.
+helpers and reference films download from GitHub at the release tag `v<version>`, falling back to `main`.
 
 The packages are vendored under `lib/node_modules` rather than declared as `bundleDependencies`: a global npm install
 of a package with bundled dependencies installs every platform's optional esbuild binary (about 280 MB).
@@ -46,7 +46,11 @@ pnpm test:package    # pack, npm install -g into a temporary prefix, run version
 ## Release
 
 1. Set `version` in `apps/cli/package.json` (`0.2.0-beta.1` for a beta).
-2. `pnpm build && pnpm check && pnpm test:package`.
+2. `pnpm build && pnpm check && pnpm pack:cli && pnpm test:package`.
 3. Tag the commit `v<version>` and push the tag, so the package's downloads find matching files.
-4. `npm publish apps/cli/dist/mografy-<version>.tgz --tag beta` (or `--tag latest` for a release). A pre-release
-   version checks the `beta` tag in `mografy update`, a release the `latest` tag.
+4. `npm publish apps/cli/dist/mografy-<version>.tgz --access public` publishes a release under `latest`, which is
+   what `npm install -g mografy` and `npx mografy` install. For a beta, add `--tag beta`. A pre-release version checks
+   the `beta` tag in `mografy update`, a release the `latest` tag.
+
+Users install with `npm install -g mografy` (or run it once with `npx mografy`) and add the agent Skill with
+`npx skills add mografy/mografy -g`.
