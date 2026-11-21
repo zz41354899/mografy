@@ -1,9 +1,12 @@
 import { homedir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { installation, isProject } from '@mografy/server';
+import { installation, isProject, workspaceDir } from '@mografy/server';
 
-/** The installation's root folder (the repository root of a checkout); see `installation` in @mografy/server. */
-export const workspaceRoot = installation.root;
+/**
+ * Where Mografy's folders are: the repository root of a checkout, or the workspace `npx mografy@latest init` made
+ * (found from the current folder), else the installation's own folder. See `workspaceDir` in @mografy/server.
+ */
+export const workspaceRoot = workspaceDir() ?? installation.root;
 /** Keep terminal output useful without exposing the user's absolute home path. */
 export function displayPath(value: string) {
   const absolute = resolve(value);

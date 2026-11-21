@@ -210,5 +210,7 @@ export const zh = {
   dsTiming: '時間與長度', dsTimingHelp: '每個圖層什麼時候出現、留多久。點長條跳到那個時間。',
   dsTimingSequence: '這支影片的圖層是鏡頭，每個都是整個畫面。改開始或長度只會動到那一個鏡頭；空出來的地方顯示背景。',
   dsStart: '開始', dsLength: '長度', dsSceneMotion: '動畫參數', dsSceneMotionHelp: '場景開放的數值，像速度、強度、數量，跟檢視器裡的是同一組。',
+  mcpPromptTitle: '用 AI 安裝 MCP', mcpPromptHelp: '複製這段提示詞，貼給 Claude Code 或 Codex，它會幫你把 Mografy MCP 裝好。路徑已自動帶入這個 Mografy 的位置。', mcpCopyPrompt: '複製提示詞', mcpCopied: '已複製', mcpOs: '作業系統', mcpFolder: 'Mografy 位置', mcpManual: '手動設定', mcpClaudeHelp: '在終端機執行一次就會記住。', mcpCodexHelp: '在終端機執行一次，之後每個 Codex 對話都能用。', mcpDesktop: 'Claude Desktop', mcpDesktopSetup: '在 Claude Desktop 打開 Settings → Developer → Edit Config，加入這段後重新啟動。command 填 node 的完整路徑（在終端機執行 node -p process.execPath 可以查到）。',
+  mcpFolderHere: '這台電腦的 Mografy 位置，已自動帶入；要用別的資料夾可以直接改。', mcpFolderOther: '另一台電腦上的 Mografy 資料夾，輸入一次就會記住。', mcpFolderNeeded: '先輸入那台電腦上的 Mografy 資料夾，提示詞和指令就會出現。',
 };
 export type Dict = typeof zh;

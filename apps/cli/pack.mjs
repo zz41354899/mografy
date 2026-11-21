@@ -77,6 +77,13 @@ for (const [name, extra] of Object.entries(PACKAGES)) {
 // Reference films: only the catalog, so `mografy add` lists them offline at this version; each downloads on demand.
 mkdirSync(join(stage, 'examples'), { recursive: true });
 cpSync(join(root, 'examples', 'catalog.json'), join(stage, 'examples', 'catalog.json'));
+// Mografy Templates (about 0.7 MB): `init` copies them into the workspace's templates/, so `mografy add <template>`
+// works offline and matches this version. Only the files Git tracks, so nothing local slips into the package.
+for (const file of execFileSync('git', ['ls-files', '-z', 'templates'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean)) {
+  if (!existsSync(join(root, file))) continue;
+  mkdirSync(dirname(join(stage, file)), { recursive: true });
+  cpSync(join(root, file), join(stage, file));
+}
 cpSync(join(here, 'bin'), join(stage, 'bin'), { recursive: true });
 cpSync(join(root, 'LICENSE'), join(stage, 'LICENSE'));
 cpSync(join(here, 'README.md'), join(stage, 'README.md'));
@@ -95,7 +102,7 @@ writeFileSync(join(stage, 'package.json'), JSON.stringify({
   bin: { mografy: 'bin/mografy.js' },
   // Read by @mografy/server's `installation` to recognise this layout.
   mografy: { package: true },
-  files: ['bin', 'lib', 'examples', 'README.md', 'LICENSE'],
+  files: ['bin', 'lib', 'examples', 'templates', 'README.md', 'LICENSE'],
   dependencies: Object.fromEntries(Object.entries(external).sort()),
 }, null, 2) + '\n');
 

@@ -4,7 +4,7 @@
 // downloaded from the same repository on GitHub, file by file, the first time it is added.
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, join, resolve, sep } from 'node:path';
-import { EXAMPLES_DIR, isProject, libraryDir } from '@mografy/server';
+import { EXAMPLES_DIR, isProject, referenceFilmsDir } from '@mografy/server';
 import { downloadRepoFile } from './github.js';
 import { displayPath } from './paths.js';
 
@@ -77,8 +77,8 @@ export async function copyExample(name: string, target?: string) {
   const list = await listExamples();
   const film = list.find(e => e.name === name);
   if (!film) throw new Error(`Unknown example: ${name}\nAvailable examples:\n${await examplesList()}`);
-  const dest = resolve(target ?? join(libraryDir(), name));
-  if (await readdir(dest).then(() => true, () => false)) throw new Error(`${displayPath(dest)} already exists. Pass another folder: mografy add ${name} <folder>`);
+  const dest = resolve(target ?? join(referenceFilmsDir(), name));
+  if (await readdir(dest).then(() => true, () => false)) throw new Error(`${displayPath(dest)} already exists. Pass another folder: npx mografy add ${name} <folder>`);
   if (film.installed) await cp(join(EXAMPLES_DIR, name), dest, { recursive: true, errorOnExist: true, filter: source => !SKIP.has(basename(source)) });
   else await downloadExample(name, dest);
   return dest;
@@ -115,5 +115,5 @@ export async function downloadExample(name: string, dest: string, fetchImpl: typ
 
 export function printExample(name: string, dest: string) {
   console.log(`Copied the reference film ${name} to ${displayPath(dest)}`);
-  console.log(`\nWatch it:   mografy dev ${displayPath(dest)}\nRead first: scenes/ (the shot table, the camera, the drawing), then references/examples.md in the Mografy Skill`);
+  console.log(`\nWatch it:   npx mografy dev ${displayPath(dest)}\nRead first: scenes/ (the shot table, the camera, the drawing), then references/examples.md in the Mografy Skill`);
 }

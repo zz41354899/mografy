@@ -822,6 +822,16 @@ li.live .sub-time { color: var(--signal); }
 .st-tool, .st-row, .st-card { min-width: 0; }
 .st-tool { grid-template-columns: minmax(0, 1fr); }
 .st-command { min-width: 0; }
+.st-command.block { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; }
+.st-command pre { flex: 1; min-width: 0; margin: 0; overflow-x: auto; white-space: pre; font: 12px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
+.st-prompt { margin: 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font: 12px/1.55 "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text); }
+.st-prompt { max-height: 220px; overflow-y: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--ui); }
+.st-path-row { flex-wrap: wrap; }
+.st-input { flex: 1 1 260px; min-width: 0; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--ui); color: var(--text); font: 12.5px var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace); }
+.st-input:focus { outline: none; border-color: var(--signal); }
+.st-seg { display: inline-flex; padding: 2px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--ui); }
+.st-seg button { height: 28px; padding: 0 12px; border-radius: 6px; border: 0; background: none; color: var(--muted); font-size: 12.5px; }
+.st-seg button.on { background: var(--ui-raised); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong); }
 
 .tl-names .tl-lock { flex: none; width: 26px; height: 100%; padding: 0; display: grid; place-items: center; background: none; border-radius: 0; color: var(--faint); opacity: 0; }
 .tl-names li.layer:hover .tl-lock, .tl-names li.layer.current .tl-lock, .tl-names .tl-lock:focus-visible { opacity: 1; }
@@ -879,7 +889,7 @@ li.live .sub-time { color: var(--signal); }
 .st-tool b { font-size: 15px; }
 .st-tool.muted { background: none; border-style: dashed; }
 .st-command { min-height: 44px; padding: 4px 4px 4px 14px; border-radius: 12px; background: #050607; border-color: rgba(255, 255, 255, .06); }
-.st-command::before { content: "$"; color: #7de4d8; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
+.st-command:not(.block)::before { content: "$"; color: #7de4d8; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; }
 .st-command code { white-space: nowrap; text-overflow: ellipsis; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; }
 .st-command .tl-icon { width: 36px; height: 36px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); color: var(--text); }
 .st-scale button { padding: 18px 8px; }

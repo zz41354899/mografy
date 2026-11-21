@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
@@ -81,13 +81,73 @@ export const REPO_ROOT = installation.root;
 /** Example projects shipped in the repository (examples/ at the repo root). */
 export const EXAMPLES_DIR = installation.examples;
 /**
- * Where new projects are created: $MOGRAFY_HOME, else projects/ inside the Mografy folder
- * when running from source, else ~/Mografy.
+ * A workspace is the folder `npx mografy@latest init` makes: the same layout as a checkout (projects/, examples/,
+ * templates/) with Mografy installed in its node_modules. It is marked by this file at its root.
  */
-export const libraryDir = () => resolve(process.env.MOGRAFY_HOME ?? (installation.kind === 'source' ? join(installation.root, 'projects') : join(homedir(), 'Mografy')));
+export const WORKSPACE_FILE = 'mografy.workspace.json';
+
+function markedAncestor(start: string) {
+  for (let dir = resolve(start); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, WORKSPACE_FILE))) return dir;
+    if (dirname(dir) === dir) return undefined;
+  }
+}
+
+/**
+ * The workspace the npm package works in: $MOGRAFY_WORKSPACE, else the workspace whose node_modules this copy runs
+ * from, else the nearest marked folder above the current folder (so `npx mografy@latest` and an MCP server started
+ * there find it too), else the one above $MOGRAFY_PROJECT. A checkout is its own workspace and never uses one.
+ */
+export function workspaceDir(cwd = process.cwd(), env: NodeJS.ProcessEnv = process.env, install: Pick<Installation, 'kind' | 'root'> = installation): string | undefined {
+  if (install.kind === 'source') return undefined;
+  if (env.MOGRAFY_WORKSPACE) { const dir = resolve(env.MOGRAFY_WORKSPACE); try { return realpathSync(dir); } catch { return dir; } }
+  for (const start of [install.root, cwd, env.MOGRAFY_PROJECT]) {
+    const found = start ? markedAncestor(start) : undefined;
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * How an MCP client runs Mografy for the project in `projectDir`, for the player's MCP settings: the folder to work in
+ * (its workspace, else the project itself) and the `mografy.js` to start, preferring the copy installed in that folder
+ * (an npx download can be cleaned away; Claude Desktop needs a full path because it starts servers without PATH).
+ */
+export function mcpTarget(projectDir: string) {
+  const workspace = installation.kind === 'source' ? undefined : markedAncestor(projectDir);
+  const folder = installation.kind === 'source' ? installation.root : workspace ?? resolve(projectDir);
+  const local = join(folder, 'node_modules', 'mografy', 'bin', 'mografy.js');
+  return { folder, workspace: Boolean(workspace), bin: existsSync(local) ? local : installation.cliBin };
+}
+
+/**
+ * Where new projects are created: $MOGRAFY_HOME, else projects/ inside the checkout or the workspace,
+ * else ~/Mografy (the npm package outside a workspace).
+ */
+export const libraryDir = () => {
+  if (process.env.MOGRAFY_HOME) return resolve(process.env.MOGRAFY_HOME);
+  if (installation.kind === 'source') return join(installation.root, 'projects');
+  const workspace = workspaceDir();
+  return workspace ? join(workspace, 'projects') : join(homedir(), 'Mografy');
+};
+/**
+ * Where `mografy add <film>` puts a reference film: examples/ in a workspace (next to your own projects/, not mixed
+ * in with them), else the library.
+ */
+export const referenceFilmsDir = () => {
+  const workspace = process.env.MOGRAFY_HOME ? undefined : workspaceDir();
+  return workspace ? join(workspace, 'examples') : libraryDir();
+};
+/** Folders the player lists as examples: the installation's examples/ and, in a workspace, its examples/. */
+export const exampleDirs = () => {
+  const workspace = workspaceDir();
+  const dirs = [EXAMPLES_DIR, ...(workspace ? [join(workspace, 'examples')] : [])];
+  return [...new Set(dirs.map(dir => resolve(dir)))];
+};
 /** Separate each installation's recent projects and active player; an override is explicit shared state. */
 export function installationStateDir(repository: string) {
   const id = createHash('sha256').update(resolve(repository)).digest('hex').slice(0, 16);
   return join(homedir(), '.mografy', 'installations', id);
 }
-export const stateDir = () => resolve(process.env.MOGRAFY_STATE ?? installationStateDir(REPO_ROOT));
+/** A workspace keeps one state whichever copy runs (its own, or an npx download), so the player and MCP agree. */
+export const stateDir = () => resolve(process.env.MOGRAFY_STATE ?? installationStateDir(workspaceDir() ?? REPO_ROOT));

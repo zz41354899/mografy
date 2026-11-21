@@ -89,7 +89,7 @@ function Editor({ settings, onSettings }: { settings: Settings; onSettings(next:
         onEffects={effects.onChange} onEffectsPreview={effects.onPreview}
         editor={timeline} player={scene.player} onSeek={seekTo} designRequest={designRequest} />
     </main>
-    {settingsOpen ? <SettingsPanel settings={settings} onChange={onSettings} onClose={() => setSettingsOpen(false)} projectDir={snapshot?.projectDir} /> : null}
+    {settingsOpen ? <SettingsPanel settings={settings} onChange={onSettings} onClose={() => setSettingsOpen(false)} projectDir={snapshot?.projectDir} mcp={snapshot?.mcp} /> : null}
     {spot.open ? <Spotlight items={spot.items()} timeItem={spot.timeItem} onClose={spot.close} /> : null}
     {!exportOpen && snapshot?.render?.state === 'running' ? <ExportProgressToast key={snapshot.render.id} job={snapshot.render} session={session} onOpen={() => showExport(true)} /> : null}
     {exportPanel.mode !== 'closed' && snapshot?.scene && snapshot.project ? <ExportDialog key={`${snapshot.projectDir}:${exportPanel.generation}`} snapshot={snapshot} session={session} open={exportOpen} resume={exportPanel.mode === 'job' || exportPanel.mode === 'hidden'} onClose={keepJob => dispatchExport({ type: 'close', keepJob })} onBatch={showBatch} /> : null}

@@ -48,6 +48,8 @@ export interface Snapshot {
   thumbnail?: string | null;
   /** One of the bundled component projects, which cannot be presented. */
   builtIn?: boolean;
+  /** Where an MCP client should run Mografy for this project (the player's MCP settings). */
+  mcp?: { folder: string; workspace: boolean; bin: string } | undefined;
 }
 /** One project in the player's batch export queue. */
 export interface QueueJob {

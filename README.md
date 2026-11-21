@@ -44,15 +44,27 @@ cd mografy
 npx mografy dev
 ```
 
-`init` creates a `mografy` folder with your first project, installs Mografy and its Skill for Claude Code, Codex and other agents into that folder, and `npx mografy dev` opens the editor. Then open Claude Code or Codex in the `mografy` folder and describe the animation.
+`init` creates a `mografy` workspace, installs Mografy and its Skill for Claude Code, Codex and other agents into it, and `npx mografy dev` opens the editor on the sixteen built-in components. Then open Claude Code or Codex in the `mografy` folder and describe the animation. The workspace is laid out like this repository:
 
-Everything lives in that folder: nothing is installed globally, and deleting the folder removes it. `npx mografy@latest init my-film` names the folder yourself. `npm run dev` works too.
+```text
+mografy/
+  projects/      your films, one project each (built-in components in projects/.components)
+  examples/      reference films added with npx mografy add
+  templates/     Mografy Templates, read by npx mografy add
+  .claude/ .agents/  the Mografy Skill
+  node_modules/  Mografy itself
+  mografy.workspace.json
+```
 
-**Updating.** Run `npx mografy@latest` inside the folder. It moves the folder's Mografy and Skill to the newest version and opens the editor.
+Every `npx mografy` command run in the workspace, or in any folder inside it, uses it: new films go into `projects/`, `npx mografy add <film>` copies reference films into `examples/`, templates are read from `templates/` without a download, and an MCP server started there works with it. `init` creates no project of its own.
 
-**FFmpeg and Chromium.** You don't install either: Chrome or Edge on your computer renders checks and exports, and FFmpeg downloads into the project the first time you export a video (a Chromium shell too, only if there is no Chrome or Edge). `npx mografy setup` downloads them ahead of time; details are in [configuration](docs/configuration.md).
+Everything lives in that folder: nothing is installed globally, and deleting the folder removes it. `npx mografy@latest init my-workspace` names the folder yourself. `npm run dev` works too.
 
-Templates, extras and reference films download from GitHub the first time `npx mografy add` needs them.
+**Updating.** Run `npx mografy@latest init` inside the workspace. It moves its Mografy, Skill and templates to the newest version; your projects stay as they are. A folder made by an earlier version is a single project rather than a workspace; it keeps working, and `npx mografy@latest init` next to it makes a workspace you can move it into (`projects/`).
+
+**FFmpeg and Chromium.** You don't install either: Chrome or Edge on your computer renders checks and exports, and FFmpeg downloads into the workspace the first time you export a video (a Chromium shell too, only if there is no Chrome or Edge). `npx mografy setup` downloads them ahead of time; details are in [configuration](docs/configuration.md).
+
+Templates come with Mografy; extras and reference films download from GitHub the first time `npx mografy add` needs them.
 
 **Optional: install globally.** `npm install -g mografy` puts a `mografy` command on your PATH for every folder, and `npx skills add mografy/mografy -g` installs the Skill for every agent on the computer. Update them with `npm install -g mografy@latest` and `npx skills update`.
 
@@ -60,7 +72,7 @@ To change Mografy itself, work from a Git checkout instead; see [Contributing](#
 
 ## Make your first film
 
-1. In the `mografy` folder, run `npx mografy dev`. The editor opens on your project.
+1. In the `mografy` folder, run `npx mografy dev`. The editor opens on the built-in components.
 2. Open Claude Code or Codex in the same folder and describe the film:
 
    > Make an eight-second 9:16 animation, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
@@ -68,7 +80,7 @@ To change Mografy itself, work from a Git checkout instead; see [Contributing](#
 3. The agent writes the scene, and each time it saves, Mografy compiles and trial-renders the change and updates the editor at the same moment in the film. If a change breaks the film, the last working version keeps playing and the error is shown.
 4. Adjust it in the editor, or ask the agent for more changes. When you are happy with it, export.
 
-For another film, run `npx mografy@latest init another-film` next to the first one. For anything longer than a few shots, ask for a storyboard first. The agent writes `storyboards/storyboard.md` and a visual board, then builds the film from it.
+Every film is a project in `projects/`: the agent creates one when you ask, or run `npx mografy init my-film` in the workspace (it creates `projects/my-film`). For anything longer than a few shots, ask for a storyboard first. The agent writes `storyboards/storyboard.md` and a visual board, then builds the film from it.
 
 ## The editor
 
@@ -85,7 +97,7 @@ Your timeline edits are saved to `scenes/timeline.json` and your colour swaps to
 
 ## The Skill
 
-The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. `npx mografy@latest init` puts it in the project folder for Claude Code (`.claude/skills/mografy`) and for Codex and other agents (`.agents/skills/mografy`), and `npx mografy@latest` keeps it current. Inside a Git checkout of Mografy the agent finds it without installing. To have it in every folder instead, install it with the [skills CLI](https://github.com/vercel-labs/skills):
+The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. `npx mografy@latest init` puts it in the workspace for Claude Code (`.claude/skills/mografy`) and for Codex and other agents (`.agents/skills/mografy`), and running `npx mografy@latest init` again keeps it current. Inside a Git checkout of Mografy the agent finds it without installing. To have it in every folder instead, install it with the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```sh
 npx skills add mografy/mografy -g     # optional: every folder, for Claude Code, Codex and other agents
@@ -213,7 +225,7 @@ Mografy is a pnpm monorepo:
 | `web` | The editor |
 | `cli` | The `mografy` command and the MCP server |
 
-Work from a Git checkout (Node.js 22.12 or later). `pnpm install` builds Mografy, fetches the headless Chromium shell and puts the checkout's `mografy` command on your PATH; inside a checkout, `npx mografy update` pulls, rebuilds and refreshes the Skill.
+Work from a Git checkout (Node.js 22.12 or later). `pnpm install` builds Mografy and fetches the headless Chromium shell; inside the checkout, `npx mografy …` runs that checkout, and `npx mografy update` pulls, rebuilds and refreshes the Skill.
 
 ```sh
 git clone https://github.com/mografy/mografy.git

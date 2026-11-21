@@ -44,15 +44,27 @@ cd mografy
 npx mografy dev
 ```
 
-`init` 會建立 `mografy` 資料夾和你的第一個專案，並把 Mografy 和給 Claude Code、Codex 等代理用的 Skill 裝進這個資料夾；`npx mografy dev` 會打開編輯器。接著在 `mografy` 資料夾裡打開 Claude Code 或 Codex，描述你要的動畫就可以了。
+`init` 會建立 `mografy` 工作區，並把 Mografy 和給 Claude Code、Codex 等代理用的 Skill 裝進去；`npx mografy dev` 會打開編輯器，先顯示 16 個內建元件。接著在 `mografy` 資料夾裡打開 Claude Code 或 Codex，描述你要的動畫就可以了。工作區的結構跟這個 repository 一樣：
 
-所有東西都在這個資料夾裡，不會全域安裝；刪掉資料夾就清乾淨了。想自己取資料夾名稱，用 `npx mografy@latest init 我的動畫`。也可以用 `npm run dev` 開啟。
+```text
+mografy/
+  projects/      你的影片，一部一個專案（內建元件在 projects/.components）
+  examples/      用 npx mografy add 加入的參考影片
+  templates/     Mografy Templates，npx mografy add 會從這裡讀取
+  .claude/ .agents/  Mografy Skill
+  node_modules/  Mografy 本體
+  mografy.workspace.json
+```
 
-**更新**：在資料夾裡執行 `npx mografy@latest`，會把資料夾裡的 Mografy 和 Skill 換成最新版，並打開編輯器。
+在工作區（或它裡面任何資料夾）執行的 `npx mografy` 指令都會用這個工作區：新影片放進 `projects/`，`npx mografy add <影片>` 把參考影片複製到 `examples/`，模板直接從 `templates/` 讀取、不用下載，在這裡啟動的 MCP 伺服器也連到它。`init` 本身不會建立專案。
 
-**FFmpeg 和 Chromium**：都不用自己安裝。檢查和匯出會用電腦上的 Chrome 或 Edge 算繪；第一次匯出影片時，FFmpeg 會自動下載到專案資料夾裡（沒有 Chrome 或 Edge 時，Chromium shell 也一樣）。想事先下載可以執行 `npx mografy setup`，細節請看[設定說明](docs/configuration.md)。
+所有東西都在這個資料夾裡，不會全域安裝；刪掉資料夾就清乾淨了。想自己取資料夾名稱，用 `npx mografy@latest init 我的工作區`。也可以用 `npm run dev` 開啟。
 
-模板、extras 和參考影片要等 `npx mografy add` 第一次用到時，才會從 GitHub 下載。
+**更新**：在工作區裡執行 `npx mografy@latest init`，會把 Mografy、Skill 和模板換成最新版，你的專案不會變。用舊版建立的資料夾是單一專案而不是工作區，照常能用；在它旁邊執行 `npx mografy@latest init` 建一個工作區，再把它搬進 `projects/` 即可。
+
+**FFmpeg 和 Chromium**：都不用自己安裝。檢查和匯出會用電腦上的 Chrome 或 Edge 算繪；第一次匯出影片時，FFmpeg 會自動下載到工作區裡（沒有 Chrome 或 Edge 時，Chromium shell 也一樣）。想事先下載可以執行 `npx mografy setup`，細節請看[設定說明](docs/configuration.md)。
+
+模板隨 Mografy 附上；extras 和參考影片要等 `npx mografy add` 第一次用到時，才會從 GitHub 下載。
 
 **選用：全域安裝**：`npm install -g mografy` 會把 `mografy` 指令加進 PATH，在任何資料夾都能用；`npx skills add mografy/mografy -g` 會替電腦上所有代理安裝 Skill。用 `npm install -g mografy@latest` 和 `npx skills update` 更新。
 
@@ -60,7 +72,7 @@ npx mografy dev
 
 ## 做第一支影片
 
-1. 在 `mografy` 資料夾執行 `npx mografy dev`，編輯器會打開你的專案。
+1. 在 `mografy` 資料夾執行 `npx mografy dev`，編輯器會打開內建元件。
 2. 在同一個資料夾打開 Claude Code 或 Codex，描述你要的影片：
 
    > 做一支 8 秒的 9:16 動畫，1080 × 1920。先像 Typewriter 元件那樣打出「Hello, Mografy.」，再用青綠色強調色帶出標誌。看過實際畫面後匯出 MP4。
@@ -68,7 +80,7 @@ npx mografy dev
 3. 代理會寫好場景。它每次存檔，Mografy 都會編譯並試算繪，再停在影片同一個時間點更新畫面。如果某次修改讓影片壞掉，畫面會繼續播放上一個可用的版本，同時顯示錯誤。
 4. 在編輯器裡調整，或請代理繼續修改。滿意了就匯出。
 
-要做另一支影片，在第一個資料夾旁邊執行 `npx mografy@latest init 另一支影片`。超過幾個鏡頭的影片，建議先請代理做分鏡。它會寫好 `storyboards/storyboard.md` 和視覺分鏡板，再照著分鏡做出影片。
+每支影片都是 `projects/` 裡的一個專案：請代理做就會自動建立，或在工作區裡執行 `npx mografy init my-film`（會建立 `projects/my-film`）。超過幾個鏡頭的影片，建議先請代理做分鏡。它會寫好 `storyboards/storyboard.md` 和視覺分鏡板，再照著分鏡做出影片。
 
 ## 編輯器
 
@@ -85,7 +97,7 @@ npx mografy dev
 
 ## Skill
 
-`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。`npx mografy@latest init` 會把它放進專案資料夾，給 Claude Code（`.claude/skills/mografy`）和 Codex 等代理（`.agents/skills/mografy`）使用，`npx mografy@latest` 會讓它保持最新。在 Mografy 的 Git 工作副本裡，不安裝代理也找得到。想在任何資料夾都能用，可以用 [skills CLI](https://github.com/vercel-labs/skills) 安裝：
+`mografy` Skill 教代理怎麼規劃、撰寫、審閱和匯出 Mografy 影片，內容包括場景規範、影片架構（一個世界、一個攝影機、一張節拍表）、動態設計、圖層、分鏡、效能、配樂、3D、中日文排版和輸出格式。`npx mografy@latest init` 會把它放進工作區，給 Claude Code（`.claude/skills/mografy`）和 Codex 等代理（`.agents/skills/mografy`）使用，再執行一次 `npx mografy@latest init` 會讓它保持最新。在 Mografy 的 Git 工作副本裡，不安裝代理也找得到。想在任何資料夾都能用，可以用 [skills CLI](https://github.com/vercel-labs/skills) 安裝：
 
 ```sh
 npx skills add mografy/mografy -g     # 選用：任何資料夾都能用，Claude Code、Codex 等代理共用
@@ -213,7 +225,7 @@ Mografy 是一個 pnpm monorepo：
 | `web` | 編輯器 |
 | `cli` | `mografy` 指令和 MCP 伺服器 |
 
-請用 Git 工作副本開發（需要 Node.js 22.12 或更新版本）。`pnpm install` 會建置 Mografy、下載 Chromium headless shell，並把工作副本的 `mografy` 指令加進 PATH；在工作副本裡，`npx mografy update` 會拉取最新版本、重新建置並更新 Skill。
+請用 Git 工作副本開發（需要 Node.js 22.12 或更新版本）。`pnpm install` 會建置 Mografy 並下載 Chromium headless shell；在工作副本裡，`npx mografy …` 會執行這份工作副本，`npx mografy update` 會拉取最新版本、重新建置並更新 Skill。
 
 ```sh
 git clone https://github.com/mografy/mografy.git

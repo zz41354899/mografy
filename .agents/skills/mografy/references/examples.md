@@ -13,7 +13,8 @@ They follow the [quality floor](https://github.com/mografy/mografy/blob/main/.ag
 npx mografy add                           # list reference films, showcase films and helpers
 npx mografy add stage-invoices ./hero     # copy a Stage film (downloaded from GitHub when not checked out)
 npx mografy add film-starter ~/Films/new  # download a showcase film: the model for a new multi-shot film
-npx mografy add mografy-montage           # into the library (projects/mografy-montage when running from source)
+npx mografy add mografy-montage           # into examples/ of the workspace (projects/mografy-montage in a checkout)
+npx mografy add stage-phone projects/my-app  # a copy of your own, to build on
 ```
 
 The copy is an ordinary project: open it with `npx mografy dev <folder>`, and edit, check, review and export it like any other. Never edit the films in `examples/` themselves; they are the reference other agents read. Stage and showcase downloads need a network connection; if it fails, the same zip is on the film's showcase page.

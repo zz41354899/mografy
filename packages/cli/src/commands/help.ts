@@ -19,9 +19,10 @@ export function helpText(color: boolean) {
   return [
     `  ${teal('●')} ${bold('Mografy')} ${dim(VERSION)}\n  ${dim('Local Canvas animation for Claude Code and Codex. Claude creates. Mografy shows.')}`,
     section('Start', [
-      row('npx mografy@latest init [folder]', 'New project in ./mografy (or [folder]) with its own Mografy, no global install'),
-      row('npx mografy dev', 'Inside that project (cd mografy): open the player'),
-      row('npx mografy@latest', "Inside that project: update its Mografy, then open the player"),
+      row('npx mografy@latest init [folder]', 'New workspace in ./mografy (or [folder]): projects/, examples/, templates/ and its own Mografy'),
+      row('npx mografy init projects/<name>', 'Inside a workspace: a new project in projects/'),
+      row('npx mografy dev', 'Inside the workspace (cd mografy): open the player'),
+      row('npx mografy@latest init', 'Inside the workspace: update its Mografy and templates'),
       row('mografy dev', 'Open the player: built-in animations and your projects'),
       row('mografy dev <project>', 'Open a project in the player'),
     ]),
@@ -35,7 +36,7 @@ export function helpText(color: boolean) {
     ]),
     section('Add', [
       row('mografy add', 'List the reference films, helpers and templates you can add'),
-      row('mografy add <film> [folder]', 'Copy a reference film into your library (showcase films are downloaded)'),
+      row('mografy add <film> [folder]', 'Copy a reference film into examples/ (outside a workspace: the library)'),
       row('mografy add <helper...> [project]', 'Add helpers to a project: cinema, cjk, three, music, walkthrough, stage'),
       row('mografy add <template...> [project]', 'Add Mografy Templates: hooks, captions, screens, end cards (9:16 and 16:9)'),
       row('', '--force replaces helper and template files you changed'),

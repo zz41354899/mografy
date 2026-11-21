@@ -2,16 +2,28 @@
 
 [English](CHANGELOG.md) | [繁體中文](CHANGELOG.zh-TW.md)
 
-Notable changes to Mografy. From **Mografy Triangulum v0.1.0**, releases are numbered and follow [semantic versioning](https://semver.org); `mografy --version` prints yours. Updates before v0.1.0 are listed by date below it. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
+Notable changes to Mografy. From **Mografy Triangulum v0.1.0**, releases are numbered and follow [semantic versioning](https://semver.org); `npx mografy --version` prints yours. Updates before v0.1.0 are listed by date below it. Installation still contains only the sixteen built-in components; optional extras live in [`extras/`](extras/) on GitHub and are copied into a project only when it needs them.
 
-Update from your Mografy checkout:
+Update Mografy inside your `mografy` folder:
 
 ```sh
-mografy update --check
-mografy update
+npx mografy@latest init
 ```
 
-Older installations without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `mografy dev`.
+In a Git checkout of this repository, `npx mografy update --check` shows what would change and `npx mografy update` updates the checkout. Older checkouts without `update`: stop the player, run `git pull --ff-only` and `pnpm install` once, then reopen with `npx mografy dev`.
+
+## Mografy Triangulum v0.1.2 — 2026-11-21
+
+### Changed
+
+- **Every command in the docs is `npx mografy …`** — the README, `docs/`, the Skill and the template, extras and reference-film READMEs now write each command as `npx mografy dev`, `npx mografy check`, `npx mografy export` and so on. In a folder made by `npx mografy@latest init`, `mografy` on its own is not on PATH, so an agent following the Skill no longer runs into "command not found". Inside a Git checkout, `npx mografy` runs that checkout. Only the optional global install (`npm install -g mografy`) gives you a bare `mografy` command.
+- **Simpler MCP setup** — `npx -y mografy mcp` starts the server from any folder, and `MOGRAFY_PROJECT` names the project it opens by default, so Claude Desktop and other apps no longer need the full path of the command: `claude mcp add mografy -- npx -y mografy mcp` in your `mografy` folder, or `codex mcp add mografy --env MOGRAFY_PROJECT="$PWD" -- npx -y mografy mcp`. On Windows, put `cmd /c` in front of `npx`.
+- **`npx mografy@latest init` makes a workspace** — the `mografy` folder now has the same layout as a checkout: `projects/` (your films; the built-in components in `projects/.components`), `examples/` (reference films from `npx mografy add <film>`) and `templates/` (Mografy Templates, now shipped in the package, so `npx mografy add <template>` works offline), marked by `mografy.workspace.json`. Every command run in the workspace or a folder inside it defaults to it, including `npx mografy@latest` from the npx cache and `npx -y mografy mcp` (or `MOGRAFY_WORKSPACE`), so nothing goes to `~/Mografy` any more. `init` no longer creates a project: the player opens on the built-in components, and `npx mografy init my-film` in the workspace creates `projects/my-film` without reinstalling. Update with `npx mografy@latest init` in the workspace. Folders made by v0.1.1 are single projects and keep working as before.
+- **Library projects stay in the library** — a project in the projects library is always listed there, whether or not you have opened it, instead of moving to Recent and leaving the library section empty.
+
+### Removed
+
+- **`mografy install-command`** — `pnpm install` in a checkout no longer puts a `mografy` launcher on PATH. Run `npx mografy …` in the checkout or project folder, or install globally with `npm install -g mografy`.
 
 ## Mografy Triangulum v0.1.1 — 2026-11-21
 

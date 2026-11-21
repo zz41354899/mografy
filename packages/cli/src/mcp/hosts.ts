@@ -1,12 +1,15 @@
 // Which process hosts a project for the MCP server: the running player when there is one (so the player and the
 // agent see the same result and share one Chromium), otherwise a Project this process opens and keeps for a while.
+import { existsSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
 import { readApiResponse, sendApi } from '@mografy/core';
 import type { ExportRequest, FrameCost, RenderStatus, Smoothness, Snapshot } from '@mografy/core';
 import type { ReviewResult } from '@mografy/render';
-import { Project, findServer, isProject, libraryDir } from '@mografy/server';
+import { Project, WORKSPACE_FILE, findServer, isProject, libraryDir } from '@mografy/server';
 import { workspaceRoot } from '../paths.js';
+
+const isWorkspace = (dir: string) => existsSync(join(dir, WORKSPACE_FILE));
 
 export type CheckResult = Snapshot & { cost?: FrameCost | undefined };
 export interface Source { entry: string; files: Record<string, string> }
@@ -84,12 +87,13 @@ export class Hosts {
 
   /**
    * A project path: absolute, relative to the current folder, a folder name in the projects library, or a path inside
-   * the Mografy installation. Without one, MOGRAFY_PROJECT or the project in the current folder.
+   * the Mografy installation or workspace. Without one, MOGRAFY_PROJECT or the project in the current folder.
    */
   async resolve(arg: unknown): Promise<string> {
     const value = typeof arg === 'string' && arg.trim() ? arg.trim() : undefined;
     if (!value) {
-      if (process.env.MOGRAFY_PROJECT) return this.require(resolve(process.env.MOGRAFY_PROJECT));
+      // MOGRAFY_PROJECT may name a workspace (that is where the server works, see workspaceDir) rather than one project.
+      if (process.env.MOGRAFY_PROJECT && !isWorkspace(resolve(process.env.MOGRAFY_PROJECT))) return this.require(resolve(process.env.MOGRAFY_PROJECT));
       if (await isProject(process.cwd())) return realpath(process.cwd());
       throw new Error('Name a project: an absolute path, or a folder name from list_projects.');
     }

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installation, libraryDir, sourceLayout, TEMPLATE_DIR, EXAMPLES_DIR, REPO_ROOT } from '../src/installation.js';
@@ -53,4 +53,25 @@ test('the npm package layout is recognised from its vendored server, and only wi
     // A server that is not vendored under lib/node_modules/@mografy is never taken for the package.
     assert.equal(packageLayout(join(root, 'node_modules', '@mografy', 'server')), undefined);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('a workspace is found from its own copy, the current folder or MOGRAFY_PROJECT, and never for a checkout', async () => {
+  const { mkdtemp, mkdir, rm, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { WORKSPACE_FILE, workspaceDir } = await import('../src/installation.js');
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-ws-'));
+  try {
+    const ws = join(dir, 'mografy'), deep = join(ws, 'projects', 'film', 'scenes'), elsewhere = join(dir, 'other');
+    await mkdir(deep, { recursive: true });
+    await mkdir(elsewhere);
+    await writeFile(join(ws, WORKSPACE_FILE), '{"version":1}\n');
+    const pkg = { kind: 'package' as const, root: join(dir, 'npx-cache', 'mografy') };
+    assert.equal(workspaceDir(deep, {}, pkg), ws, 'from a folder inside it');
+    assert.equal(workspaceDir(ws, {}, pkg), ws);
+    assert.equal(workspaceDir(elsewhere, {}, pkg), undefined);
+    assert.equal(workspaceDir(elsewhere, {}, { kind: 'package', root: join(ws, 'node_modules', 'mografy') }), ws, 'its own copy');
+    assert.equal(workspaceDir(elsewhere, { MOGRAFY_PROJECT: join(ws, 'projects', 'film') }, pkg), ws, 'from MOGRAFY_PROJECT (MCP clients)');
+    assert.equal(workspaceDir(elsewhere, { MOGRAFY_WORKSPACE: elsewhere }, pkg), realpathSync(elsewhere), 'resolved to its real path (macOS /var → /private/var)');
+    assert.equal(workspaceDir(deep, {}, { kind: 'source', root: dir }), undefined, 'a checkout is its own workspace');
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });

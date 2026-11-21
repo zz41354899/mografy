@@ -30,7 +30,7 @@ export async function planAdd(args: string[]): Promise<AddPlan> {
   }
   if (templates.length) plan.templates = templates;
   if (plan.films.length && (plan.helpers.length || templates.length) || plan.target !== undefined && plan.films.length > 1)
-    throw new Error('Add reference films and helpers separately; a folder can follow one film:\n  mografy add <film> [folder]\n  mografy add <helper...> [project]');
+    throw new Error('Add reference films and helpers separately; a folder can follow one film:\n  npx mografy add <film> [folder]\n  npx mografy add <helper...> [project]');
   return plan;
 }
 
@@ -49,9 +49,9 @@ export async function addList() {
     await templatesList(),
     '',
     'Usage:',
-    '  mografy add <film> [folder]',
-    '  mografy add <helper...> [project]   for example: mografy add music cjk',
-    '  mografy add <template...> [project]     for example: mografy add hook-impact cta-endcard projects/my-film',
+    '  npx mografy add <film> [folder]',
+    '  npx mografy add <helper...> [project]   for example: npx mografy add music cjk',
+    '  npx mografy add <template...> [project] for example: npx mografy add hook-impact cta-endcard projects/my-film',
     '                                      (a missing project is created for the templates)',
   ].join('\n');
 }
@@ -77,8 +77,8 @@ export async function runAdd(plan: AddPlan, workspaceRoot: string, target: (name
   if (!dir || !await isProject(dir)) {
     const named = plan.target ?? 'projects/<name>';
     throw new Error(`${dir ? `${dir} has no mografy.json` : 'This folder is not a Mografy project'}, so there is nowhere to add ${plan.helpers.join(', ')}.\n`
-      + `  Name the project:   mografy add ${plan.helpers.join(' ')} ${named}\n`
-      + `  Or start one from templates, which creates the project: mografy add hook-impact ${named}`);
+      + `  Name the project:   npx mografy add ${plan.helpers.join(' ')} ${named}\n`
+      + `  Or start one from templates, which creates the project: npx mografy add hook-impact ${named}`);
   }
   for (const [i, name] of plan.helpers.entries()) {
     if (i) console.log('');

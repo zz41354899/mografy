@@ -4,7 +4,7 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { installation } from '@mografy/server';
+import { installation, workspaceDir } from '@mografy/server';
 
 export const SKILL_INSTALL = 'npx skills add mografy/mografy -g';
 
@@ -13,7 +13,9 @@ export const skillLocations = (project: string, home = homedir()) => [project, h
   ['.agents', '.claude'].map(host => join(base, host, 'skills', 'mografy', 'SKILL.md')));
 
 export function skillHint(project: string, log = (line: string) => console.log(line), home?: string) {
-  if (installation.kind !== 'package' || skillLocations(project, home).some(file => existsSync(file))) return false;
+  const workspace = workspaceDir();
+  const found = [...skillLocations(project, home), ...(workspace ? skillLocations(workspace, home) : [])].some(file => existsSync(file));
+  if (installation.kind !== 'package' || found) return false;
   log(`Tip: agents need the Mografy Skill to write scenes. Install it once with:\n  ${SKILL_INSTALL}`);
   return true;
 }

@@ -14,7 +14,7 @@ import { ProjectWatcher } from './project-watcher.js';
 import { ProjectFrames } from './project-frames.js';
 import { RenderJobs } from './render-jobs.js';
 import { ApiError, describe } from './errors.js';
-import { libraryDir } from './installation.js';
+import { libraryDir, mcpTarget } from './installation.js';
 
 /** The sixteen bundled component projects (library/.components/<id>): references, kept as installed. */
 const isBuiltIn = (dir: string) => { const rel = relative(join(libraryDir(), '.components'), dir); return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.includes(sep); };
@@ -81,7 +81,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     return structuredClone({
       sequence: this.sequence, url: this.url, projectDir: this.dir, revision: sha256(this.raw),
       project: this.project, scene: this.scene, error: this.error, issues: this.issues,
-      state: this.state, render: this.jobs.status, thumbnail: this.thumbnail, builtIn: isBuiltIn(this.dir),
+      state: this.state, render: this.jobs.status, thumbnail: this.thumbnail, builtIn: isBuiltIn(this.dir), mcp: mcpTarget(this.dir),
     });
   }
   private publish(reason: string, clientId?: string) {

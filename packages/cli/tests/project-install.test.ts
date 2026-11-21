@@ -4,7 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createProject, ensureAgentFiles } from '@mografy/server';
-import { ignoreNodeModules, runningProject, useProjectTools, writeProjectManifest, writeProjectSkill } from '../src/project-install.js';
+import { ignoreNodeModules, insideFolder, isWorkspace, runningProject, useProjectTools, workspaceProjectDir, writeProjectManifest, writeProjectSkill, writeWorkspace } from '../src/project-install.js';
 import { VERSION } from '../src/commands/help.js';
 
 test('init writes a private package.json with mografy and the scripts, keeping what the project already has', async () => {
@@ -68,4 +68,37 @@ test("a project's own copy keeps its tools in the project and ignores PATH's ffm
     assert.equal(fresh.MOGRAFY_TOOLS, join(dir, 'node_modules', '.cache', 'mografy', 'tools'));
     assert.equal(useProjectTools({}, undefined), false);
   } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('a workspace gets projects/, examples/ and templates/ with notes and a guide, and no project of its own', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'mografy-workspace-'));
+  try {
+    const ws = join(dir, 'mografy');
+    await writeWorkspace(ws, 'mografy');
+    assert.ok(isWorkspace(ws));
+    assert.equal(JSON.parse(await readFile(join(ws, 'mografy.workspace.json'), 'utf8')).version, 1);
+    for (const folder of ['projects', 'examples', 'templates']) assert.match(await readFile(join(ws, folder, 'README.md'), 'utf8'), new RegExp(`^# ${folder}`));
+    assert.match(await readFile(join(ws, 'AGENTS.md'), 'utf8'), /^# Mografy workspace[\s\S]*npx mografy init projects\/<name>/);
+    assert.equal(await readFile(join(ws, 'CLAUDE.md'), 'utf8'), '@AGENTS.md\n');
+    await assert.rejects(readFile(join(ws, 'mografy.json')), 'the workspace is not a project');
+    // A checkout's templates/ is copied in, so `mografy add <template>` works offline.
+    await readFile(join(ws, 'templates', 'catalog.json'));
+    // Again (an update): a custom AGENTS.md and the notes stay; projects are never touched.
+    await writeFile(join(ws, 'AGENTS.md'), '# mine\n');
+    await writeFile(join(ws, 'projects', 'README.md'), 'edited');
+    await writeWorkspace(ws, 'mografy');
+    assert.equal(await readFile(join(ws, 'AGENTS.md'), 'utf8'), '# mine\n');
+    assert.equal(await readFile(join(ws, 'projects', 'README.md'), 'utf8'), 'edited');
+    assert.equal(runningProject(join(ws, 'node_modules', 'mografy'), 'package'), ws);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('init <name> in a workspace root makes projects/<name>; deeper paths are kept', () => {
+  const ws = join(tmpdir(), 'ws');
+  assert.equal(workspaceProjectDir(ws, join(ws, 'film')), join(ws, 'projects', 'film'));
+  assert.equal(workspaceProjectDir(ws, join(ws, 'projects', 'film')), join(ws, 'projects', 'film'));
+  assert.equal(workspaceProjectDir(ws, join(ws, 'examples', 'mine')), join(ws, 'examples', 'mine'));
+  assert.ok(insideFolder(ws, join(ws, 'projects', 'a')));
+  assert.ok(insideFolder(ws, ws));
+  assert.ok(!insideFolder(ws, join(tmpdir(), 'wsx')));
 });

@@ -4,7 +4,7 @@ import { mkdir, readdir, readFile, realpath, stat } from 'node:fs/promises';
 import { basename, join, resolve, sep } from 'node:path';
 import { validateSceneProject } from '@mografy/core';
 import type { AspectRatio, ProjectList, ProjectSummary } from '@mografy/core';
-import { EXAMPLES_DIR, libraryDir } from './installation.js';
+import { exampleDirs, libraryDir } from './installation.js';
 import { lastProject, readRecent } from './workspace-state.js';
 import { COMPONENT_PRESETS, componentRoot, ensureComponentsProject } from './components.js';
 import { createProject, exists, folderName, isProject } from './project-scaffold.js';
@@ -68,7 +68,7 @@ export async function listProjects(current?: string): Promise<ProjectList> {
     const summary = await summarize(real, kind);
     if (summary) { seen.add(real); projects.push(summary); }
   };
-  const examples = new Set((await subfolders(EXAMPLES_DIR)).map(d => resolve(d)));
+  const examples = new Set((await Promise.all(exampleDirs().map(subfolders))).flat().map(d => resolve(d)));
   for (const preset of COMPONENT_PRESETS) await add(join(componentRoot(), preset.id), 'component');
   // Projects in the library folder always list as library, opened or not, so that section never empties out.
   const library = await subfolders(libraryDir());

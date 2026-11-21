@@ -5,11 +5,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { createInLibrary, createProject, installation, isProject } from '@mografy/server';
-import { displayPath } from './paths.js';
+import { displayPath, workspaceRoot } from './paths.js';
 import { exists, repoFile } from './github.js';
 
-/** This installation's root folder (see `installation` in @mografy/server). */
-export const ROOT = installation.root;
+/** The checkout or workspace whose templates/ is read first (see `workspaceRoot`). */
+export const ROOT = workspaceRoot;
 
 export interface TemplateEntry {
   id: string; name: string; category: string; aspect: '9:16' | '16:9'; pair?: string; look?: string;
@@ -105,6 +105,17 @@ export async function templateProject(workspaceRoot: string, dir: string | undef
 }
 
 /**
+ * The runtime types a project's tsconfig.json points to: this installation's; in a workspace, the copy in its own
+ * node_modules when it has one (an npx download can be cleaned away); in another checkout, that checkout's build.
+ */
+async function runtimeTypesFor(root: string) {
+  if (root === installation.root) return installation.runtimeTypes;
+  const local = join(root, 'node_modules', 'mografy', 'lib', 'node_modules', '@mografy', 'runtime', 'dist', 'index.d.ts');
+  if (installation.kind === 'package') return await exists(local) ? local : installation.runtimeTypes;
+  return join(root, 'packages/runtime/dist/index.d.ts');
+}
+
+/**
  * Editor support for a project's scenes: a tsconfig.json that resolves `@mografy/runtime` to this installation's
  * types, so templates open without "Cannot find module" or implicit `any` errors. Mografy's own build never reads it.
  * An existing tsconfig.json is left alone.
@@ -112,7 +123,7 @@ export async function templateProject(workspaceRoot: string, dir: string | undef
 export async function writeEditorConfig(workspaceRoot: string, dir: string) {
   const file = join(dir, 'tsconfig.json');
   if (await exists(file)) return false;
-  const types = relative(dir, workspaceRoot === installation.root ? installation.runtimeTypes : join(workspaceRoot, 'packages/runtime/dist/index.d.ts')).split(sep).join('/');
+  const types = relative(dir, await runtimeTypesFor(workspaceRoot)).split(sep).join('/');
   const config = {
     '//': "Editor support only. Mografy's build resolves @mografy/runtime itself.",
     compilerOptions: {
@@ -171,7 +182,7 @@ export function printTemplatesDone(dir: string, ids: string[], created: boolean,
     '',
     created ? `Created ${displayPath(dir)} (${aspect}) with a scene that plays ${ids.length > 1 ? 'the templates in order' : 'the template'}: scenes/main.ts` : `Templates are in ${displayPath(dir)}/scenes/templates/.`,
     ...skipped.length ? [`Not in the sequence (other aspect ratio): ${skipped.join(', ')}. Use them in a ${aspect === '9:16' ? '16:9' : '9:16'} project.`] : [],
-    created ? `Open it: mografy dev ${displayPath(dir)}` : 'Play one inside your film:',
+    created ? `Open it: npx mografy dev ${displayPath(dir)}` : 'Play one inside your film:',
     ...created ? [] : [`  import * as ${camel(first)} from './templates/${first}.js';`, `  import { play } from './templates/kit.js';`, `  play(ctx, time, 2.0, ${camel(first)}, { /* params */ });`],
     'Guide: .agents/skills/mografy/references/templates.md',
   ];

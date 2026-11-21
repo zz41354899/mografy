@@ -2,16 +2,28 @@
 
 [English](CHANGELOG.md) | [繁體中文](CHANGELOG.zh-TW.md)
 
-Mografy 的重要變更。從 **Mografy Triangulum v0.1.0** 開始，每次發布都有版本號，並遵循[語意化版本](https://semver.org/lang/zh-TW/)；`mografy --version` 會顯示你目前的版本。v0.1.0 以前的更新依日期列在後面。安裝內容仍然只有十六個內建元件；選用的 extras 放在 GitHub 上的 [`extras/`](extras/)，只有專案需要時才會複製進去。
+Mografy 的重要變更。從 **Mografy Triangulum v0.1.0** 開始，每次發布都有版本號，並遵循[語意化版本](https://semver.org/lang/zh-TW/)；`npx mografy --version` 會顯示你目前的版本。v0.1.0 以前的更新依日期列在後面。安裝內容仍然只有十六個內建元件；選用的 extras 放在 GitHub 上的 [`extras/`](extras/)，只有專案需要時才會複製進去。
 
-在你的 Mografy checkout 中更新：
+在你的 `mografy` 資料夾裡更新 Mografy：
 
 ```sh
-mografy update --check
-mografy update
+npx mografy@latest init
 ```
 
-還沒有 `update` 指令的舊版安裝：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `mografy dev` 重新開啟。
+在這個 repository 的 Git checkout 裡，`npx mografy update --check` 會列出會更新什麼，`npx mografy update` 會更新 checkout。還沒有 `update` 指令的舊 checkout：先停止播放器，執行一次 `git pull --ff-only` 與 `pnpm install`，再用 `npx mografy dev` 重新開啟。
+
+## Mografy Triangulum v0.1.2 — 2026-11-21
+
+### 變更
+
+- **文件裡的指令全部改成 `npx mografy …`**：README、`docs/`、Skill，以及模板、extras 和參考影片的 README，現在都寫成 `npx mografy dev`、`npx mografy check`、`npx mografy export` 等。用 `npx mografy@latest init` 建立的資料夾裡，單打 `mografy` 不在 PATH 上，所以照著 Skill 做的代理不會再遇到「找不到指令」。在 Git checkout 裡，`npx mografy` 會執行該 checkout。只有選用的全域安裝（`npm install -g mografy`）才會有單獨的 `mografy` 指令。
+- **MCP 設定更簡單**：`npx -y mografy mcp` 在任何資料夾都能啟動伺服器，`MOGRAFY_PROJECT` 指定預設打開的專案，所以 Claude Desktop 和其他 app 不用再填指令的完整路徑：在 `mografy` 資料夾裡執行 `claude mcp add mografy -- npx -y mografy mcp`，或 `codex mcp add mografy --env MOGRAFY_PROJECT="$PWD" -- npx -y mografy mcp`。Windows 請在 `npx` 前面加上 `cmd /c`。
+- **`npx mografy@latest init` 建立工作區**：`mografy` 資料夾現在跟 checkout 一樣有 `projects/`（你的影片；內建元件在 `projects/.components`）、`examples/`（`npx mografy add <影片>` 加入的參考影片）和 `templates/`（Mografy Templates，現在隨套件附上，`npx mografy add <模板>` 不用連網），並以 `mografy.workspace.json` 標記。在工作區或其中任何資料夾執行的指令都預設用它，包括從 npx 快取執行的 `npx mografy@latest` 和 `npx -y mografy mcp`（或 `MOGRAFY_WORKSPACE`），不會再放到 `~/Mografy`。`init` 不再自動建立專案：播放器先打開內建元件，在工作區執行 `npx mografy init my-film` 會建立 `projects/my-film`，不用重裝。更新請在工作區執行 `npx mografy@latest init`。v0.1.1 建立的資料夾是單一專案，照常能用。
+- **作品庫的專案留在作品庫**：作品庫資料夾裡的專案，不管有沒有打開過，都會列在作品庫，不會再跑到「最近」而讓作品庫區塊變空。
+
+### 移除
+
+- **`mografy install-command`**：在 checkout 執行 `pnpm install` 不再把 `mografy` 啟動器放進 PATH。請在 checkout 或專案資料夾裡用 `npx mografy …`，或用 `npm install -g mografy` 全域安裝。
 
 ## Mografy Triangulum v0.1.1 — 2026-11-21
 
