@@ -6,7 +6,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { installation } from '@mografy/server';
 
-export const SKILL_INSTALL = 'npx skills add zz41354899/mografy -g';
+export const SKILL_INSTALL = 'npx skills add mografy/mografy -g';
 
 /** Where agents find a Skill named mografy: the project's own folders, then the user's (both hosts). */
 export const skillLocations = (project: string, home = homedir()) => [project, home].flatMap(base =>

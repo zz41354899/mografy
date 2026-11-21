@@ -3,12 +3,16 @@ import type { AspectRatio, ExportFormat, ExportPreset, ExportSize, RenderSetting
 import { createExportDraft, exportDraftReducer } from './export-draft.js';
 import type { ExportDraft, ExportQuality } from './export-draft.js';
 
-/** The last export settings per project, so the next export opens where the last one left off. */
+/**
+ * The last export settings per project, so the next export opens where the last one left off. They are kept only
+ * while the project's own render settings (mografy.json) stay the same: when those change, the dialog starts from them.
+ */
 const key = (dir: string) => `mografy.export.draft:${dir}`;
 function restore(snapshot: Snapshot): ExportDraft {
   const fresh = createExportDraft(snapshot.scene!.meta, snapshot.project!.render);
   try {
-    const saved = JSON.parse(localStorage.getItem(key(snapshot.projectDir)) ?? 'null') as ExportDraft | null;
+    const stored = JSON.parse(localStorage.getItem(key(snapshot.projectDir)) ?? 'null') as { base?: string; draft?: ExportDraft } | null;
+    const saved = stored?.base === JSON.stringify(snapshot.project!.render) ? stored.draft : null;
     if (!saved || !(saved.format in fresh.formats)) return fresh;
     // Keep only formats the saved copy has in full; anything newer falls back to the project's settings.
     const formats = { ...fresh.formats };
@@ -22,7 +26,7 @@ function restore(snapshot: Snapshot): ExportDraft {
 
 export function useExportDraft(snapshot: Snapshot) {
   const [draft, dispatch] = useReducer(exportDraftReducer, snapshot, restore);
-  useEffect(() => { try { localStorage.setItem(key(snapshot.projectDir), JSON.stringify(draft)); } catch { /* optional */ } }, [draft, snapshot.projectDir]);
+  useEffect(() => { try { localStorage.setItem(key(snapshot.projectDir), JSON.stringify({ base: JSON.stringify(snapshot.project!.render), draft })); } catch { /* optional */ } }, [draft, snapshot.projectDir, snapshot.project]);
   return {
     format: draft.format, ...draft.formats[draft.format],
     setFormat: (format: ExportFormat) => dispatch({ type: 'format', format }),
