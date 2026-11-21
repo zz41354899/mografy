@@ -1,8 +1,8 @@
 // HTTP request contracts reuse project schemas without applying defaults to omitted patch fields.
 import { z } from 'zod';
 import { exportFormatSchema, exportSizeSchema, renderOverridesSchema } from './export-settings.js';
-import { audioSchema, reviewSchema, slidesSchema, sceneProjectSchema } from './project-schema.js';
-import { aspectRatioSchema } from './scene-meta.js';
+import { audioSchema, colorSwapsSchema, reviewSchema, sceneProjectSchema } from './project-schema.js';
+import { aspectRatioSchema, timelineEditsSchema } from './scene-meta.js';
 import { scalar } from './schema-parts.js';
 
 export const projectPatchSchema = z.strictObject({
@@ -11,13 +11,13 @@ export const projectPatchSchema = z.strictObject({
   seed: sceneProjectSchema.shape.seed.unwrap().optional(),
   aspectRatio: aspectRatioSchema.nullable().optional(),
   audio: audioSchema.nullable().optional(),
+  /** Replaces every colour swap; null removes them. */
+  colors: colorSwapsSchema.nullable().optional(),
   render: renderOverridesSchema.optional(),
   review: z.strictObject({
     times: reviewSchema.shape.times.unwrap().optional(),
     transitions: reviewSchema.shape.transitions.unwrap().optional(),
   }).optional(),
-  /** Replaces all presentation stops; null removes them. */
-  slides: slidesSchema.nullable().optional(),
 });
 export type ProjectPatch = z.infer<typeof projectPatchSchema>;
 const clientId = z.string().optional();
@@ -41,6 +41,9 @@ export type QueueRequest = z.input<typeof queueRequestSchema>;
 export const queueCancelSchema = z.strictObject({ id: z.string().min(1).optional() });
 export const newProjectRequestSchema = z.strictObject({ name: z.string().trim().min(1).max(80), aspectRatio: aspectRatioSchema.optional() });
 export const sourceRequestSchema = z.strictObject({ files: z.record(z.string(), z.string().max(1_000_000)).refine(files => Object.keys(files).length > 0, 'No files submitted') });
+/** style.md, written whole from the editor's design panel. */
+export const styleRequestSchema = z.strictObject({ text: z.string().max(500_000) });
+export const timelineRequestSchema = z.strictObject({ edits: timelineEditsSchema, clientId });
 export const playheadRequestSchema = z.strictObject({ playhead: time, clientId });
 export const seekRequestSchema = z.strictObject({ t: time, clientId });
 export const cancelRenderRequestSchema = z.strictObject({ id: z.string().optional() });

@@ -2,7 +2,8 @@
 //
 // The package is the runtime half of the workspace and nothing else: each @mografy/* package's dist (without
 // sourcemaps), the player's built web app, the built-in components and their previews, the intro film, the reference
-// film catalog and the shared Skill. The workspace packages are vendored, unchanged, under lib/node_modules/@mografy/,
+// film catalog. Not the agent Skill: it is installed on its own (`npx skills add mografy/mografy -g`), so agents get
+// it whichever way Mografy is installed, and it updates with `npx skills update`. The workspace packages are vendored, unchanged, under lib/node_modules/@mografy/,
 // so Node and esbuild find them by ordinary package resolution and every path they resolve at runtime
 // (import.meta.resolve, the scene host's in-page bundle, the runtime helpers scenes compile against) works exactly as
 // in a checkout; `installation` in @mografy/server recognises the layout. Their third-party dependencies become the
@@ -67,7 +68,6 @@ mkdirSync(join(stage, 'examples'), { recursive: true });
 cpSync(join(root, 'examples', 'catalog.json'), join(stage, 'examples', 'catalog.json'));
 const tracked = execFileSync('git', ['ls-files', '-z', '--', 'examples/mografy-intro'], { cwd: root, encoding: 'utf8' }).split('\0').filter(Boolean);
 for (const file of tracked) { mkdirSync(dirname(join(stage, file)), { recursive: true }); cpSync(join(root, file), join(stage, file)); }
-cpSync(join(root, '.agents', 'skills', 'mografy'), join(stage, '.agents', 'skills', 'mografy'), { recursive: true, filter: keep });
 cpSync(join(here, 'bin'), join(stage, 'bin'), { recursive: true });
 cpSync(join(root, 'LICENSE'), join(stage, 'LICENSE'));
 cpSync(join(here, 'README.md'), join(stage, 'README.md'));
@@ -78,13 +78,13 @@ writeFileSync(join(stage, 'package.json'), JSON.stringify({
   description: app.description,
   license: 'MIT',
   type: 'module',
-  repository: { type: 'git', url: 'git+https://github.com/zz41354899/mografy.git' },
+  repository: { type: 'git', url: 'git+https://github.com/mografy/mografy.git' },
   homepage: 'https://www.mografy.app',
   engines: read(join(root, 'package.json')).engines,
   bin: { mografy: 'bin/mografy.js' },
   // Read by @mografy/server's `installation` to recognise this layout.
   mografy: { package: true },
-  files: ['bin', 'lib', 'examples', '.agents', 'README.md', 'LICENSE'],
+  files: ['bin', 'lib', 'examples', 'README.md', 'LICENSE'],
   dependencies: Object.fromEntries(Object.entries(external).sort()),
 }, null, 2) + '\n');
 

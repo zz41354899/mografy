@@ -52,3 +52,9 @@ export function DockHandle({ dock, label, resolve }: { dock: ReturnType<typeof u
     onPointerDown={down} onDoubleClick={dock.reset}
     onKeyDown={e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); dock.set(resolve(dock.size + (e.key === 'ArrowUp' ? 16 : -16))); } }} />;
 }
+
+/** The panel size as a width, for the side panels and the timeline's name column. */
+export function usePanelWidth(key: string, initial: number, min: number, max: number) {
+  const panel = usePanelSize(key, initial, min, max);
+  return { ...panel, width: panel.size };
+}

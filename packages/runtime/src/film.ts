@@ -4,6 +4,7 @@
 // HTML storyboard page on any 2D context.
 import { clamp } from './math.js';
 import type { FrameContext } from './canvas.js';
+import { COLOR_PROPS, swappedGradient, type ColorSwap } from './colors.js';
 
 export type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 /** A FrameContext, or any native 2D context (ctx.canvas, a storyboard canvas, an offscreen context). */
@@ -18,7 +19,8 @@ export type Target = FrameContext | Context2D;
  * `effects` means it also scales shadow and filter lengths from film units to pixels (the logical context and every
  * layer context), so scene code draws the same picture on the frame and inside a layer at any output scale.
  */
-export interface FilmFrame { base: DOMMatrix; inverse: DOMMatrix; width: number; height: number; hidden: boolean; effects: boolean }
+/** `swap` carries the project's colour swaps from the frame's context to every layer made from it. */
+export interface FilmFrame { base: DOMMatrix; inverse: DOMMatrix; width: number; height: number; hidden: boolean; effects: boolean; swap?: ColorSwap | undefined }
 /** Global key, so a scene bundle and the runtime that made its context agree on it. */
 export const FILM_FRAME = Symbol.for('mografy.filmFrame');
 
@@ -149,16 +151,18 @@ interface Layer { canvas: OffscreenCanvas; ctx: OffscreenCanvasRenderingContext2
 const EFFECT_PROPS = new Set(['shadowBlur', 'shadowOffsetX', 'shadowOffsetY']);
 const scaleLengths = (value: string, k: number) => value === 'none' ? value : value.replace(/(-?\d*\.?\d+(?:e[-+]?\d+)?)px/gi, (_, n: string) => `${Number(n) * k}px`);
 /** A layer context whose shadow and filter lengths are in film units, like the runtime's own context. */
-function filmUnits(x: OffscreenCanvasRenderingContext2D, k: number): OffscreenCanvasRenderingContext2D {
+function filmUnits(x: OffscreenCanvasRenderingContext2D, k: number, swap?: ColorSwap): OffscreenCanvasRenderingContext2D {
   return new Proxy(x, {
     get(target, key) {
+      const gradient = swappedGradient(target, key, swap);
+      if (gradient) return gradient;
       const value = Reflect.get(target, key, target);
       if (EFFECT_PROPS.has(String(key))) return Number(value) / k;
       if (key === 'filter') return scaleLengths(String(value), 1 / k);
       return typeof value === 'function' ? value.bind(target) : value;
     },
     set(target, key, value) {
-      const next = EFFECT_PROPS.has(String(key)) ? Number(value) * k : key === 'filter' ? scaleLengths(String(value), k) : value;
+      const next = EFFECT_PROPS.has(String(key)) ? Number(value) * k : key === 'filter' ? scaleLengths(String(value), k) : swap && COLOR_PROPS.has(String(key)) ? swap.apply(value) : value;
       return Reflect.set(target, key, next, target);
     },
   });
@@ -167,7 +171,7 @@ function filmUnits(x: OffscreenCanvasRenderingContext2D, k: number): OffscreenCa
  * A buffer at `res` × output resolution over the device pixels of the film frame, or only of `bounds` (current
  * coordinates) grown by `margin` device pixels. Its context draws in the caller's current space.
  */
-function frameLayer(c: Context2D, name: string, res: number, bounds?: Bounds, margin = 0): Layer {
+function frameLayer(c: Context2D, name: string, res: number, bounds?: Bounds, margin = 0, alloc: (w: number, h: number) => OffscreenCanvas = (w, h) => buffer(name, w, h)): Layer {
   const f = frameOf(c), d = deviceTransform(c);
   const corners = (m: DOMMatrix, [x, y, w, h]: Bounds) => [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([px, py]) => m.transformPoint({ x: px!, y: py! }));
   const box = (pts: DOMPoint[], grow: number) => {
@@ -178,13 +182,13 @@ function frameLayer(c: Context2D, name: string, res: number, bounds?: Bounds, ma
   let [x0, y0, x1, y1] = bounds ? box(corners(d, bounds), margin) : full;
   x0 = Math.floor(Math.max(x0!, full[0]!)); y0 = Math.floor(Math.max(y0!, full[1]!)); x1 = Math.ceil(Math.min(x1!, full[2]!)); y1 = Math.ceil(Math.min(y1!, full[3]!));
   const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
-  const canvas = buffer(name, w * res, h * res), raw = canvas.getContext('2d')!;
+  const canvas = alloc(w * res, h * res), raw = canvas.getContext('2d')!;
   // device pixels of the rect → layer pixels; then the caller's current transform
   const toLayer = new DOMMatrix([res, 0, 0, res, -x0 * res, -y0 * res]);
   raw.setTransform(toLayer.multiply(d));
   const tag = filmFrame(raw, f.width, f.height, toLayer.multiply(f.base));
-  tag.effects = true;
-  return { canvas, ctx: filmUnits(raw, frameScale(tag)), frame: f, rect: [x0, y0, w, h], res };
+  tag.effects = true; tag.swap = f.swap;
+  return { canvas, ctx: filmUnits(raw, frameScale(tag), f.swap), frame: f, rect: [x0, y0, w, h], res };
 }
 export type Composite = GlobalCompositeOperation;
 function composite(c: Context2D, canvas: OffscreenCanvas, l: Layer, alpha: number, mode: Composite = 'source-over') {
@@ -222,6 +226,38 @@ export function layer(t: Target, name: string, alpha: number, draw: (c: Context2
   const l = frameLayer(c, `layer:${name}`, o.res ?? 1, o.bounds, 2);
   draw(l.ctx);
   composite(c, l.canvas, l, alpha, o.mode);
+}
+
+/** Pixels of each `cached` part, per output canvas: its key, the transform it was drawn under, and the layer. */
+const stills = new WeakMap<object, Map<string, { key: string; layer: Layer }>>();
+/**
+ * Draw a part that does not change with time once, and reuse its pixels on every later sample and frame: a
+ * background, a logo at rest, a static panel, a block of text that holds. Where a film spends most of its frame time
+ * on parts like these, this is the largest saving there is. `name` is unique per part. `key` names everything else the
+ * drawing depends on (params, copy, colours, sizes): the part is drawn again when the key, the current transform,
+ * the bounds or the output size changes. Never put time, or anything that moves, inside `draw` or `key`: a cached
+ * part that should have moved stays where it was. Composites at `alpha`, like `layer`.
+ */
+export function cached(t: Target, name: string, key: string, draw: (c: Context2D) => void, o: LayerOptions & { alpha?: number } = {}) {
+  const c = native(t), alpha = o.alpha ?? 1;
+  if (alpha <= 0.001) return;
+  const f = frameOf(c), d = deviceTransform(c), res = o.res ?? 1;
+  const full = [key, f.base, d, f.width, f.height, c.canvas.width, c.canvas.height, res, o.bounds?.join(',') ?? ''].map(String).join('|');
+  let parts = stills.get(c.canvas);
+  if (!parts) { parts = new Map(); stills.set(c.canvas, parts); }
+  let part = parts.get(name);
+  if (!part || part.key !== full) {
+    // Its own canvas, never a pooled one: pooled buffers are cleared whenever another layer asks for the same size.
+    const old = part?.layer.canvas;
+    const layer = frameLayer(c, `cached:${name}`, res, o.bounds, 2, (w, h) => {
+      const cw = Math.max(1, Math.ceil(w)), ch = Math.max(1, Math.ceil(h));
+      if (old && old.width === cw && old.height === ch) { old.getContext('2d')!.reset(); return old; }
+      return new OffscreenCanvas(cw, ch);
+    });
+    draw(layer.ctx);
+    part = { key: full, layer }; parts.set(name, part);
+  }
+  composite(c, part.layer.canvas, { ...part.layer, frame: f }, alpha, o.mode);
 }
 
 export interface BlurOptions extends LayerOptions {

@@ -94,7 +94,7 @@ async function restartPlayer(root: string, player: Player) {
   throw new Error(`The updated player did not become ready (${lastHealth}). Run mografy dev with your project path.`);
 }
 
-const REPOSITORY = 'https://github.com/zz41354899/mografy.git';
+const REPOSITORY = 'https://github.com/mografy/mografy.git';
 /** Commands a user can copy as they are, one per line. */
 const commands = (lines: string[]) => lines.map(line => `  ${line}`).join('\n');
 type Git = (...args: string[]) => Promise<string>;
@@ -190,7 +190,7 @@ async function merge({ git }: UpdateContext, { before, target }: Versions) {
   await git('merge', '--ff-only', '--no-edit', target);
 }
 
-/** Setup: install, whose postinstall builds and syncs slides, then regenerate the Skill. */
+/** Setup: install, whose postinstall builds, then regenerate the Skill. */
 async function setup({ services, root }: UpdateContext) {
   await services.run(PNPM, PNPM_INSTALL_ARGS, root, true);
   await services.run(PNPM, ['sync:skills'], root, true);
@@ -207,7 +207,7 @@ export async function updateInstallation(root: string, checkOnly = false, overri
   const context: UpdateContext = { root, services, git, checkOnly };
   let repository: string;
   try { repository = await git('rev-parse', '--show-toplevel'); }
-  catch { throw new Error('mografy update requires a Git source installation. Clone https://github.com/zz41354899/mografy and run pnpm install.'); }
+  catch { throw new Error('mografy update requires a Git source installation. Clone https://github.com/mografy/mografy and run pnpm install.'); }
   if (await realpath(repository) !== await realpath(root)) throw new Error('The Mografy installation must be the Git repository root.');
   const lockPath = resolve(root, await git('rev-parse', '--git-path', 'mografy-update.lock'));
   const lock = await acquireLock(lockPath);

@@ -24,6 +24,6 @@ export function projectPaths(dir: string) {
   const state = join(dir, PROJECT_STATE_DIR);
   return {
     state, builds: join(state, 'builds'), tmp: join(state, 'tmp'), stateFile: join(state, 'state.json'), verified: join(state, 'verified.json'),
-    thumb: join(state, 'thumb.png'), thumbInfo: join(state, 'thumb.json'), autoShots: join(state, 'auto-shots.json'), slidesSync: join(state, 'slides-sync.json'), serverLock: join(state, 'server.json'),
+    thumb: join(state, 'thumb.png'), thumbInfo: join(state, 'thumb.json'), serverLock: join(state, 'server.json'),
   };
 }

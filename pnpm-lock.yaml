@@ -50,9 +50,6 @@ importers:
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
-      playwright:
-        specifier: 1.64.0
-        version: 1.64.0
       protobufjs:
         specifier: ^8.8.0
         version: 8.8.0

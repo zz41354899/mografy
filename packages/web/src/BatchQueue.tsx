@@ -1,6 +1,7 @@
 // The batch export queue: the film being captured, and every job in order.
 import type { CSSProperties } from 'react';
 import { XIcon } from '@phosphor-icons/react/dist/csr/X';
+import { Steps } from './Steps.js';
 import type { QueueJob } from '@mografy/core';
 import { Thumb } from './BatchThumb.js';
 import { clock, formatName, isActive, jobProgress } from './batch-progress.js';
@@ -46,7 +47,7 @@ export function BatchQueue({ session, jobs, versions, error, now, onCancel: canc
           : <><h2 className="bx-label">{t.batchExport}</h2><div className="bx-big">{done ? t.bxDone(plural(done)) : t.bxNothing}</div><p className="bx-sub">{failed ? t.bxFailed(failed) : ''}{done ? t.bxSaved : ''}</p></>}
       </section>
       <div className="bx-main">
-        <header className="bx-head"><h3 id="batch-title">{t.bxQueue}</h3><button type="button" className="icon-button" aria-label={t.bxClose} title={t.close} onClick={onClose}><XIcon size={19} /></button></header>
+        <header className="bx-head"><h3 id="batch-title">{t.bxQueue}</h3><Steps items={[t.stFilms, t.stFormat, t.stExport]} current={jobs.some(j => j.state === 'queued' || j.state === 'running') ? 2 : 3} /><button type="button" className="icon-button" aria-label={t.bxClose} title={t.close} onClick={onClose}><XIcon size={19} /></button></header>
         <div className="bx-body">
           <ul className="bx-queue">
             {jobs.map((job, i) => {

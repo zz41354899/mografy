@@ -3,10 +3,11 @@ import type { CSSProperties } from 'react';
 import type { Snapshot } from '@mografy/core';
 import { MusicNotesIcon } from '@phosphor-icons/react/dist/csr/MusicNotes';
 import type { Session } from './session.js';
-import { apiPath, projectHeaders, readApiResponse } from './api.js';
+import { projectHeaders, readApiResponse } from './api.js';
 import { useDebounced } from './useDebounced.js';
 import { Section } from './InspectorSection.js';
 import { useT } from './i18n.js';
+import { basename } from './format.js';
 
 /** Music for the project: add, replace or remove the file, and set its beat grid and volume. */
 export function AudioPanel({ snapshot, session, sound }: { snapshot: Snapshot; session: Session; sound: string }) {
@@ -22,7 +23,7 @@ export function AudioPanel({ snapshot, session, sound }: { snapshot: Snapshot; s
   const upload = async (file: File) => {
     setBusy(true); setMessage('');
     try {
-      const response = await fetch(apiPath(`assets?name=${encodeURIComponent(file.name)}`), { method: 'POST', headers: { 'content-type': 'application/octet-stream', ...projectHeaders(snapshot.projectDir) }, body: file });
+      const response = await fetch(`/__mografy/assets?name=${encodeURIComponent(file.name)}`, { method: 'POST', headers: { 'content-type': 'application/octet-stream', ...projectHeaders(snapshot.projectDir) }, body: file });
       const data = await readApiResponse<{ path: string }>(response);
       await session.patchProject({ audio: { path: data.path, bpm: audio?.bpm ?? 120, offset: audio?.offset ?? 0, beatsPerBar: audio?.beatsPerBar ?? 4, gain: audio?.gain ?? 1 } });
     } catch (e) { setMessage(e instanceof Error ? e.message : String(e)); }
@@ -42,7 +43,7 @@ export function AudioPanel({ snapshot, session, sound }: { snapshot: Snapshot; s
   </Section>;
   return <Section title={t.auMusic} aside={<span className="hint">{sound === 'muted' ? t.auMuted : ''}</span>}>
     {picker}
-    <div className="audio-file"><div className="audio-file-name"><MusicNotesIcon size={20} aria-hidden="true" /><span title={draft.path}>{draft.path.split('/').pop()}</span></div><div className="audio-file-actions"><button className="text-button" onClick={() => input.current?.click()} disabled={busy}>{busy ? t.auUploading : t.auReplace}</button><button className="text-button" disabled={busy} onClick={() => void remove()}>{t.auRemove}</button></div></div>
+    <div className="audio-file"><div className="audio-file-name"><MusicNotesIcon size={20} aria-hidden="true" /><span title={draft.path}>{basename(draft.path)}</span></div><div className="audio-file-actions"><button className="text-button" onClick={() => input.current?.click()} disabled={busy}>{busy ? t.auUploading : t.auReplace}</button><button className="text-button" disabled={busy} onClick={() => void remove()}>{t.auRemove}</button></div></div>
     <div className="param audio-volume"><div className="param-head"><span>{t.auVolume}</span><span className="hint">{Math.round(draft.gain * 100)}%</span></div>
       <input type="range" min={0} max={2} step={0.01} value={draft.gain} onChange={e => change({ gain: e.currentTarget.valueAsNumber })} aria-label={t.auVolume} style={{ '--fill': `${(draft.gain / 2) * 100}%` } as CSSProperties} />
     </div>

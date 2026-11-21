@@ -61,7 +61,7 @@ To make a new one: `mografy add paper-theatre-shadow <folder>` (or the closest f
 
 ## What to take from them
 
-- **Timing.** One table per film. Change a shot's end there and every key, slide and review time follows.
+- **Timing.** One table per film. Change a shot's end there and every key, shot stop and review time follows.
 - **Continuity.** Each shot ends on the geometry the next one starts from: the comet's head becomes the underline, the underline becomes the prompt pill, the pill becomes the window's field. Read the transitions in the montage (`mografy add mografy-montage`) before designing your own.
 - **Camera.** Moves start before the action, ease through every key and never stop on a pose that is not a story beat. Cards and windows have their own local transforms inside the camera.
 - **Cost.** Blur goes through layers or the text's shadow, glow through `bloom`, and buffers are pooled. Run `mografy check` on a copy to see what a frame costs, and keep your own film in the same range.

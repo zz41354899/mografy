@@ -10,6 +10,8 @@ const FILM_ARCHITECTURE = SKILL_TEXT['references/film-architecture.md'];
 const PERFORMANCE = SKILL_TEXT['references/performance.md'];
 const OUTPUT = SKILL_TEXT['references/output.md'];
 const TASTE = SKILL_TEXT['references/taste.md'];
+const LAYERS = SKILL_TEXT['references/layers.md'];
+const HOW_TO_FILM = SKILL_TEXT['references/how-to-film.md'];
 const EXAMPLES_REFERENCE = SKILL_TEXT['references/examples.md'];
 const BUILTIN_COMPONENTS_REFERENCE = SKILL_TEXT['references/built-in-components.md'];
 const INTRO_REFERENCE = SKILL_TEXT['references/intro.md'];
@@ -19,7 +21,6 @@ const THREE_D_REFERENCE = SKILL_TEXT['references/three-d.md'];
 const MUSIC_REFERENCE = SKILL_TEXT['references/music.md'];
 const WALKTHROUGH_REFERENCE = SKILL_TEXT['references/product-walkthrough.md'];
 const UI_STAGE_REFERENCE = SKILL_TEXT['references/ui-stage.md'];
-const PRESENTATIONS_REFERENCE = SKILL_TEXT['references/presentations.md'];
 const VIDEO_COMPRESSION_REFERENCE = SKILL_TEXT['references/video-compression.md'];
 const TEMPLATES_REFERENCE = SKILL_TEXT['references/templates.md'];
 export const SKILL = SKILL_TEXT['SKILL.md'];
@@ -41,7 +42,8 @@ export function isLegacyAgentFile(contents: string, kind: 'guide' | 'skill', rep
     contents === (kind === 'guide' ? LEGACY_PROJECT_GUIDE : LEGACY_REPOSITORY_SKILL) ||
     (kind === 'guide' && contents === LEGACY_USER_SCOPE_GUIDE) ||
     (kind === 'guide' && repository !== undefined && contents === legacySharedProjectGuide(repository)) ||
-    (kind === 'guide' && (isPreviousProjectPointer(contents) || contents === projectGuide().replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga')));
+    (kind === 'guide' && (isPreviousProjectPointer(contents) || contents === projectGuide().replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga')
+      || contents === previousSkillPointerGuide() || contents === previousSkillPointerGuide().replaceAll('mp4|webm|lottie|svga', 'mp4|lottie|svga')));
 }
 
 /** Generated references are colocated with each host's skill for portable relative links. */
@@ -54,6 +56,8 @@ export const SKILL_REFERENCES = {
   'performance.md': PERFORMANCE,
   'output.md': OUTPUT,
   'taste.md': TASTE,
+  'layers.md': LAYERS,
+  'how-to-film.md': HOW_TO_FILM,
 } as const;
 
 
@@ -122,7 +126,6 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
     'music.md': MUSIC_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'product-walkthrough.md': WALKTHROUGH_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'ui-stage.md': UI_STAGE_REFERENCE.replaceAll('__REPOSITORY__', repository),
-    'presentations.md': PRESENTATIONS_REFERENCE,
     'templates.md': TEMPLATES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'examples.md': EXAMPLES_REFERENCE.replaceAll('__REPOSITORY__', repository),
     'video-compression.md': VIDEO_COMPRESSION_REFERENCE.replaceAll('__REPOSITORY__', repository),
@@ -134,12 +137,12 @@ Adapt storyboards to the actual scene and assets. Write plans and prompts in Eng
   };
 }
 
-const GITHUB_SOURCE = 'https://github.com/zz41354899/mografy/blob/main';
+const GITHUB_SOURCE = 'https://github.com/mografy/mografy/blob/main';
 
 /** Published guidance is identical in every checkout and never embeds a developer's disk paths. */
 export function sharedSkillFiles(_repository?: string) {
   const files = skillFilesWithRepositoryLinks(GITHUB_SOURCE,
-    'Canonical sources are on [GitHub](https://github.com/zz41354899/mografy). Resolve local files from the current checkout, never from a path in another installation. For an animation project elsewhere, read that project\'s settings and assets; do not assume it is inside this repository.',
+    'Canonical sources are on [GitHub](https://github.com/mografy/mografy). Resolve local files from the current checkout, never from a path in another installation. For an animation project elsewhere, read that project\'s settings and assets; do not assume it is inside this repository.',
   );
   for (const [file, contents] of Object.entries(files.mografy)) {
     const base = `${GITHUB_SOURCE}/.agents/skills/mografy/${file}`;
@@ -193,6 +196,13 @@ function isPreviousProjectPointer(contents: string) {
 
 export function projectGuide(_repository?: string) {
   return GUIDE + `
+Shared Skill: [Mografy](${GITHUB_SOURCE}/.agents/skills/mografy/SKILL.md). Inside a Mografy checkout, use its outer \`.agents/skills/mografy/\` folder. Elsewhere, install it once with \`npx skills add mografy/mografy -g\` (and keep it current with \`npx skills update\`).
+`;
+}
+
+/** The pointer projects received before the Skill was installed with the skills CLI; replaced when found unedited. */
+function previousSkillPointerGuide() {
+  return GUIDE + `
 Shared Skill: [Mografy](${GITHUB_SOURCE}/.agents/skills/mografy/SKILL.md). For local work, use the current installation's outer \`.agents/skills/mografy/\` folder. If missing, run \`pnpm build\` and \`pnpm sync:skills\` from your Mografy checkout.
 `;
 }
@@ -208,10 +218,9 @@ export function obsoleteStoryboardFiles(repository: string): Record<string, stri
   delete files['references/music.md'];
   delete files['references/product-walkthrough.md'];
   delete files['references/ui-stage.md'];
-  delete files['references/presentations.md'];
   delete files['references/templates.md'];
   delete files['references/examples.md'];
-  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste']) delete files[`references/${name}.md`];
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste', 'layers', 'how-to-film']) delete files[`references/${name}.md`];
   files['references/project.md'] = files['references/project.md']!.replace(
     "One `mografy` Skill lives in the source repository's outer `.agents/skills/` folder, with scene, storyboard, animation-principle, and project references. Codex reads it there; the root `.claude/skills/mografy` symlink points Claude to the same folder. Root `CLAUDE.md` also imports the shared Skill. Never create Skill folders inside animation subprojects.",
     "Skills live in the source repository's outer `.agents/skills/` folder. Codex and Claude share `mografy` and `mografy-storyboard` there, with local references. Never create Skill folders inside animation subprojects. Root `AGENTS.md` routes Codex; root `CLAUDE.md` imports the same shared Skill for Claude.",

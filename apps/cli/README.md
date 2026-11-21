@@ -5,7 +5,7 @@ Local Canvas motion design for Claude Code and Codex. Scenes are TypeScript modu
 
 ```sh
 npm install -g mografy@beta
-mografy skill        # the agent Skill, for Claude Code and Codex in every folder
+npx skills add mografy/mografy -g   # the agent Skill, for Claude Code, Codex and others
 mografy dev
 ```
 
@@ -13,4 +13,4 @@ Projects live in `~/Mografy` (set `MOGRAFY_HOME` to change it). FFmpeg and the h
 the package: they download the first time a check or export needs them, or ahead of time with `mografy setup`.
 Templates, helpers and reference films download from GitHub when `mografy add` needs them.
 
-Documentation, the shared agent Skill and the source: https://github.com/zz41354899/mografy
+Documentation, the shared agent Skill and the source: https://github.com/mografy/mografy

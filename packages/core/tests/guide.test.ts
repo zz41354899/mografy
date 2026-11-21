@@ -4,7 +4,7 @@ import { sharedSkillFiles, obsoleteStoryboardFiles } from '../src/guide.js';
 
 test('every shared Skill reference is reachable and its internal links resolve', () => {
   const files = sharedSkillFiles().mografy;
-  const base = 'https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/';
+  const base = 'https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/';
   const visited = new Set<string>();
   const pending = ['SKILL.md'];
   while (pending.length) {
@@ -26,7 +26,7 @@ test('every shared Skill reference is reachable and its internal links resolve',
 });
 
 test('legacy storyboard cleanup excludes the newer references', () => {
-  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste', 'examples']) {
+  for (const name of ['motion-design', 'film-architecture', 'performance', 'output', 'taste', 'examples', 'how-to-film']) {
     const file = `references/${name}.md`;
     assert.ok(file in sharedSkillFiles().mografy);
     assert.equal(file in obsoleteStoryboardFiles('/old/installation'), false);

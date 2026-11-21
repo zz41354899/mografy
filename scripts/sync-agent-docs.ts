@@ -11,7 +11,6 @@ import { sameText } from '../packages/core/scripts/generated-file.mjs';
 import { atomicWrite, queueProjectWrite } from '../packages/server/src/files.js';
 import { ensureAgentFiles, isProject } from '../packages/server/src/workspace.js';
 import { recordSkillSources } from '../packages/cli/src/skills.js';
-import { refreshInstalledSkill } from '../packages/cli/src/skill-install.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Bundle the Markdown first, so an edited reference is picked up even before `pnpm build`.
@@ -92,5 +91,3 @@ await install(join(root, 'examples'));
 await install(join(root, 'projects'));
 console.log(`Updated guidance in ${projects} local projects; both hosts share one repository-root Mografy Skill.`);
 await recordSkillSources(root);
-// Copies that `mografy skill` put in ~/.agents/skills and ~/.claude/skills follow the Skill just generated.
-await refreshInstalledSkill();

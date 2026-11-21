@@ -163,7 +163,7 @@ test('one shared Mografy skill links GitHub sources and includes every reference
         // GitHub reference links must name files that are included in the shared Skill.
         for (const [file, contents] of Object.entries(files)) {
           for (const [, link] of contents.matchAll(/\]\(([^)]+\.md)\)/g)) {
-            const prefix = 'https://github.com/zz41354899/mografy/blob/main/';
+            const prefix = 'https://github.com/mografy/mografy/blob/main/';
             assert.ok(link!.startsWith(prefix), `${name}/${file} -> ${link}`);
             const repositoryPath = link!.slice(prefix.length);
             const skillPrefix = '.agents/skills/mografy/';
@@ -194,7 +194,7 @@ test('installation state and published guidance are portable across checkout loc
   const first = sharedSkillFiles('/clones/first');
   assert.deepEqual(first, sharedSkillFiles('/clones/second'));
   assert.doesNotMatch(JSON.stringify(first), /\/clones\//);
-  assert.match(first.mografy['references/project.md']!, /https:\/\/github.com\/zz41354899\/mografy/);
+  assert.match(first.mografy['references/project.md']!, /https:\/\/github.com\/mografy\/mografy/);
   assert.equal(projectGuide('/clones/first'), projectGuide('/clones/second'));
 });
 

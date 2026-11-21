@@ -27,7 +27,6 @@
     "@mografy/core": "workspace:*",
     "@mografy/runtime": "workspace:*",
     "esbuild": "0.28.2",
-    "playwright": "1.64.0",
     "protobufjs": "^8.8.0"
   },
   "devDependencies": {

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { installation } from '@mografy/server';
 import { VERSION } from './commands/help.js';
 
-const REPOSITORY = 'https://raw.githubusercontent.com/zz41354899/mografy';
+const REPOSITORY = 'https://raw.githubusercontent.com/mografy/mografy';
 export const GITHUB_RAW = (process.env.MOGRAFY_GITHUB_URL ?? `${REPOSITORY}/main`).replace(/\/$/, '') + '/';
 /**
  * Where downloads come from, in order. The npm package first asks for its own release tag (v<version>), so its

@@ -15,7 +15,6 @@
     "build": "pnpm --filter \"./packages/**\" -r --workspace-concurrency=1 build && pnpm sync:skills",
     "typecheck": "pnpm --filter \"./packages/**\" -r typecheck",
     "sync:skills": "node scripts/ensure-built.mjs && node --import tsx scripts/sync-agent-docs.ts",
-    "sync:slides": "node --import tsx scripts/sync-slides.ts",
     "pack:cli": "node apps/cli/pack.mjs",
     "test:package": "node apps/cli/smoke.mjs",
     "examples:sync": "node scripts/examples-catalog.mjs",
@@ -31,7 +30,7 @@
     "check": "pnpm build && pnpm typecheck && pnpm test",
     "mografy": "node packages/cli/bin/mografy.js",
     "install:tool": "pnpm install --filter mografy-workspace --filter \"./packages/**\"",
-    "postinstall": "pnpm build && playwright install chromium --only-shell && node packages/cli/bin/mografy.js install-command && pnpm sync:slides",
+    "postinstall": "pnpm build && playwright install chromium --only-shell && node packages/cli/bin/mografy.js install-command",
     "bootstrap": "pnpm install",
     "install-command": "node packages/cli/bin/mografy.js install-command"
   },

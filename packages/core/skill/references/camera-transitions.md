@@ -10,7 +10,7 @@ The helpers are an optional extra, not part of the installed template. If the pr
 mografy add cinema projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cinema/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/cinema/`.
 
 Import it locally (`import { plate, move, particleWipe } from './cinema.js'`). Copy `cinema-demo.ts` too only when the user wants the tour.
 

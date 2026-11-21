@@ -4,7 +4,7 @@
 
 ## When to use it
 
-Use it for any film made from a web or mobile app's screens: product demos, feature explainers and tutorials, onboarding and help clips, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. Typical requests: "turn these screenshots into a walkthrough", "redraw the UI simpler and only film the interactions" (重繪、介面簡化、只拍操作細節).
+Use it for any film made from a web or mobile app's screens (for step-by-step tutorial clips, one per step, also read [how-to-film.md](how-to-film.md)): product demos, feature explainers and tutorials, onboarding and help clips, what's-new shorts, mobile app previews, social cut-downs and landing-page loops. Typical requests: "turn these screenshots into a walkthrough", "redraw the UI simpler and only film the interactions" (重繪、介面簡化、只拍操作細節).
 
 For a short loop of one to three actions (a landing-page hero, a feature card, a phone moment), use the Stage extra in [ui-stage.md](ui-stage.md) instead: a script over state, windows cropped by the frame, placeholder lines and a seamless loop.
 
@@ -18,7 +18,7 @@ The helper is an optional extra, not part of the installed template. If the proj
 mografy add walkthrough projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/walkthrough/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/walkthrough/`.
 
 Import it locally (`import { createKit, camAt, withCamera as withCardZoom, cursorAt } from './walkthrough.js'`), and take `springs`, `cameraPath`, `withCamera`, `beats` and `blurText` from `@mografy/runtime`. The extra's `withCamera` is a card-local zoom, so rename it on import to keep it apart from the runtime's film camera. Copy `walkthrough-demo.ts` too when you want a working starting point; it shows every helper in context. For Chinese or Japanese UI copy, add the CJK fonts from [cjk-typography.md](cjk-typography.md) and put `"Noto Sans TC"` (or the project's CJK family) in the theme's `font` stack.
 
@@ -39,7 +39,7 @@ When the brief is unclear, ask which scenario it is and for how long; otherwise 
 
 ## Workflow
 
-1. **Collect the screens.** Agree on the steps that tell the story (usually 3–6) and ask the user for a screenshot of every state, with the exact labels and values where they are hard to read. Keep them in `capture/` (numbered PNGs plus a `steps.json` with labels and values). Read the UI tokens from the screenshots or ask for them (primary colour, ink, borders, radius, fonts), and ask for the logo as SVG. Do not operate the user's site or account to collect them.
+1. **Collect the screens.** Agree on the steps that tell the story (usually 3–6) and ask the user for a screenshot of every state, with the exact labels and values where they are hard to read; when the user asks you to operate the product yourself and gives a test account, capture the states as in [how-to-film.md](how-to-film.md) instead. Keep them in `capture/` (numbered PNGs plus a `steps.json` with labels and values). Read the UI tokens from the screenshots or ask for them (primary colour, ink, borders, radius, fonts), and ask for the logo as SVG. Do not operate the user's site or account unless they asked you to and gave you a test account.
 2. **Choose the fidelity.** A *faithful rebuild* draws the whole app as it looks and films it with a camera; use it when viewers must recognise the real screens. A *simplified redraw* is the default when the user asks to redraw, simplify, or film only the interactions. Both use the real product: its layout logic, labels, colours and the order of states. Never invent features or screens.
 3. **Inventory each screenshot.** For every step write three lists: the *target* (the control the action touches: a field, button, row, dialog), the *context* needed to understand it (the card title, one neighbouring row), and *everything else* (navigation, filters, footers, badges, extra columns, tooltips).
 4. **Redraw.** Keep the brand tokens, the logo, the real labels and values of the target, its proportions and its state sequence (empty → focus → typing → loading → result → success). Drop everything else, collapse lists to 3–4 rows and tables to the columns the story needs, and turn copy the action does not need into `skeleton` bars. Raise type to about 1.3–1.6× the app's size so it reads at 1080p, keep at least 48 px of padding inside a card, and use one card style throughout ([taste.md](taste.md)). Build every step from the same kit parts so the film stays consistent.

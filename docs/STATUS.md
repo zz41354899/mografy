@@ -1,6 +1,12 @@
 # Development status
 
-Updated: 2026-11-08
+Updated: 2026-11-21
+
+## Local MCP server (2026-11-21)
+
+- `mografy mcp` is back as a stdio MCP server in `packages/cli/src/mcp/` (no SDK: `rpc.ts` is the newline-delimited JSON-RPC transport, so the slim install gains no dependency). stdout carries only protocol messages; logs go to stderr.
+- Tools: `list_projects`, `project_info`, `check` (`motion`), `render_frame` (PNG), `review` (sheet PNGs inline), `read_source`, `write_source` (through `Project.updateSource`: compiled and trial-rendered before anything is written), `create_project`, `open_player`, `export` (progress notifications; `notifications/cancelled` cancels the export) and `read_guide` (the shared Skill and its references).
+- `hosts.ts` picks the host per call, like `mografy check`: the running player when `findServer` finds one (the MCP server then closes its own copy, so a project never has two hosts), otherwise a `Project` it opens, rebuilds from disk before each call and closes after five idle minutes.
 
 ## Showcase films (2026-11-08)
 
@@ -21,7 +27,8 @@ Updated: 2026-11-08
 
 ## Bilingual player, viewport and update reliability (2026-11-09)
 
-- Interface strings live in `packages/web/src/locales/{zh,en}.ts`, with no i18n library; the presentation page's own overlay (`deck-app.ts`) stays English, as in Pro.
+- Interface strings live in `packages/web/src/locales/{zh,en}.ts`, with no i18n library.
+- Present mode was removed (2026-11-20) to keep Mografy on making films: no slides, presentation page or HTML export. `meta.shots` remains: the timeline marks shots and `mografy review` writes a sheet of their stop frames. An older `slides` entry in mografy.json is kept and ignored.
 - Preview: view state only, in `useViewport.ts` and `viewport.ts`; the player redraws sharper when the stage grows past what it was drawn for.
 - `mografy update` is split into preflight, heal, compare, pause, merge, setup and restart stages. Generators go through `generated-file.mjs`; `bin/locate.mjs` is the one place that picks the checkout.
 - `core/src/index.ts` is split by area with its public API unchanged; `core/src/api.ts` is the HTTP contract for the CLI, web and Server; `cli/src/index.ts` dispatches to `commands/`.

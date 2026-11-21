@@ -5,362 +5,220 @@
   </picture>
 </p>
 
+<p align="center"><b>Some ideas need to move.</b></p>
+
+<p align="center">
+  <b>Mografy Triangulum v0.1.0</b> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="https://www.mografy.app">mografy.app</a> ·
+  <a href="README.zh-TW.md">繁體中文</a>
+</p>
+
 # Mografy
 
-[English](README.md) | [繁體中文](README.zh-TW.md)
+Mografy makes motion graphics with your coding agent. You describe a film to Claude Code or Codex; the agent writes it as Canvas code with the help of the `mografy` Skill; Mografy compiles it, trial-renders it in Chromium and shows it in a local editor, where you play it, retime its layers, change its colours and export it.
 
-Mografy is a local Canvas animation tool for Claude Code and Codex. One shared `mografy` Skill helps the agent plan storyboards, adapt working examples, write scenes, review frames, and export the result. The browser player provides playback, scrubbing, subtitles, colors, effects, and audio controls.
+Everything runs on your computer. A film is a folder of plain files you own: a scene in TypeScript, `mografy.json` for its settings, and the assets it uses.
 
-Describe the animation in your agent, then watch it in `mografy dev`. The agent edits scene files; Mografy compiles and trial-renders them in Chromium before updating the player at the same time position.
+[![Watch the twelve-second Mografy intro](https://github.com/mografy/mografy/blob/main/docs/media/mografy-intro.gif)](https://github.com/mografy/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4)
 
-[![Watch the twelve-second Mografy intro](https://github.com/zz41354899/mografy/blob/main/docs/media/mografy-intro.gif)](https://github.com/zz41354899/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4)
+[Watch the intro with sound (MP4)](https://github.com/mografy/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4)
 
-[Watch the intro with audio (MP4)](https://github.com/zz41354899/mografy/raw/refs/heads/main/docs/media/mografy-intro.mp4).
+## New in Triangulum v0.1.0
 
-## Latest updates
+- **A new editor.** A layer timeline where you drag, trim, duplicate, hide, lock and reorder parts of a film and give each one an enter and exit motion; ⌘K search over projects, layers and commands; settings for language, playback, text size and shortcuts.
+- **Every film is editable.** A film that marks its shots gets one layer per shot automatically, with no change to its code. Films the agent writes with `timeline()` get one layer per part, such as a title, a card or a logo.
+- **A design system for the film.** Swap any colour the film draws, apply motions to all layers at once, set each layer's start and length, and try the scene's own controls, with the film playing beside them. Player, review and export all use the changes.
+- **A lighter install.** About 10 MB to check out. FFmpeg and the Chromium shell download the first time they are needed, and Playwright is no longer needed at runtime.
+- **An MCP server.** `mografy mcp` lets any MCP client check, preview, review and export your films.
 
-**2026-10-27** — [Mografy Templates](#mografy-templates): 43 free, ready-made templates for product videos, 22 native 9:16 in an editorial look and 21 16:9 in the montage look. `mografy add <template...> projects/<name>` starts a project from them.
-
-**2026-10-21** — Contextual music: the agent describes what each part of the film needs and an optional generator composes a score that lands on its moments; 3D layers with Three.js; a project style file (`style.md`) that fixes a project's design and motion decisions; and the shared Skill now keeps itself up to date after every install, build or update.
-
-**2026-10-20** — Edits no longer get stuck behind a stalled scene or a long review; the `mografy` command keeps working when the folder it was installed from is moved or deleted. See the [changelog](CHANGELOG.md).
+Present mode has been removed so Mografy can focus on making films. See the [changelog](CHANGELOG.md) for everything in this release.
 
 ## Get started
 
-You need [Node.js](https://nodejs.org/) 22.12 or later. Then run:
+You need [Node.js](https://nodejs.org/) 22.12 or later.
 
 ```sh
-git clone --filter=blob:none --sparse https://github.com/zz41354899/mografy.git
+git clone --filter=blob:none --sparse https://github.com/mografy/mografy.git
 cd mografy
 git sparse-checkout set .agents .claude .github packages scripts projects docs/motion-design examples/mografy-intro
-npm install -g pnpm
+npm install -g pnpm        # skip if you already have pnpm
 pnpm install
 mografy dev
 ```
 
-The first three lines check out only what the tool runs on. Templates, extras (cinema, cjk, three, music, walkthrough, stage), the ten Stage reference films and the showreel stay in the same repository on GitHub and download the first time `mografy add` needs them, so they never take space you did not ask for. A plain `git clone https://github.com/zz41354899/mografy.git` also works and gives the whole repository; contributors changing Mografy itself need that full checkout (`git sparse-checkout disable` turns a slim one into it).
+`pnpm install` builds Mografy, fetches the headless Chromium shell it renders with and puts the `mografy` command on your PATH. `mografy dev` opens the editor with sixteen built-in animations. If you can see them, the installation works.
 
-`pnpm install` installs dependencies and then, automatically, builds Mografy, downloads the headless Chromium shell it uses for checks and exports (not the full, headed Chromium, which they never need), and puts the `mografy` command on your PATH. It ends by suggesting a few `mografy add` commands: templates to start a film from, a reference film to copy and helpers for a project. `mografy dev` opens the player with the sixteen built-in animations. If you see them, the installation works. FFmpeg is not part of the installation: video exports use the `ffmpeg` on your PATH when it has every encoder they need, otherwise the first export downloads one (about 25 MB). Run `mografy setup` to fetch FFmpeg and the Chromium shell ahead of time, for example before working offline. To use the Google Chrome or Microsoft Edge you already have instead, set `PLAYWRIGHT_CHANNEL=chrome` (or `msedge`) when you run `mografy`. An installation from before the headless shell may still keep a full Chromium in Playwright's browser folder; `pnpm exec playwright uninstall` and then `pnpm install` leave only the shell.
+The sparse checkout downloads only what the tool runs on. Templates, extras and reference films download the first time `mografy add` needs them. A plain `git clone` also works, and `git sparse-checkout disable` turns a slim checkout into a full one, which you need if you are changing Mografy itself.
 
-To check for updates, run `mografy update --check`. To install the latest commit from your branch's tracked upstream, run `mografy update` from the Mografy folder. The command checks for local changes, waits for an active export to finish, stops the active player, fast-forwards the source, runs `pnpm install` (including build, Chromium setup and launcher refresh), synchronizes the shared Skill, then restarts the same project on the same port. Refresh the browser after it restarts. Without an active player, it updates the installation without opening a project.
+**Updating.** Run `mografy update --check` to see if there is something new, and `mografy update` to install it. It stops the editor, pulls, rebuilds, refreshes the Skill and reopens the same project. It stops without changing anything if you have local changes or your branch has diverged.
 
-If your installation predates the update command, stop the player with Ctrl+C and run this once in the original Mografy checkout:
+**Before your first export.** Video exports use the `ffmpeg` on your PATH if it has every encoder they need. If it does not, the first export downloads one (about 25 MB). To download FFmpeg and Chromium in advance, for example before working offline, run `mografy setup`. Settings such as the projects folder (`MOGRAFY_HOME`) and the browser to use are described in [configuration](docs/configuration.md).
 
-```sh
-git pull --ff-only
-pnpm install
-mografy dev
-```
+An npm package for people who only make films (`npm install -g mografy`, no Git needed) is in preparation; see [the npm package](docs/npm-package.md).
 
-`--check` fetches Git metadata but does not change working files, install dependencies or restart the player. Updates stop for local changes (including untracked files), missing upstreams, detached HEADs or diverged history. User projects ignored by Git stay in place. If dependency setup fails after the source update, the player stays stopped and the error lists recovery commands. Separate checkouts update independently; outside a checkout, the PATH launcher selects its installed copy.
+## Make your first film
 
-An npm package for people who only make films (`npm install -g mografy`, no Git or pnpm needed) is in preparation; see [the npm package](docs/npm-package.md).
+1. Run `mografy dev`.
+2. In Claude Code or Codex, open the Mografy folder and describe the film, including the folder it should go in:
 
-`npm install -g pnpm` installs the pnpm package manager; skip it if you already have pnpm. pnpm switches to the version Mografy pins in `package.json` by itself. If npm reports a permission error, run `sudo npm install -g pnpm`. Contributors changing Mografy itself also need `pnpm check` and `pnpm test:browser`; see [Development and architecture](#development-and-architecture).
+   > Create an eight-second 9:16 animation in `projects/hello`, 1080 × 1920. Type "Hello, Mografy." like the Typewriter component, then reveal the logo with a teal accent. Review the frames and export an MP4.
 
-### More setup options
+3. The agent creates the project and the editor switches to it. Each time the agent saves, Mografy compiles and trial-renders the change and updates the editor at the same moment in the film. If a change breaks the film, the last working version keeps playing and the error is shown.
+4. Adjust it in the editor, or ask the agent for more changes. When you are happy with it, export.
 
-Open the bundled intro, or a project you already have:
+For anything longer than a few shots, ask for a storyboard first. The agent writes `storyboards/storyboard.md` and a visual board, then builds the film from it.
 
-```sh
-mografy dev ./examples/mografy-intro
-mografy dev ./projects/my-animation
-```
+## The editor
 
-New animations are created in the `projects/` folder. To keep them somewhere else, set `MOGRAFY_HOME` before starting the player:
-
-```sh
-export MOGRAFY_HOME="$HOME/Animations"
-```
-
-Other settings, such as the default project and the FFmpeg path, are in [configuration](docs/configuration.md).
-
-## Create your first animation
-
-1. Run `mografy dev` to open the player. No starter project is needed; after `pnpm install` it opens with the built-in animations.
-2. Open the repository in Codex or Claude Code and describe the animation, naming the project folder. The agent creates the project and the player switches to it. The shared Skill guides scene authoring and review.
-3. Watch the player update after each successful compile and Chromium trial render. Scrub to check timing and adjust the exposed scene controls.
-4. Run `mografy check ./projects/my-animation` and `mografy review ./projects/my-animation`, then inspect the generated images. Export from the player or CLI when ready.
-
-For example:
-
-> Create an eight-second 9:16 animation in `projects/my-animation`, with a native 1080 × 1920 canvas. Use the Typewriter and Logo reveal components as references. Show “Hello, Mografy.”, then reveal the logo with a teal accent. Review the actual frames and export an MP4.
-
-For a longer sequence, ask for a storyboard first. Scene code determines the composition; the player exposes the parameters declared by that scene.
-
-## One Skill for Codex and Claude
-
-Based on the maintainer's current experience, the Claude workflow is more fully calibrated. Codex can adapt its approach to the brief and rendered results while following the shared scene contract.
-
-The Skill lives at [`.agents/skills/mografy/SKILL.md`](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md), outside animation subprojects. Claude's `.claude/skills/mografy` entry links to that same folder, and [CLAUDE.md](https://github.com/zz41354899/mografy/blob/main/CLAUDE.md) imports it. Both hosts read one maintained copy.
-
-Inside this checkout the agent finds the Skill by itself. For projects elsewhere, install it where agents look in every folder, either from this installation (`mografy skill` copies it to `~/.agents/skills/mografy` and `~/.claude/skills/mografy`, and keeps those copies identical to this installation's Skill: `pnpm build` and `mografy dev` refresh them after you edit the Skill or update Mografy) or from GitHub with the [skills CLI](https://github.com/vercel-labs/skills), which also knows other agents:
-
-```sh
-mografy skill                              # this installation's Skill, for Claude Code and Codex
-npx skills add zz41354899/mografy -g       # or: the latest Skill on GitHub, for the agents you choose
-```
-
-An agent that only plans and writes scenes needs the Skill and nothing else; previews, checks and exports need the `mografy` command.
-
-Its English references cover:
-
-| Reference | Use |
+| Area | What you do there |
 | --- | --- |
-| [Project](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/project.md) | Repository sources, architecture, and development checks |
-| [Scene authoring](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) | Scene contract, drawing API, validation, review, and export |
-| [Built-in components](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) | All sixteen working component scenes and how to adapt them |
-| [Intro](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) | The existing twelve-second film, its source, assets, timing, and review points |
-| [Storyboards](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/storyboard.md) | Shot planning and host-specific visual boards |
-| [Animation principles](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/animation-principles.md) | The twelve principles applied to deterministic Canvas motion |
-| [Film architecture](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) | One world, one camera and one shot table: continuity rules, shared-geometry handoffs, storyboard as code |
-| [Performance](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md) | Slow frames versus choppy motion, what each Canvas operation costs, coordinates and units, and how `mografy check` measures both |
-| [Motion design](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/motion-design.md) | Visual concepts, choreography, continuity, rhythm, default taste, and design review |
-| [Output](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) | Aspect ratios, 9:16 portrait work, export sizes and formats |
-| [Reference films](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/examples.md) | The finished films in `examples/`, what each one teaches, and how to copy one |
-| [Camera and transitions](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) | `cinema.ts` camera moves, transitions including sakura particle wipes, and atmosphere |
-| [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) | Vertical Japanese / Chinese text, CJK line breaking, and the bundled OFL fonts |
-| [Video compression](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) | Python helper for smaller exported MP4s, quality controls, and upload-size budgets |
+| **Projects** (left) | Search, recent projects, built-in components; `P` hides it |
+| **Preview** | Play, step frames (arrows) or beats (⇧ arrows), loop (`L`), safe-area guides (`G`), zoom, full screen (`F`) |
+| **Timeline** | One row per layer. Drag a layer to move it, drag its ends to trim it; right-click to rename, duplicate, hide, lock, change motions or colour. Changes snap to beats, the playhead and other layers (hold ⌘ to turn snapping off), and undo works. |
+| **Inspector** (right) | The selected layer, subtitles, the scene's colours and controls, effects (glow, grain) and audio |
+| **Design system** | Colours, motion, timing, type and the project's `style.md` |
+| **Export / Batch** | Export the open film, or queue several films at once |
 
-[packages/core/skill/](https://github.com/zz41354899/mografy/tree/main/packages/core/skill) holds the entrypoint and references as Markdown, and `packages/core/src/guide.ts` assembles them. After editing them, run `pnpm build`: it ends with `pnpm sync:skills`, which regenerates the Skill. `pnpm install` and `mografy update` build too, and `mografy dev` regenerates the Skill on start when its sources changed since the last sync (for example after a `git pull`). Animation projects receive `AGENTS.md` and `CLAUDE.md` pointers to the shared Skill.
+Your timeline edits are saved to `scenes/timeline.json` and your colour swaps to `colors` in `mografy.json`. The scene code itself is never changed, so the agent can keep working on the film and your edits stay. If you want to move an element inside a shot on its own, for example a title, ask the agent to give the film layers.
 
-## Reference films
+## The Skill
 
-Mografy has two kinds of reference film. The twelve-second [intro](https://github.com/zz41354899/mografy/tree/main/examples/mografy-intro) is installed and listed in the player under Examples; the ten [Stage](https://github.com/zz41354899/mografy/tree/main/examples) product UI loops (`stage-*`) are listed in `examples/catalog.json` and download from GitHub the first time you add one. Longer films live on the website's [showcase](https://www.mografy.app/showcase) instead of in the installation: the 60 s montage, the 42 s Triangulum teaser, the 71 s story film, the paper theatre explainers and character films, and [film-starter](https://www.mografy.app/showcase), the twenty-second model for every multi-shot film. `mografy add` lists both; `mografy add <name> [folder]` copies the intro, downloads a Stage film from GitHub or downloads a showcase film into your library to build on (`mografy add film-starter <folder>` to start a new film). The agent reads the showcase list at [mografy.app/showcase/films.json](https://www.mografy.app/showcase/films.json) when it needs one.
-
-## Mografy Templates
-
-[Mografy Templates](https://github.com/zz41354899/mografy/tree/main/templates) is a free library of ready-made templates for product demo videos: opening hooks, captions, phone, desktop and laptop screens, callouts, before/after, steps, numbers, reviews, logos, slides, end cards and transitions, all in English. Twenty-two are designed natively for 9:16 (Threads, Reels, Shorts) in an editorial look: a white printed page, black Anton headlines that rise letter by letter and one orange accent. Twenty-one are for 16:9 (landing pages, YouTube, decks; their ids end in `-wide`) in the look of the [montage](https://www.mografy.app/showcase) film: night grounds, light trails and kinetic type in the Mografy spectrum. Every template plays live, with its copy editable, at [mografy.app/library/templates](https://www.mografy.app/en/library/templates).
+The `mografy` Skill teaches your agent how to plan, write, review and export Mografy films: the scene contract, film architecture (one world, one camera, one beat table), motion design, layers, storyboards, performance, music, 3D, CJK type and output formats. Inside this checkout the agent finds it automatically. To use it from any other folder, install it once with the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```sh
-mografy add hook-impact three-steps cta-endcard projects/my-film
+npx skills add mografy/mografy -g     # once, for Claude Code, Codex and other agents
+npx skills update                        # later, to get the latest version
 ```
 
-A folder that is not a project yet becomes one: `mografy add` creates it with the templates' aspect ratio and a scene that plays them in order, so `mografy dev projects/my-film` opens a working film. Each template is a complete scene module copied to `scenes/templates/<id>.ts` with the shared `kit.ts`, `editorial.ts` and `montage.ts`, and Inter and Anton are registered in `mografy.json`. Play one inside a film with `play(ctx, time, start, template, { ...params })`; overlay templates take `backdrop: false` to draw over the film's picture. `mografy add` lists them all, and the Skill's [templates reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/templates.md) tells the agent when to use which. Maintainers: see [templates/README.md](templates/README.md).
+The Skill is written in [`packages/core/skill/`](packages/core/skill/) and generated into [`.agents/skills/mografy/`](.agents/skills/mografy/SKILL.md). `pnpm build`, `pnpm install` and `mografy update` regenerate it, and Claude reads the same files through `.claude/skills/mografy` and `CLAUDE.md`.
 
-## Working examples
+## Starting points
 
-The sixteen built-in animations are authoring references as well as playable examples:
+- **Templates.** 43 ready-made scenes for product videos: hooks, captions, device screens, steps, numbers, reviews, end cards and transitions. 22 are designed for 9:16 and 21 for 16:9. `mografy add hook-impact three-steps cta-endcard projects/my-film` creates a playable film from them. You can browse them at [mografy.app/library/templates](https://www.mografy.app/en/library/templates).
+- **Reference films.** The twelve-second [intro](examples/mografy-intro) comes with the install. The ten `stage-*` product UI loops and the longer films on the [showcase](https://www.mografy.app/showcase) download when you add them, for example `mografy add film-starter projects/my-film`.
+- **Built-in components.** Sixteen small animations you can play and adapt: text and numbers, brand and layout, interactions, and indicators.
+- **Extras.** Helpers the agent copies into a project only when the film needs them: `cinema` (camera moves and transitions), `cjk` (vertical Chinese and Japanese type), `three` (Three.js 3D), `music` (a score composed to the film's moments), `walkthrough` and `stage` (product UI). For example, `mografy add cinema cjk projects/my-film`.
 
-- **Text and numbers:** Stagger text, Typewriter, Lower third, Count up.
-- **Brand and layout:** Pop card, Logo reveal, Social card, Follow badge.
-- **Interactions:** YouTube subscribe, AI chat, Like burst, Notification toast, Toggle switch.
-- **Indicators:** Progress bar, Pulse dots, Audio wave.
+Run `mografy add` on its own to list all of them.
 
-Reusable functions live in [components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/components.ts) and [social-components.ts](https://github.com/zz41354899/mografy/blob/main/packages/server/template/scenes/social-components.ts). Each example has its own scene entry, controls, preview, and export. Source copies live under `packages/server/template/scenes/`; editable installed projects live under the library's `.components/{id}/` directory. New projects include the reusable modules and scene entries.
+## How a scene works
 
-All sixteen built-in component projects default to centered **9:16 portrait** previews. Their bundled thumbnails also show the full portrait canvas, so a new installation can show all sixteen previews before opening their projects. Scene edits refresh the opened project's thumbnail automatically. After changing built-in source scenes or assets, maintainers regenerate the bundled previews with `pnpm thumbnails:generate`.
-
-Optional [extras](https://github.com/zz41354899/mografy/tree/main/extras) are not installed; installation contains only the sixteen built-in components. The agent copies an extra into a project when the brief needs it: [cinema.ts](https://github.com/zz41354899/mografy/blob/main/extras/cinema/cinema.ts) for camera moves on image plates, transitions (crossfade, dip, flash, iris, slash, whip, sakura-style particle wipes) and atmosphere, and [cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) with OFL Noto Sans / Serif CJK TC subsets for vertical Japanese / Chinese text and CJK line breaking. See the [camera and transition](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/camera-transitions.md) and [CJK typography](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/cjk-typography.md) references. Add one yourself with `mografy add <extra...> [project]` (one or several at once; `mografy add` lists them with the reference films: cinema, cjk, three, music, walkthrough, stage). [stage.ts](https://github.com/zz41354899/mografy/blob/main/extras/stage/stage.ts) makes short product UI loops — a script over state, windows and phones cropped by the frame, placeholder lines, rolling numbers and four looks; see the [UI stage reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/ui-stage.md) and the `stage-*` reference films. Everyday motion helpers are built into `@mografy/runtime`: easing curves, springs, eased time windows, monotone `keys`, one film camera (`cameraPath`, `withCamera`), a shot table (`beats`), pooled layers (`layer`, `blurLayer`, `bloom`, `buffer`), shadow-based text blur (`blurText`, `blurWords`), a tempo grid, rounded surfaces and gradients.
-
-The [component reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/built-in-components.md) links every entry and explains layout, timing, local imports, and review. Ask the agent to adapt the relevant component to your project's own assets and style.
-
-The [Mografy intro](https://github.com/zz41354899/mografy/blob/main/examples/mografy-intro/scenes/main.ts) is a 1920 × 1080, twelve-second, 30fps example: code introduces the idea, a preview plays and scrubs, an external edit updates the picture, and the original logo completes the sequence. Its [reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/intro.md) documents the four beats, fonts, music, captions, and transition sampling.
-
-## Storyboards and motion direction
-
-For example:
-
-> Create an English storyboard for a twelve-second product intro. Use the Mografy intro as a sequence reference and adapt the logo reveal and lower third components to this project's assets.
-
-The agent writes `storyboards/storyboard.md`, with each shot's time range, purpose, composition, assets, key poses, camera, copy/audio, transition, animation principles, and review times.
-
-Codex invokes image generation for visual panels. Claude uses Artifacts when available, otherwise saves a standalone `storyboards/storyboard.html` preview. Plans and prompts are in English. When implementation is requested, the agent continues into scene modules and validates the actual frames.
-
-The animation reference covers squash and stretch, anticipation, staging, straight ahead action and pose to pose, follow through and overlapping action, slow in and slow out, arcs, secondary action, timing, exaggeration, solid drawing, and appeal. Apply the principles that support each shot and its reading holds.
-
-### Project style
-
-A project can fix its own design and motion decisions in `style.md` at the project root, so every shot and later session follows them: do and don't rules, motion character, palette, type and tempo choices, composition habits and reference stills. The values themselves stay in the scene code, defined once and changed there.
-
-Tell the agent when a decision should last ("always use this teal", "titles always rise from below with a little overshoot") and it records it in `style.md`, updating the value in the scene code when the decision is a value. The style takes precedence over the Skill's default design guidance, never over the scene contract, and your current request still wins. Copy `style.md` to reuse a style in another project.
-
-## Scene model
-
-A scene draws the complete picture from absolute `time`, resolved params, and prepared assets. `mografy.json` stores project settings; animation code lives in scene modules.
+A scene draws the whole frame from the absolute `time`, so it can be played, scrubbed and exported in any order:
 
 ```ts
-import { ease, lerp, pr } from '@mografy/runtime';
+import { ease, lerp, pr, timeline } from '@mografy/runtime';
 import type { FrameContext } from '@mografy/runtime';
+import edits from './timeline.json';
 
-export const meta = { width: 1920, height: 1080, duration: 4, fps: 30, background: '#17191d' };
-export const params = {
-  accent: { name: 'Accent', type: 'color' as const, default: '#12b5a5' },
-};
+export const TIMELINE = timeline([
+  { id: 'dot', name: 'Dot', in: 0, out: 4, enter: 'pop' },
+], edits);
+export const meta = { width: 1920, height: 1080, duration: 4, fps: 30, background: '#17191d', layers: TIMELINE.meta };
+export const params = { accent: { name: 'Accent', type: 'color' as const, default: '#12b5a5' } };
 
 export function renderFrame(ctx: FrameContext, time: number, params: Readonly<Record<string, unknown>>) {
-  const mografy = ctx.draw;
-  mografy.fill(String(params.accent));
-  mografy.circle(ctx.width / 2, ctx.height / 2, lerp(20, 160, ease.outCubic(pr(time, 0, 0.8))));
+  TIMELINE.draw(ctx.canvas, time, {
+    dot: (c, own) => {
+      c.fillStyle = String(params.accent);
+      c.beginPath(); c.arc(960, 540, lerp(20, 160, ease.outCubic(pr(own, 0, 0.8))), 0, Math.PI * 2); c.fill();
+    },
+  });
 }
 ```
 
-Use `ctx.draw` for common drawing, `ctx.canvas` for native Canvas operations, and `ctx.withCanvas` or `ctx.clip` for isolated scopes. Scenes run only in the browser and must render deterministically when seeking in any order. The player and exports share the same runtime and post-processing. See the [scene-authoring reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/scene-authoring.md) for the full contract.
-
-After editing a scene:
+`@mografy/runtime` provides easing and springs, a film camera, a shot table (`beats`), layers, blur and bloom, text reveals and a tempo grid. After the agent edits a scene it checks the result:
 
 ```sh
-mografy check ./projects/my-animation
-mografy review ./projects/my-animation
+mografy check projects/my-film          # compile and trial-render in Chromium (--motion also finds jumps)
+mografy review projects/my-film         # stills, output frames and transition sheets in renders/
 ```
 
-`check` compiles and trial-renders in real Chromium. While a player is open for that project, `check` asks the player to rebuild from disk, so the terminal and the player report the same result. `review` creates raw stills, output frames, and transition sheets under `renders/`. Inspect those images for clipping, overlap, legibility, hierarchy, safe margins, reading time, and transition continuity. Review compares against a video only when you pass `--video file.mp4` or the player's last finished MP4/WebM export is of the current version; an older export under `renders/` is ignored.
+The full contract is in the [scene-authoring reference](.agents/skills/mografy/references/scene-authoring.md).
 
-Scene setup must finish within 30 seconds and the trial render within 20 seconds; each export, still or review frame has a 120-second limit. A scene that exceeds a limit (for example, an `await` in `setup` that never resolves or a loop in `renderFrame` that never ends) is reported as a scene error and the last working version keeps playing, so later edits are not blocked.
+## Export
 
-## Player and exports
-
-The Scene inspector groups Subtitles, Colors, and Controls. Only strings marked `role: 'subtitle'` appear as editable subtitles; the agent edits other copy in source. The Effects inspector provides Glow and Grain with percentage inputs, reset, and an Original/With effects comparison. Audio supports a track, volume, and beat-grid settings.
-
-The main preview follows the authored scene's dimensions and has no orientation switch. For a new **9:16 portrait** video, ask the agent to create a native 1080 × 1920 scene with vertical layout, wrapped text, and social safe margins. The shared Skill records this requirement. An optional saved `aspectRatio` is also read by agents and the Runtime. Portrait Guides reserve conservative space for social overlays.
-
-Playback supports Space, frame stepping with arrows, beat stepping with Shift+arrows when audio is present, Loop (`L`), Guides (`G`), and Projects (`P`).
-
-Export from the player or CLI:
+Export from the editor, or from the command line:
 
 ```sh
-mografy export ./projects/my-animation --format mp4
-mografy export ./projects/my-animation --format mp4 --codec h264
-mografy export ./projects/my-animation --preset fast
-mografy export ./projects/my-animation --preset master
-mografy export ./projects/my-animation --format webm
-mografy export ./projects/my-animation --format mp4 --orientation portrait --resolution 1080p
-mografy export ./projects/my-animation --format lottie -o preview.lottie.json
-mografy export ./projects/my-animation --format svga -o preview.svga
-mografy export ./projects/intro ./projects/launch --preset share   # batch: one after another
-mografy export --all                                             # batch: every project in projects/
+mografy export projects/my-film                       # MP4, H.265 10-bit
+mografy export projects/my-film --preset share        # MP4, H.264, plays everywhere
+mografy export projects/my-film --format webm
+mografy export projects/my-film --format lottie
+mografy export --all                                  # every project, one after another
 ```
-
-**Batch export.** Name several projects, or `--all [folder]` for every project in a folder (default: your projects folder; folders starting with `_` are skipped). They export one after another with the same options, share one Chromium, and a project that fails is reported while the rest go on; Ctrl+C stops the batch and prints a summary. In the player, **Batch** next to **Export** opens the batch export dialog: tick films, choose format, encoder, resolution and frame rate (*Use less memory* is a switch), and they queue in the background; a card in the corner follows the queue while the dialog is closed, and switching projects does not stop it.
-
-Four export presets cover most needs (Encoder in the Export dialog, `--preset` on the CLI):
 
 | Preset | Output | Use it for |
 | --- | --- | --- |
 | `share` | MP4, H.264 8-bit | Any browser, Windows PCs, chat apps and social uploads |
-| `high` (default) | MP4, H.265 10-bit | Smallest file at the same look; Apple devices, Chrome and Edge with hardware decoding |
-| `fast` | MP4, hardware H.265 10-bit, GPU-drawn | Quick exports: VideoToolbox on macOS, NVIDIA NVENC, Intel Quick Sync or AMD AMF on Windows; software fallback elsewhere |
-| `master` | MOV, ProRes 422 HQ 10-bit, PCM audio | Editing in Final Cut, Premiere or DaVinci Resolve |
+| `high` (default) | MP4, H.265 10-bit | The smallest file at the same quality: Apple devices, Chrome, Edge |
+| `fast` | MP4, hardware H.265 10-bit | Quick exports with VideoToolbox, NVENC, Quick Sync or AMF |
+| `master` | MOV, ProRes 422 HQ | Editing in Final Cut, Premiere or DaVinci Resolve |
 
-Constant quality encodes while frames are captured, so there is no separate encoding wait; two-pass target bitrate is under Advanced settings. Audio is 48 kHz. Advanced settings also offer the shutter angle (360° by default, 180° for a film look) and ordered dithering for soft gradients. Exports work the same on macOS, Windows and Linux; the finished file names the encoder that wrote it.
+Mografy also exports WebM, Lottie and SVGA. It exports up to 60 fps for video, with motion blur, glow and grain, at 720p or 1080p in landscape or portrait. Files are written to the project's `renders/` folder. [Exports](docs/exports.md) covers codecs, quality settings, output sizes, fit and compression.
 
-MP4 uses 10-bit H.265 (HEVC) video and 48 kHz AAC audio by default. In tests on a 3D paper-texture film and a 2D motion film, H.265 at the same CRF matched H.264's quality at 50–58 % of the file size and took the same time to encode (Encoder speed Slow uses x265's medium preset, which is as fast as x264's slow). The file is tagged `hvc1`, so it plays in QuickTime, Safari, iOS and Android, Chrome and Edge, and uploads to YouTube, Instagram and TikTok. Firefox and some Windows PCs play HEVC only with hardware support or the HEVC Video Extensions, so for a website `<video>` or files sent to unknown players choose **Encoder → Share · H.264** in the Export dialog, pass `--preset share` (or `--codec h264`), or set `"codec": "h264"` under `render` in `mografy.json`. MP4 CRF and bitrate are on the H.264 scale for both codecs. WebM uses VP9 video and Opus audio at 128 kbps, defaulting to constant quality at CRF 32 rather than the MP4 target bitrate. Both support audio, motion sampling, glow, grain, and encoding controls. Finished files are written under `renders/`.
+## Commands
 
-WebM quality presets:
+| Command | What it does |
+| --- | --- |
+| `mografy dev [project]` | Open the editor |
+| `mografy check [project] [--motion]` | Compile and trial-render; `--motion` also finds jumps and hard stops |
+| `mografy review [project]` | Write review images |
+| `mografy export [project...]` | Export one film or a batch (`--all`) |
+| `mografy add [name...] [project]` | Add templates, extras or a reference film |
+| `mografy update [--check]` | Update Mografy |
+| `mografy setup [--check]` | Download FFmpeg and Chromium now, or show which ones are used |
+| `mografy stop [project]` | Stop the editor's server |
+| `mografy mcp` | Run the MCP server |
+| `mografy --version`, `--help` | Show the version and all options |
 
-| Quality | VP9 CRF | Motion samples | Encoder speed |
-| --- | --- | --- | --- |
-| Draft | 38 | 1 | Very fast |
-| Standard | 32 | 4 | Medium |
-| High | 26 | 8 | Slow |
+### MCP server
 
-The initial WebM draft inherits the project's motion samples and output effects; choosing a quality preset applies the values above. Draft also disables glow and grain. Lower CRF keeps more detail and usually produces larger files; higher CRF favors smaller files. Constant quality varies bitrate with scene complexity and does not guarantee a fixed size. VP9 may encode more slowly than H.264, and size savings depend on the scene and settings. CRF values are codec-specific, so compare actual outputs rather than matching MP4 and WebM numbers. Advanced settings also offer two-pass target bitrate. At equal average bitrate and duration, MP4 and WebM have similar file sizes.
-
-A local comparison of the twelve-second intro at 640 × 360, 30 fps and one motion sample produced an 852,445-byte MP4 and a 300,321-byte WebM (64.77% smaller). Total export times were 15.89 and 17.28 seconds. This compares the formats' default encoding settings, including different audio bitrates; it is not a matched-quality benchmark or a prediction for other scenes. See the [measured comparison](artifacts/webm-export/comparison.json).
-
-Lottie and SVGA package embedded PNG frames, preserving Canvas artwork and effects without editable vector layers or audio. Lottie output is `.lottie.json`; SVGA output is compressed SVGA 2 protobuf.
-
-If a finished video is too large, ask the shared `mografy` Skill to compress it, or run the Python helper directly (Python 3.10+, FFmpeg and ffprobe on PATH):
+`mografy mcp` makes the CLI's operations available to any MCP client over stdio: list and create projects, check, render a frame, review, read and write the scene (the new code is compiled and trial-rendered before it is saved), open the editor, export, and read the Skill. While the editor has a project open, the tools work through it, so you see the same result there.
 
 ```sh
-python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4
-python3 .agents/skills/mografy/scripts/compress-video.py ./projects/my-animation/renders/film.mp4 --target-mb 10 -o ./projects/my-animation/renders/film-share.mp4
+claude mcp add mografy -- mografy mcp
+codex mcp add mografy -- mografy mcp
 ```
 
-The default writes a separate H.265 `film-compressed.mp4` using CRF 23 (H.264 scale) and retains audio; `--codec h264` writes H.264. `--target-mb` uses two passes and checks the actual decimal MB limit. Existing files are never overwritten; candidates that do not reduce size are discarded. See the [compression reference](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/video-compression.md) for quality, resolution, dependency overrides, and result verification. The maintained script is `scripts/compress-video.py`; `pnpm sync:skills` copies it into the shared Skill for both Codex and Claude.
-
-The player's Export dialog offers these output sizes:
-
-| Format | Sizes |
-| --- | --- |
-| Lottie | 256 × 256 — Square; 640 × 360 — Landscape |
-| SVGA | 375 × 375 — Square; 375 × 750 — Portrait |
-| MP4 / WebM landscape (16:9) | 1280 × 720 — 720p; 1920 × 1080 — 1080p |
-| MP4 / WebM portrait (9:16) | 720 × 1280 — 720p; 1080 × 1920 — 1080p |
-
-MP4 and WebM start in the authored canvas orientation, with icons to switch the output orientation while retaining 720p/1080p quality. A paused-frame preview shows the selected output. Each format remembers its size and Fit selection while the dialog stays open.
-
-When the output aspect differs from the scene, **Fit** appears for all four formats:
-
-| Fit option | Result |
-| --- | --- |
-| **Fit entire scene** (default) | Center the full artwork, filling extra space with the scene background |
-| **Fill and crop** | Fill the output, cropping the centered artwork at the edges |
-| **Adapt layout** | Give responsive scene code the output canvas dimensions so it can rearrange the composition |
-
-All sixteen built-in components support landscape and portrait layouts. Choose **Adapt layout** when exporting a component in the other orientation. Custom scenes must use `ctx.width` and `ctx.height` to implement their own responsive layout; selecting this option alone does not rearrange fixed-coordinate artwork.
-
-Output choices leave the main preview and saved project settings intact. Portrait video files default to `name-portrait.mp4` or `name-portrait.webm`. CLI `--orientation` and `--resolution` presets use **Fit entire scene**; `--orientation` alone defaults to 720p, and `--resolution` alone selects landscape. CLI exports without these flags use the project's render scale. Output names supplied with `-o` must be filenames or relative paths inside the project's `renders/` directory.
-
-Mografy exports allow up to **60 fps for MP4 and WebM** and **30 fps for Lottie and SVGA**. SVGA uses its supported rates within this limit. The player, API, CLI, and direct render functions enforce the same limits. The export dialog caps inherited video frame rates at 60 fps without changing saved settings.
-
-After starting a player export, the same dialog shows an animated robot, actual frame-capture progress, and elapsed time. Encoding and packaging use an indeterminate indicator. **Hide** keeps the export running and moves progress into a toast with **View** and **Cancel**; the top **Exporting** button also reopens it.
-
-Completed MP4 and WebM videos can be played and downloaded in the dialog. **Done** dismisses the result, and **Last export** reopens it while the player retains that job. **Export** opens fresh settings. Failed or cancelled jobs offer **Settings** and, for exports started in this dialog, **Retry**.
-
-Progress also appears in the CLI. Cancel a direct CLI export with Ctrl+C, or cancel a player export through the interface or `mografy export [project] --cancel`. Cancellation cleans up temporary data before finishing.
-
-## Commands and project structure
-
-| Command | Purpose |
-| --- | --- |
-| `mografy dev [project]` | Open the player for an existing project |
-| `mografy check [project]` | Compile and trial-render |
-| `mografy check --motion [project]` | Also find jumps, hard starts and hard stops |
-| `mografy review [project] [--video file.mp4]` | Generate review images and optional video comparisons |
-| `mografy export [project] --format mp4\|webm\|mov\|lottie\|svga` or `--preset share\|high\|fast\|master` | Export the animation |
-| `mografy update [--check]` | Update this source installation, or check for a newer revision |
-| `mografy skill [--check] [--force]` | Install the shared Skill for Claude Code and Codex in every folder, or show what is installed |
-| `mografy setup [ffmpeg\|chromium] [--check]` | Download FFmpeg and the Chromium shell now instead of on first use, or show which ones are used |
-| `mografy stop [project]` | Stop the project's player server |
-| `mografy --help` | Show commands and supported options |
-
-`--yes` is deprecated and ignored: `mografy dev` no longer creates missing projects; ask Claude or Codex for a new animation. Use `--no-open` to start the player without opening a browser, and `--port <port>` to choose its port (default: 4173, then the next free port). For `dev`, `check`, `review`, `export`, and `stop`, omitted project paths use `MOGRAFY_PROJECT` when set, otherwise the current project or the source checkout's default project. `mografy init` without a path creates a project in the current folder.
-
-**Open only projects you trust.** A project's scene code runs in the player page with the same access as the editor, so it can edit project files and open your other projects. Opening a project from someone else is like running their script. The player listens only on `127.0.0.1` and refuses requests from other sites. The `mografy` command uses a checkout around the current folder only when `pnpm install` was run there, so a downloaded folder that imitates one cannot run its code.
+## A project
 
 ```text
-mografy/
-  .agents/skills/mografy/       Shared Skill, references, and video-compression helper
-  .claude/skills/mografy       Link to the same Skill
-  packages/server/template/   Source component library and project template
-  templates/                  Mografy Templates: 43 ready-made scenes for product videos
-  examples/mografy-intro/      Twelve-second reference animation
-  examples/stage-*/            Ten Mografy Stage product UI loops
-                               (longer reference films: mografy.app/showcase, `mografy add <name>`)
-  projects/                   Editable animation projects and installed components
-  docs/                       Architecture and development status
-
-animation-project/
-  mografy.json                 Scene entry, aspectRatio, params, fonts, audio, render, review
-  scenes/                     Animation code and local reusable components
-  style.md                    Optional project style rules
-  assets/                     Images, fonts, and audio
-  AGENTS.md / CLAUDE.md        Shared Skill pointers
-  storyboards/                Written and visual planning outputs
-  renders/                    Exports and review images
-  .mografy/                   Managed builds and server state
+my-film/
+  mografy.json        scene entry, aspect ratio, colours, fonts, audio, render and review settings
+  scenes/             the film's code; timeline.json holds your timeline edits
+  style.md            the film's design and motion decisions (optional)
+  assets/             images, fonts and audio
+  storyboards/        plans and visual boards
+  renders/            exports and review images
 ```
 
-## Development and architecture
+**Only open projects you trust.** A scene runs in the editor page with the editor's access, so opening someone else's project is like running their script. The editor only listens on `127.0.0.1` and refuses requests from other sites.
+
+## Versions
+
+From Mografy Triangulum v0.1.0, Mografy has numbered releases that follow [semantic versioning](https://semver.org): `mografy --version` prints the version you have, and the [changelog](CHANGELOG.md) lists each release. Updates from before v0.1.0 are listed by date.
+
+## Contributing
+
+Mografy is a pnpm monorepo:
 
 | Package | Responsibility |
 | --- | --- |
-| `core` | Settings schema, shared contracts, generated Skill guidance |
-| `runtime` | Browser scene execution, drawing, sampling, effects |
-| `render` | Compilation, Chromium hosting, exports, frame review |
-| `server` | Project write queue, atomic writes, watching, HTTP/WebSocket |
-| `web` | Player and inspector |
-| `cli` | Development, validation, review, export, project creation |
+| `core` | Settings and scene schemas, shared contracts, the Skill |
+| `runtime` | Running scenes in the browser: drawing, layers, motion, effects |
+| `render` | Compiling, Chromium hosting, exports, review |
+| `server` | Projects, the write queue, file watching, HTTP and WebSocket |
+| `web` | The editor |
+| `cli` | The `mografy` command and the MCP server |
 
 ```sh
 pnpm check
 pnpm test:browser
-pnpm --filter @mografy/web dev
 ```
 
-Read [architecture](https://github.com/zz41354899/mografy/blob/main/docs/architecture.md) for the data flow and invariants, [status](https://github.com/zz41354899/mografy/blob/main/docs/STATUS.md) for completed work and remaining tasks, and [AGENTS.md](https://github.com/zz41354899/mografy/blob/main/AGENTS.md) before repository changes.
+Read [AGENTS.md](AGENTS.md) before changing the repository, [architecture](docs/architecture.md) for how data flows, and [status](docs/STATUS.md) for what is done and what is next.
 
 ## License
 
-Mografy source code and documentation use the [MIT License](https://github.com/zz41354899/mografy/blob/main/LICENSE), following the [standard MIT text](https://opensource.org/license/mit). Package manifests declare `MIT`. Third-party dependencies and bundled assets retain their original terms; the bundled ABeeZee font uses the [SIL Open Font License](https://github.com/zz41354899/mografy/blob/main/packages/server/template/assets/OFL.txt).
+Mografy's code and documentation are released under the [MIT License](LICENSE). Third-party dependencies and bundled assets keep their own licences. The bundled ABeeZee font uses the [SIL Open Font License](packages/server/template/assets/OFL.txt).

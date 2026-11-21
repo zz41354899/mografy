@@ -7,8 +7,7 @@ export interface Flags {
   yes: boolean;
   output?: string | undefined;
   video?: string | undefined;
-  /** `html` is the presentation file, written directly rather than as a render job. */
-  format?: ExportFormat | 'html' | undefined;
+  format?: ExportFormat | undefined;
   orientation?: 'landscape' | 'portrait';
   resolution?: '720p' | '1080p';
   /** MP4 video codec for this export; the project's setting otherwise. */
@@ -43,7 +42,7 @@ export function parse(argv: string[]) {
     else if (value === '--port') flags.port = Number(argv[++i]);
     else if (value === '--output' || value === '-o') flags.output = argv[++i];
     else if (value === '--video') flags.video = argv[++i];
-    else if (value === '--format') { const v = argv[++i]; flags.format = v === 'html' ? 'html' : exportFormatSchema.parse(v); }
+    else if (value === '--format') { const v = argv[++i]; flags.format = exportFormatSchema.parse(v); }
     else if (value === '--orientation') { const v = argv[++i]; if (v !== 'landscape' && v !== 'portrait') throw new Error('--orientation must be landscape or portrait'); flags.orientation = v; }
     else if (value === '--codec') { const v = argv[++i]?.toLowerCase().replace(/^hevc$/, 'h265').replace(/^avc$/, 'h264'); if (v !== 'h265' && v !== 'h264') throw new Error('--codec must be h265 or h264'); flags.codec = v; }
     else if (value === '--preset') { const v = exportPresetSchema.safeParse(argv[++i]); if (!v.success) throw new Error('--preset must be share, high, fast or master'); flags.preset = v.data; }

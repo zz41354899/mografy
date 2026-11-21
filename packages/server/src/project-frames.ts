@@ -18,7 +18,7 @@ export class ProjectFrames {
     if (this.closed) return Promise.reject(new ApiError(503, 'CLOSED', 'Server is closing'));
     const next = this.queue.then(async () => {
       const { project, scene, build } = this.current();
-      const key = JSON.stringify([sceneRuntimeKey(scene.version, project), project.params]);
+      const key = JSON.stringify([sceneRuntimeKey(scene.version, project), project.params, project.colors ?? null]);
       // A page closed by a frame timeout or a renderer crash is replaced instead of failing every later still.
       if (this.cached?.key !== key || this.cached.page.closed) {
         await this.cached?.page.close();

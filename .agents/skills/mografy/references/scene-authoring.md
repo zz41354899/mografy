@@ -30,11 +30,11 @@ export function renderFrame(ctx: FrameContext, time: number, p: any) {
 }
 ```
 
-This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and start from the `film-starter` showcase film (`mografy add film-starter <folder>` downloads it).
+This is the shape of a single shot. A film with several shots or a moving camera is one world drawn through one camera from one shot table: read [film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and start from the `film-starter` showcase film (`mografy add film-starter <folder>` downloads it).
 
 ## Aspect ratio
 
-Read `mografy.json.aspectRatio` (`"16:9"` or `"9:16"`) before planning or editing; when absent, use the scene's `meta.width / meta.height`. The runtime applies the saved ratio before setup, so `SetupContext` and `FrameContext` both receive the effective dimensions: use `ctx.width` and `ctx.height`, never imported meta dimensions, for layout, backgrounds, clipping and camera bounds. A portrait brief is authored natively at 1080 × 1920, never fitted from a landscape scene. Read [output.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/output.md) for portrait layout, safe margins, export sizes and formats.
+Read `mografy.json.aspectRatio` (`"16:9"` or `"9:16"`) before planning or editing; when absent, use the scene's `meta.width / meta.height`. The runtime applies the saved ratio before setup, so `SetupContext` and `FrameContext` both receive the effective dimensions: use `ctx.width` and `ctx.height`, never imported meta dimensions, for layout, backgrounds, clipping and camera bounds. A portrait brief is authored natively at 1080 × 1920, never fitted from a landscape scene. Read [output.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/output.md) for portrait layout, safe margins, export sizes and formats.
 
 ## Required behavior
 
@@ -43,7 +43,7 @@ Read `mografy.json.aspectRatio` (`"16:9"` or `"9:16"`) before planning or editin
 3. The runtime resets and fills the canvas before every call. `renderFrame` must finish synchronously.
 4. Import only files inside the project and `@mografy/runtime`.
 5. Put fonts in `assets/`, list them in `mografy.json` under `fonts`, then select them with `mografy.textFont('Family', 400)`. Only loaded weights are reliable.
-6. Express effect distances such as `shadowBlur`, shadow offsets, and filter pixels in logical units on `ctx.canvas`; the runtime scales them for output resolution, but not for your own transforms (a camera zoom) and not on your own offscreen contexts. Never set `ctx.filter` around a group of draws: blur a layer with `blurLayer`, type with `blurText` / `blurWords`, light with `bloom` (see [performance.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/performance.md)). Use `ctx.vignette(strength)` for a canvas vignette.
+6. Express effect distances such as `shadowBlur`, shadow offsets, and filter pixels in logical units on `ctx.canvas`; the runtime scales them for output resolution, but not for your own transforms (a camera zoom) and not on your own offscreen contexts. Never set `ctx.filter` around a group of draws: blur a layer with `blurLayer`, type with `blurText` / `blurWords`, light with `bloom` (see [performance.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/performance.md)). Use `ctx.vignette(strength)` for a canvas vignette.
 7. Never create a canvas in `renderFrame`. Use `layer`, `blurLayer`, `bloom` or `buffer(name, w, h)`, which reuse pooled memory sized in film coordinates.
 8. Expose only important subtitles as `type: 'string', role: 'subtitle'` params. Titles, chat text, buttons, hints, code examples, and brand copy should stay in the scene for the AI to edit. Do not turn every string into an inspector field. Every color or numeric param must control a visible result. Do not add a dot grid unless the user explicitly asks for one.
 
@@ -213,27 +213,27 @@ New projects include `scenes/components.ts`, `scenes/social-components.ts`, and 
 For a new animation, create the project first with `mografy init projects/<name>` (an internal command for agents; it starts as a blank stage with the component modules), then replace `scenes/main.ts` and open it with `mografy dev projects/<name>` so the running player switches to it. `mografy dev` only opens existing projects and fails on a folder without `mografy.json`. Do not tell the user to run `init` themselves.
 
 1. Read `mografy.json`, the configured scene entry, and every local module it imports. Preserve the scene's existing visual language unless the user asks for a redesign.
-2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render, review, and presentation (`slides`) settings.
+2. Edit scene source files directly. Keep animation data out of `mografy.json`; use it only for project, parameter, font, audio, render and review settings.
 3. Run `mografy check [project]`. This compiles the scene, trial-renders it in real Chromium and measures frame cost. Fix every reported error, and every `!` frame-cost warning, before judging the design.
 4. Run `mografy review [project]`. Inspect every generated PNG in `renders/`, including raw stills, output frames, and transition strips. Do not approve a scene from source code or a successful build alone.
 5. Judge the images for clipping, overlap, safe margins, legibility, hierarchy, spacing, contrast, consistent easing, transition continuity (the followed object is visible in every frame of a transition strip, nothing jumps, no frame is empty), and whether each important message stays visible long enough. Review the beginning, end, configured key times, and dense transition intervals. Check both raw stills and final output frames when glow, grain, or motion sampling is used.
 6. Iterate on the scene and repeat check plus review until the visual problems are resolved. Use `mografy dev [project]` when the user should watch the live result.
 7. Export with `mografy export [project] --format mp4|webm|lottie|svga` when the user asks for a file. The command prints capture and encoding or packaging progress and writes the finished file under `renders/`. Press Ctrl+C to cancel a CLI export. When `mografy dev` is running, player exports also print progress in that terminal and can be stopped with `mografy export [project] --cancel`.
 
-## Presentations
+## Shots
 
-The same project can be presented live, one slide per shot, from the editor's Present mode. Slides come only from the scene: export `meta.shots` (`[{ end, stop?, title? }, …]`) in the scene's `meta`; presentation titles, notes and holds live in `mografy.json` `slides`. To mark shots, follow [presentations.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/presentations.md): read the scene files and `mografy.json`, find each shot, pick a settled stop frame, write `meta.shots`, then `mografy check` and inspect `review-<version>-slides.png` from `mografy review`. Video export ignores shots and `slides`.
+Export `meta.shots` (`[{ end, stop?, title? }, …]`, from the beat table) so the player's timeline marks each shot and `mografy review` writes `review-<version>-shots.png` with the frame each one settles on. `stop` is that settled frame; by default one frame before `end`. Video export ignores shots.
 
 Only important subtitles belong in `role: 'subtitle'` params. Let the user edit those in Scene → Subtitles; make other copy changes in source when requested.
 
 ## Motion direction
 
 - Show a meaningful element within the first 0.3 seconds.
-- Keep important text readable for at least the caption hold in [taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md).
+- Keep important text readable for at least the caption hold in [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md).
 - Use `springs.out` (or `spring()`) for entrances, `springs.pop` for cards and buttons, `keys` / `cameraPath` for moves through several poses, and `ease.inOutCubic` for exits. Keep one vocabulary per film.
 - Use a consistent curve for related elements and fixed 0.05–0.08 second intervals for a text stagger.
 - Hold readable poses still: no idle drift or bobbing while the viewer reads.
-- Connect shots through shared geometry and overlapping exits (see [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md)).
+- Connect shots through shared geometry and overlapping exits (see [film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md)).
 - Preserve whitespace and keep one dominant moving focus at a time.
 - With music, declare `meta.tempo` and time major changes from `tempoGrid(tempo).onBar(n)`, so cuts stay on bar starts when the tempo changes; use `ctx.beat(time)` for pulses inside a bar.
 

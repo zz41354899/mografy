@@ -5,6 +5,7 @@ import { hashNoise, seededRandom } from './math.js';
 import { createDrawing } from './draw.js';
 import type { DrawingApi } from './draw.js';
 import { FILM_FRAME, type FilmFrame } from './film.js';
+import { COLOR_PROPS, colorSwap, swappedGradient, type ColorSwaps } from './colors.js';
 
 export interface SetupContext {
   width: number; height: number; seed: number;
@@ -44,6 +45,8 @@ export interface SceneModule {
 export interface SceneRuntime {
   meta: SceneMeta; definitions: ParameterDefinitions; renderScale: number;
   render(time: number, values?: ParameterValues): void;
+  /** Replace the project's colour swaps; the next render draws with them. */
+  setColors(swaps: ColorSwaps | undefined): void;
   /** Costs counted during the last render, for `mografy check`. */
   stats(): FrameStats;
   dispose(): void;
@@ -68,6 +71,10 @@ export interface RuntimeOptions {
    * blurs and shadows, slower readback, and edges may differ slightly from 'cpu'.
    */
   canvas?: 'cpu' | 'gpu' | undefined;
+  /** The project's colour swaps (`#rrggbb` → `#rrggbb`), applied to every colour the scene draws with. */
+  colors?: ColorSwaps | undefined;
+  /** Receives a count of every colour drawn, keyed `#rrggbb`: the design system's palette scan. */
+  colorUsage?: Map<string, number> | undefined;
 }
 
 const EFFECT_PROPS = new Set(['shadowBlur', 'shadowOffsetX', 'shadowOffsetY']);
@@ -102,15 +109,16 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
     element.width = size.width; element.height = size.height;
     const ctx = element.getContext('2d', { willReadFrequently: options.canvas !== 'gpu' });
     if (!ctx) { runtime.dispose(); throw new Error('Canvas 2D unavailable'); }
-    const width = meta.width * factor, height = meta.height * factor;
+    const width = meta.width * factor, height = meta.height * factor, swap = colorSwap(options.colors);
     return {
       meta: runtime.meta, definitions: runtime.definitions, renderScale: runtime.renderScale,
       render(time, values) {
         runtime.render(time, values);
-        ctx.reset(); ctx.fillStyle = meta.background; ctx.fillRect(0, 0, size.width, size.height);
+        ctx.reset(); ctx.fillStyle = swap.apply(meta.background); ctx.fillRect(0, 0, size.width, size.height);
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(source, (size.width - width) / 2, (size.height - height) / 2, width, height);
       },
+      setColors(swaps) { swap.set(swaps); runtime.setColors(swaps); },
       stats: () => runtime.stats(),
       dispose() { runtime.dispose(); source.width = source.height = 0; },
     };
@@ -149,7 +157,8 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
   // Public context speaks logical units; the native context receives device pixels.
   const base = new DOMMatrix([sx, 0, 0, sy, 0, 0]), inverse = base.inverse();
   const toNative = (m: DOMMatrix) => base.multiply(m);
-  const film: FilmFrame = Object.freeze({ base, inverse, width: meta.width, height: meta.height, hidden: true, effects: true });
+  const swap = colorSwap(options.colors, options.colorUsage);
+  const film: FilmFrame = Object.freeze({ base, inverse, width: meta.width, height: meta.height, hidden: true, effects: true, swap });
   let filters = 0;
   const overrides: Record<string, unknown> = {
     setTransform(...args: unknown[]) {
@@ -164,6 +173,8 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
     get(target, key) {
       if (key === FILM_FRAME) return film;
       if (typeof key === 'string' && key in overrides) return overrides[key];
+      const gradient = swappedGradient(target, key, swap);
+      if (gradient) return gradient;
       const value = Reflect.get(target, key, target);
       if (EFFECT_PROPS.has(String(key))) return Number(value) / effect;
       if (key === 'filter') return scaleFilter(String(value), 1 / effect);
@@ -171,7 +182,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
     },
     set(target, key, value) {
       if (key === 'filter' && value !== 'none' && value !== '') filters++;
-      const next = EFFECT_PROPS.has(String(key)) ? Number(value) * effect : key === 'filter' ? scaleFilter(String(value), effect) : value;
+      const next = EFFECT_PROPS.has(String(key)) ? Number(value) * effect : key === 'filter' ? scaleFilter(String(value), effect) : COLOR_PROPS.has(String(key)) ? swap.apply(value) : value;
       return Reflect.set(target, key, next, target);
     },
   });
@@ -190,7 +201,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       try { logical.clip(path, rule); draw(); } finally { drawing.draw.pop(); }
     },
     blur(radius) { if (radius > 0) filters++; ctx.filter = radius > 0 ? `blur(${radius * effect}px)` : 'none'; },
-    shadow(color, radius, x = 0, y = 0) { ctx.shadowColor = color; ctx.shadowBlur = radius * effect; ctx.shadowOffsetX = x * effect; ctx.shadowOffsetY = y * effect; },
+    shadow(color, radius, x = 0, y = 0) { ctx.shadowColor = swap.apply(color); ctx.shadowBlur = radius * effect; ctx.shadowOffsetX = x * effect; ctx.shadowOffsetY = y * effect; },
     vignette(strength, inner = 0.15) {
       ctx.save(); ctx.setTransform(base); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none'; ctx.shadowColor = 'transparent';
       const cx = meta.width / 2, cy = meta.height / 2;
@@ -210,7 +221,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       if (!Number.isFinite(time) || time < 0 || time > meta.duration) throw new Error(`Time outside scene: ${time}`);
       const resolved = resolveParams(definitions, values);
       // reset() also discards clip regions and unbalanced save stacks from the previous call.
-      ctx.reset(); ctx.setTransform(base); ctx.fillStyle = meta.background; ctx.fillRect(0, 0, meta.width, meta.height);
+      ctx.reset(); ctx.setTransform(base); ctx.fillStyle = swap.apply(meta.background); ctx.fillRect(0, 0, meta.width, meta.height);
       drawing.reset(); filters = 0;
       // The scene's own globals: in an iframe they differ from this module's.
       const { Math: math, Date: date, performance: perf } = win;
@@ -221,6 +232,7 @@ export async function createSceneRuntime(element: HTMLCanvasElement, scene: Scen
       finally { if (saved) { math.random = saved.random; date.now = saved.now; perf.now = saved.perf; } }
       if (result instanceof Promise) throw new Error('renderFrame must be synchronous');
     },
+    setColors(swaps) { swap.set(swaps); },
     stats: () => ({ filters }),
     dispose() {
       disposed = true;

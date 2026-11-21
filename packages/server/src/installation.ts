@@ -25,8 +25,11 @@ export interface Installation {
   thumbnails: string;
   /** `@mografy/runtime` types, for the editor tsconfig.json written into projects. */
   runtimeTypes: string;
-  /** The shared Mografy Skill. */
-  skill: string;
+  /**
+   * The shared Mografy Skill a checkout generates (and the skills CLI installs from GitHub). The npm package carries
+   * none: its users install the Skill with `npx skills add mografy/mografy -g`.
+   */
+  skill: string | undefined;
   /** The `mografy` entry script (what a PATH launcher runs). */
   cliBin: string;
 }
@@ -64,7 +67,7 @@ export function packageLayout(serverDir: string): Installation | undefined {
     examples: join(root, 'examples'),
     thumbnails: join(serverDir, 'thumbnails'),
     runtimeTypes: join(root, 'lib', 'node_modules', '@mografy', 'runtime', 'dist', 'index.d.ts'),
-    skill: join(root, '.agents', 'skills', 'mografy'),
+    skill: undefined,
     cliBin: join(root, 'bin', 'mografy.js'),
   };
 }

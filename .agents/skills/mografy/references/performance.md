@@ -5,7 +5,7 @@
 | Problem | What you see | How to find it | Fix with |
 | --- | --- | --- | --- |
 | **Slow frames** | The preview drops frames; the same film exported to MP4 plays smoothly | `mografy check`: frame cost, filters per frame, canvases per frame | The cost tables below |
-| **Choppy motion** | The exported MP4 also looks rough: something jumps, starts at full speed or stops dead | `mografy check --motion`: jumps, hard starts and hard stops with their times | **Smooth motion** below, [film-architecture.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and [taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md) |
+| **Choppy motion** | The exported MP4 also looks rough: something jumps, starts at full speed or stops dead | `mografy check --motion`: jumps, hard starts and hard stops with their times | **Smooth motion** below, [film-architecture.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/film-architecture.md) and [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md) |
 
 Most stutter reports on finished films turn out to be choppy motion, not slow frames. Run both checks before delivery.
 
@@ -28,7 +28,7 @@ Choppy motion:
 - [ ] Entrances use `springs.*` / `spring()` over their whole duration; no entrance moves on its first frame more than on its second.
 - [ ] Fades end at 0, never at a small alpha that then disappears; base colours switch before a wipe finishes covering them.
 - [ ] The camera does not reverse direction every second or two, and holds still during clicks and reading.
-- [ ] A move across more than half the frame takes at least 0.6 s, an exit at least 0.4 s ([taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md)).
+- [ ] A move across more than half the frame takes at least 0.6 s, an exit at least 0.4 s ([taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md)).
 
 ## What costs what on a 2D canvas
 
@@ -57,7 +57,7 @@ Frame cost decides playback; `setup` and the project's files decide how long a p
 | Every font in `mografy.json` is fetched and parsed. The CJK subsets are about 4–5 MB each. | `python3 extras/cjk/subset-film-fonts.py <project>` keeps only the characters the film draws (about 9.5 MB → 300 KB) and points `mografy.json` at the result. Run it again after every copy change; it always rebuilds from the original fonts. |
 | Procedural textures (paper, wood, noise) drawn pixel by pixel in `setup` | Draw each once and keep it: store the canvas as a PNG in Cache Storage under a key that includes a version number, decode it on later opens, and draw it again when the cache is empty (exports and checks start with none, so frames stay identical). Bump the version when the generator changes. |
 | `getImageData` on a canvas you just drew, to add noise | It waits for the GPU and copies the canvas back. Fill a `new ImageData(w, h)` yourself and `putImageData` it, or draw the noise with shapes. |
-| A 3D stage: shader compilation and texture uploads | See **Cost** in [three-d.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/three-d.md): keep the light count constant, `compileAsync` in setup, share textures. |
+| A 3D stage: shader compilation and texture uploads | See **Cost** in [three-d.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/three-d.md): keep the light count constant, `compileAsync` in setup, share textures. |
 
 ## Coordinates and units
 

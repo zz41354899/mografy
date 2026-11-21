@@ -1,6 +1,6 @@
 # Chinese and Japanese typography
 
-[cjk.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk.ts) sets Chinese and Japanese copy: vertical text (tategaki) and horizontal text with CJK line breaking. [cjk-demo.ts](https://github.com/zz41354899/mografy/blob/main/extras/cjk/cjk-demo.ts) shows both.
+[cjk.ts](https://github.com/mografy/mografy/blob/main/extras/cjk/cjk.ts) sets Chinese and Japanese copy: vertical text (tategaki) and horizontal text with CJK line breaking. [cjk-demo.ts](https://github.com/mografy/mografy/blob/main/extras/cjk/cjk-demo.ts) shows both.
 
 ## Add to a project
 
@@ -10,13 +10,13 @@ The module and fonts are an optional extra, not part of the installed template. 
 mografy add cjk projects/<name>
 ```
 
-`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It also copies both font subsets with their licence and registers them under `fonts` in `mografy.json`; remove the one the design does not use. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/zz41354899/mografy/main/extras/cjk/`.
+`mografy add` copies from this checkout's `extras/` folder, or from GitHub when it is missing, keeps any project file that differs from the extra (`--force` replaces it), and prints the import line. It also copies both font subsets with their licence and registers them under `fonts` in `mografy.json`; remove the one the design does not use. Without the `mografy` command, download the same files from `https://raw.githubusercontent.com/mografy/mografy/main/extras/cjk/`.
 
 Copy only the font the design uses when one is enough. Keep the licence file with the fonts.
 
 ## Fonts
 
-The repository provides two OFL-licensed subsets in [extras/cjk/fonts/](https://github.com/zz41354899/mografy/blob/main/extras/cjk/fonts/): `NotoSansCJKtc-Medium-subset.otf` (family `Noto Sans CJK TC`, weight 500) and `NotoSerifCJKtc-Bold-subset.otf` (family `Noto Serif CJK TC`, weight 700). They cover ASCII, kana, CJK punctuation, full-width and vertical presentation forms, 5,401 common Traditional Chinese characters (Big5 level 1), 6,355 Japanese kanji (JIS levels 1–2), and 3,755 Simplified characters (GB2312 level 1). Together they are about 9.5 MB, so they are fetched per project rather than installed. After copying, register them in `mografy.json`:
+The repository provides two OFL-licensed subsets in [extras/cjk/fonts/](https://github.com/mografy/mografy/blob/main/extras/cjk/fonts/): `NotoSansCJKtc-Medium-subset.otf` (family `Noto Sans CJK TC`, weight 500) and `NotoSerifCJKtc-Bold-subset.otf` (family `Noto Serif CJK TC`, weight 700). They cover ASCII, kana, CJK punctuation, full-width and vertical presentation forms, 5,401 common Traditional Chinese characters (Big5 level 1), 6,355 Japanese kanji (JIS levels 1–2), and 3,755 Simplified characters (GB2312 level 1). Together they are about 9.5 MB, so they are fetched per project rather than installed. After copying, register them in `mografy.json`:
 
 ```json
 "fonts": [
@@ -25,7 +25,7 @@ The repository provides two OFL-licensed subsets in [extras/cjk/fonts/](https://
 ]
 ```
 
-Use the exported `CJK_SANS` and `CJK_SERIF` names with the registered weights. Without registration, the browser falls back to system fonts, so previews may differ between computers and exports. Serif (Mincho / Song) suits titles, poetry and Japanese PV copy; Sans suits subtitles and UI. For a character outside the subsets, or JP / SC / KR glyph forms, regenerate a subset with [subset-cjk-fonts.py](https://github.com/zz41354899/mografy/blob/main/extras/cjk/subset-cjk-fonts.py) from the [Noto CJK](https://github.com/notofonts/noto-cjk) sources (`--extra` adds characters). Check unusual names and rare characters in actual frames.
+Use the exported `CJK_SANS` and `CJK_SERIF` names with the registered weights. Without registration, the browser falls back to system fonts, so previews may differ between computers and exports. Serif (Mincho / Song) suits titles, poetry and Japanese PV copy; Sans suits subtitles and UI. For a character outside the subsets, or JP / SC / KR glyph forms, regenerate a subset with [subset-cjk-fonts.py](https://github.com/mografy/mografy/blob/main/extras/cjk/subset-cjk-fonts.py) from the [Noto CJK](https://github.com/notofonts/noto-cjk) sources (`--extra` adds characters). Check unusual names and rare characters in actual frames.
 
 The 9.5 MB of subsets load every time the project opens. Once the copy is settled, shrink them to the film's own characters:
 
@@ -55,7 +55,7 @@ Longer Latin words read poorly in vertical copy; prefer a separate horizontal la
 
 ## Direction
 
-- Keep important copy readable for at least the caption hold in [taste.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/taste.md) (characters ÷ 4.5 + 0.5 s); CJK characters carry more meaning per glyph than Latin letters, so long lines need longer holds.
+- Keep important copy readable for at least the caption hold in [taste.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/taste.md) (characters ÷ 4.5 + 0.5 s); CJK characters carry more meaning per glyph than Latin letters, so long lines need longer holds.
 - Use `stagger` of 0.04–0.08 s for titles and 0.015–0.03 s for longer captions.
 - On bright or busy images, add a dark gradient scrim or `outline` (about 0.1 × size) rather than relying on glow alone.
 - In portrait, wrap captions to the social safe area and shorten columns with `columnHeight`.

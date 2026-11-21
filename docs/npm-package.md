@@ -13,11 +13,13 @@ installed on this computer, the package's `mografy` command runs that checkout i
 | `bin/mografy.js` | The command |
 | `lib/node_modules/@mografy/*` | The six workspace packages, vendored as built: `dist/` without sourcemaps, plus the server's built-in components and previews, the CLI's `bin/`, and the player's `web/dist` |
 | `examples/` | `catalog.json` and the intro film; the Stage films download on demand |
-| `.agents/skills/mografy/` | The shared Skill |
 
-npm installs the third-party dependencies beside them (esbuild, playwright, protobufjs, ws, zod). There is no install
-script: FFmpeg and the Chromium headless shell download the first time a check or export needs them (or with
-`mografy setup`), into `~/.mografy/tools` and Playwright's browser folder, shared by every installation. Templates,
+npm installs the third-party dependencies beside them (esbuild, protobufjs, ws, zod). There is no install script and no
+browser library: Mografy drives Chromium over the DevTools Protocol and renders in the Chrome or Edge already on the
+computer (or Playwright's headless shell, when one is installed). FFmpeg downloads the first time a video export needs
+it, into `~/.mografy/tools`; the headless shell downloads (through `npx playwright-core`, into Playwright's browser
+folder) only on a computer with no Chromium at all. Both are shared by every installation; `mografy setup` fetches
+them ahead of time. Templates,
 helpers and Stage films download from GitHub at the release tag `v<version>`, falling back to `main`.
 
 The packages are vendored under `lib/node_modules` rather than declared as `bundleDependencies`: a global npm install
@@ -25,10 +27,11 @@ of a package with bundled dependencies installs every platform's optional esbuil
 
 `installation` in `@mografy/server` recognises the layout (`kind: 'package'`): projects go to `~/Mografy`,
 `mografy update` checks the npm registry and prints the `npm install -g` command, and `mografy install-command` is
-not needed. The Skill reaches agents through `mografy skill`, which copies it to `~/.agents/skills/mografy` and
-`~/.claude/skills/mografy` with a marker holding the Skill's hash; `mografy dev` refreshes those copies after a package
-update, as `pnpm build` does in a checkout (a copy without the marker, for example from `npx skills add`, is never
-touched).
+not needed.
+
+The package carries no agent Skill. Users install it once with `npx skills add mografy/mografy -g` (the skills CLI
+reads `.agents/skills/mografy` from GitHub, which `pnpm build` regenerates in the checkout) and update it with
+`npx skills update`. `mografy dev` prints that command when neither the project nor the home folder has a Skill.
 
 ## Check it
 

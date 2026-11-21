@@ -3,10 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { projectFile } from '@mografy/render';
-import { apiPath, PROJECT_HEADER, cancelRenderRequestSchema, exportRequestSchema, playheadRequestSchema, projectPatchEnvelopeSchema, seekRequestSchema, sheetRequestSchema, sourceRequestSchema } from '@mografy/core';
+import { apiPath, PROJECT_HEADER, cancelRenderRequestSchema, exportRequestSchema, playheadRequestSchema, projectPatchEnvelopeSchema, seekRequestSchema, sheetRequestSchema, sourceRequestSchema, styleRequestSchema, timelineRequestSchema } from '@mografy/core';
 import { ApiError, Project } from './project.js';
 import { body, json, num, rawBody, sendFile } from './http-io.js';
 import { sheetPlan } from './sheet-plan.js';
+import { atomicWrite } from './files.js';
 
 export async function handleProjectRequest(project: Project, request: IncomingMessage, response: ServerResponse, url: URL, route: string) {
   const expected = request.headers[PROJECT_HEADER];
@@ -35,6 +36,16 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
       const name = url.searchParams.get('name') ?? '';
       const path = await project.saveAsset(name, await rawBody(request, 200 * 1024 * 1024)).catch(error => { throw error instanceof ApiError ? error : new ApiError(400, 'INVALID', error instanceof Error ? error.message : String(error)); });
       return json(response, 200, { path });
+    }
+    case 'PUT /timeline': {
+      const { edits, clientId } = await body(request, timelineRequestSchema);
+      return json(response, 200, await project.updateTimeline(edits, clientId));
+    }
+    case 'PUT /style': {
+      // The design panel's style.md: plain text the AI reads, so it is written as is (no build).
+      const { text } = await body(request, styleRequestSchema);
+      await atomicWrite(join(project.dir, 'style.md'), text);
+      return json(response, 200, { ok: true });
     }
     case 'GET /source': return json(response, 200, await project.readSource());
     case 'POST /source': {
@@ -74,7 +85,6 @@ export async function handleProjectRequest(project: Project, request: IncomingMe
       return json(response, 202, project.cancelRender(id));
     }
     case 'POST /review': return json(response, 200, await project.review());
-    case 'POST /deck': return json(response, 200, await project.exportDeck());
     case 'POST /check': return json(response, 200, await project.check());
     case 'POST /check/motion': return json(response, 200, await project.motion());
   }

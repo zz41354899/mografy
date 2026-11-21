@@ -1,8 +1,8 @@
 # Mografy project reference
 
-Canonical sources are on [GitHub](https://github.com/zz41354899/mografy). Resolve local files from the current checkout, never from a path in another installation. For an animation project elsewhere, read that project's settings and assets; do not assume it is inside this repository.
+Canonical sources are on [GitHub](https://github.com/mografy/mografy). Resolve local files from the current checkout, never from a path in another installation. For an animation project elsewhere, read that project's settings and assets; do not assume it is inside this repository.
 
-Before product changes, read [AGENTS.md](https://github.com/zz41354899/mografy/blob/main/AGENTS.md), [architecture](https://github.com/zz41354899/mografy/blob/main/docs/architecture.md), [status](https://github.com/zz41354899/mografy/blob/main/docs/STATUS.md), and [usage](https://github.com/zz41354899/mografy/blob/main/README.md).
+Before product changes, read [AGENTS.md](https://github.com/mografy/mografy/blob/main/AGENTS.md), [architecture](https://github.com/mografy/mografy/blob/main/docs/architecture.md), [status](https://github.com/mografy/mografy/blob/main/docs/STATUS.md), and [usage](https://github.com/mografy/mografy/blob/main/README.md).
 
 - `packages/core/skill/` holds the English Skill entrypoint and references as Markdown; `packages/core/src/guide.ts` assembles them. After changes, run `pnpm build` in the repository; it ends with `pnpm sync:skills`, which regenerates the Skill. `mografy dev` also regenerates it when its sources changed since the last sync.
 - Use `mografy update --check` to check the executing source installation, or `mografy update` to fast-forward, install/build, sync guidance and restart its active player. Stop and resolve local changes or diverged history rather than overwriting them. Older installations need a one-time manual update documented in README.

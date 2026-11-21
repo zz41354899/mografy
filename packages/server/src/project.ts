@@ -4,21 +4,19 @@ import { projectPaths } from '@mografy/render/fs-util';
 import { EventEmitter } from 'node:events';
 import { mkdir, readFile, readdir, realpath, stat, unlink } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { outputFrameCount, projectPatchSchema, reconcileParams, resolveParams, sceneRuntimeKey, smoothness, validateSceneProject } from '@mografy/core';
-import type { ExportRequest, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Smoothness, Snapshot, ServerEvent } from '@mografy/core';
-import { buildScene, renderReview, SceneHost } from '@mografy/render';
+import { outputFrameCount, projectPatchSchema, timelineEditsSchema, reconcileParams, resolveParams, sceneRuntimeKey, smoothness, validateSceneProject } from '@mografy/core';
+import type { ExportRequest, TimelineEdits, ParameterIssue, ParameterValues, ProjectPatch, SceneError, SceneInfo, SceneProject, Smoothness, Snapshot, ServerEvent } from '@mografy/core';
+import { buildScene, renderReview, SceneHost, TIMELINE_FILE } from '@mografy/render';
 import type { SharedBrowsers } from '@mografy/render';
 import type { Cell, SceneBuild } from '@mografy/render';
 import { atomicWrite, queueProjectWrite, readJson, saveAsset, sha256, sourcePath } from './files.js';
-import { ShotGuesser } from './project-shots.js';
 import { ProjectWatcher } from './project-watcher.js';
 import { ProjectFrames } from './project-frames.js';
 import { RenderJobs } from './render-jobs.js';
 import { ApiError, describe } from './errors.js';
-import { exportDeck } from './deck.js';
 import { libraryDir } from './installation.js';
 
-/** The sixteen bundled component projects (library/.components/<id>): references, not presentations. */
+/** The sixteen bundled component projects (library/.components/<id>): references, kept as installed. */
 const isBuiltIn = (dir: string) => { const rel = relative(join(libraryDir(), '.components'), dir); return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.includes(sep); };
 export { ApiError } from './errors.js';
 const now = () => new Date().toISOString();
@@ -46,7 +44,6 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   private readonly watcher: ProjectWatcher;
   private readonly frames: ProjectFrames;
   private readonly jobs: RenderJobs;
-  private readonly shots: ShotGuesser;
   url = '';
 
   private constructor(readonly dir: string, readonly host: SceneHost) {
@@ -58,11 +55,6 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       signal.throwIfAborted();
       await atomicWrite(file, data);
     }), () => { if (!this.closed) this.publish('render'); });
-    // Built-in components are references, never presentations: they get no guessed shots.
-    this.shots = new ShotGuesser(dir, host,
-      () => isBuiltIn(this.dir) ? { scene: null, project: null, build: undefined } : { scene: this.scene, project: this.project, build: this.scene ? this.builds.get(this.scene.version) : undefined },
-      (file, data) => this.run(() => atomicWrite(file, data)),
-      () => this.publish('shots'));
   }
 
   /** `browsers`: Chromium shared with other projects (batch export); the caller closes it. */
@@ -88,26 +80,16 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
   snapshot(): Snapshot {
     return structuredClone({
       sequence: this.sequence, url: this.url, projectDir: this.dir, revision: sha256(this.raw),
-      project: this.project, scene: this.presented(), error: this.error, issues: this.issues,
+      project: this.project, scene: this.scene, error: this.error, issues: this.issues,
       state: this.state, render: this.jobs.status, thumbnail: this.thumbnail, builtIn: isBuiltIn(this.dir),
     });
   }
-  /** The scene as clients see it, with guessed shots when it lists none (see ShotGuesser). */
-  private presented(): SceneInfo | null {
-    return isBuiltIn(this.dir) ? this.scene : this.shots.present(this.scene, this.project);
-  }
   private publish(reason: string, clientId?: string) {
-    if (this.scene && (reason === 'scene' || reason === 'project')) { this.scheduleThumb(); this.shots.schedule(); }
+    if (this.scene && (reason === 'scene' || reason === 'project')) this.scheduleThumb();
     this.sequence++;
     this.emit('event', { type: 'snapshot', reason, clientId, snapshot: this.snapshot() });
   }
   build(version: string) { return this.builds.get(version); }
-  /** Write the current version as a standalone presentation file under renders/. */
-  async exportDeck() {
-    if (isBuiltIn(this.dir)) throw new ApiError(409, 'BUILT_IN', 'Built-in components cannot be presented. Create your own project to make a presentation.');
-    const { project, build } = this.current(), scene = this.presented()!;
-    return exportDeck(this.dir, project, scene, build.code, await this.host.loadedAssets(build, project));
-  }
   current() {
     if (!this.project || !this.scene) throw new ApiError(409, 'NO_SCENE', this.error?.message ?? 'No working scene yet');
     return { project: this.project, scene: this.scene, build: this.builds.get(this.scene.version)! };
@@ -193,6 +175,7 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
 
   /** Rebuild from disk (startup and file changes). Failures keep the last good version. */
   rebuild(reason: 'startup' | 'watch') {
+    // Comp files change without touching the scene: report them first, the scene rebuild follows as before.
     return this.run(async () => {
       try {
         const { raw, project } = await this.readManifest();
@@ -204,7 +187,6 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
         const { changed } = await this.commit(project, prepared, reason);
         if (changed || manifestChanged || hadError || reason === 'startup') this.publish(changed ? 'scene' : 'project');
         if (prepared.unverified) this.verifyLater(prepared.build, project, prepared.key);
-        else this.shots.schedule(); // the storyboard may have changed
       } catch (error) {
         const message = describe(error);
         if (this.error?.message !== message || reason === 'startup') { this.error = { message, reason, at: now() }; this.publish('error'); }
@@ -255,6 +237,33 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     });
   }
 
+  /**
+   * Save the timeline editor's changes to the file the scene imports (meta.layers.file, or scenes/timeline.json for a
+   * scene retimed by its shots). Like a source update, the change is compiled and trial-rendered first and written
+   * only when the scene still works.
+   */
+  updateTimeline(input: TimelineEdits, clientId?: string) {
+    return this.run(async () => {
+      let edits: TimelineEdits;
+      try { edits = timelineEditsSchema.parse(input); } catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
+      const file = this.scene?.meta.layers?.file ?? TIMELINE_FILE;
+      if (!this.scene?.meta.layers && !this.scene?.meta.shots?.length) throw new ApiError(409, 'NO_LAYERS', 'This scene has no layers and no shots yet. Ask Claude to mark shots with beats([...]) or declare layers with timeline().');
+      let path: string;
+      try { path = sourcePath(this.dir, file, true); } catch (error) { throw new ApiError(400, 'INVALID_PATH', describe(error)); }
+      const text = JSON.stringify(edits, null, 2) + '\n';
+      const { raw, project } = await this.readManifest().catch(error => { throw new ApiError(422, 'MANIFEST', describe(error)); });
+      this.raw = raw;
+      let prepared;
+      try { prepared = await this.prepare(project, { [file]: text }); }
+      catch (error) { throw new ApiError(422, 'SCENE_ERROR', describe(error)); }
+      if (!prepared.build.sources.includes(file)) throw new ApiError(422, 'NOT_IMPORTED', `The scene does not import ${file}, so the timeline cannot change it.`);
+      await atomicWrite(path, text);
+      const { changed } = await this.commit(project, prepared, 'update');
+      this.publish(changed ? 'scene' : 'project', clientId);
+      return { version: this.scene!.version, changed };
+    });
+  }
+
   async readSource() {
     const entry = this.project?.scene ?? 'scenes/main.ts';
     const paths = this.scene?.sources.length ? this.scene.sources : [entry];
@@ -283,9 +292,9 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
       if (patch.seed !== undefined) next.seed = patch.seed;
       if (patch.aspectRatio !== undefined) { if (patch.aspectRatio === null) delete next.aspectRatio; else next.aspectRatio = patch.aspectRatio; }
       if (patch.audio !== undefined) { if (patch.audio === null) delete next.audio; else next.audio = patch.audio; }
+      if (patch.colors !== undefined) { if (patch.colors === null || !Object.keys(patch.colors).length) delete next.colors; else next.colors = patch.colors; }
       if (patch.render) next.render = { ...project.render, ...patch.render };
       if (patch.review) next.review = { ...project.review, ...patch.review };
-      if (patch.slides !== undefined) { if (patch.slides === null) delete next.slides; else next.slides = patch.slides; }
       let validated: SceneProject;
       try { validated = validateSceneProject(next); } catch (error) { throw new ApiError(422, 'VALIDATION', describe(error)); }
       // Seed, canvas and the audio grid change the runtime even when compiled code is unchanged.
@@ -392,7 +401,6 @@ export class Project extends EventEmitter<{ event: [ServerEvent] }> {
     this.watcher.close();
     this.frames.cancelThumbnail();
     clearTimeout(this.stateTimer);
-    await this.shots.close();
     await this.jobs.close();
     await Promise.allSettled([...this.reviews]);
     await this.queue;

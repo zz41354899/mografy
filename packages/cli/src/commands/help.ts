@@ -43,10 +43,10 @@ export function helpText(color: boolean) {
       row('mografy install-command', 'Put the mografy command on PATH'),
       row('mografy setup [ffmpeg|chromium]', 'Download FFmpeg and the Chromium shell now, not on first use'),
       row('mografy setup --check', 'Show which FFmpeg and Chromium exports use'),
-      row('mografy skill [--check]', 'Install the Mografy Skill for Claude Code, Codex and other agents'),
+      row('mografy mcp', 'Local MCP server on stdio: check, frames, review, export for MCP clients'),
     ]),
     section('Export options', [
-      row('--format <mp4|webm|mov|lottie|svga|html>', 'Output format (default: mp4); mov is ProRes; html writes a presentation file'),
+      row('--format <mp4|webm|mov|lottie|svga>', 'Output format (default: mp4); mov is ProRes'),
       row('--preset <share|high|fast|master>', 'share: H.264, plays everywhere · high: H.265 10-bit · fast: hardware H.265 · master: ProRes MOV'),
       row('-o, --output <file>', 'File name, or a path inside renders/'),
       row('--orientation <landscape|portrait>', 'MP4/WebM/MOV at 16:9 or 9:16, fitting the whole scene'),

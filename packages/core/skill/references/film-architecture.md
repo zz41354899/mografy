@@ -58,7 +58,7 @@ export function renderFrame(ctx: FrameContext, time: number) {
 
 | Field | Use |
 | --- | --- |
-| `shots` | `meta.shots` for Present mode and slides. |
+| `shots` | `meta.shots`: timeline marks and the review sheet of stop frames. |
 | `list[i].start / end / stop` | Times to build keys and windows from (`T[title]`). |
 | `reviewTimes`, `transitions` | Every stop plus the frames around each handoff; copy them into `mografy.json` `review.times` and `review.transitions`. |
 | `at(time)` | The shot at `time`, seconds since it started and its progress. |

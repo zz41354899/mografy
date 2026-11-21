@@ -1,7 +1,7 @@
 // mografy.json: configuration only, never animation.
 import { z } from 'zod';
 import { renderSettingsSchema } from './export-settings.js';
-import { shotsSchema, aspectRatioSchema } from './scene-meta.js';
+import { aspectRatioSchema } from './scene-meta.js';
 import { localPath, scalar } from './schema-parts.js';
 
 export const audioSchema = z.strictObject({
@@ -23,28 +23,10 @@ export const reviewSchema = z.strictObject({
   transitions: z.array(transitionSchema).max(32).default([]),
 });
 
-/** At a stop the picture freezes, or keeps replaying the last `loop` seconds before the stop (never past the previous stop). */
-const slideHoldSchema = z.union([z.literal('freeze'), z.strictObject({ loop: z.number().finite().positive().max(60) })]);
-/** Present mode's own notes on one slide (a shot of the scene). */
-export const slidePageSchema = z.strictObject({
-  title: z.string().max(120).optional(),
-  notes: z.string().max(4000).optional(),
-  hold: slideHoldSchema.optional(),
-});
-/** Presentation settings. The slides themselves are the scene's shots; video export ignores all of this. */
-export const slidesSchema = z.strictObject({
-  hold: slideHoldSchema.default('freeze'),
-  /** duck: music plays during transitions and fades out at each stop. off: silent presentation. */
-  music: z.enum(['duck', 'off']).default('duck'),
-  /** pages[i] belongs to shot i: title override, speaker notes, how it waits. */
-  pages: z.array(slidePageSchema).max(200).default([]),
-  /** Shots for a scene whose `meta` lists none (the scene's own shots win). `mografy update` writes Mografy's guess here. */
-  shots: shotsSchema.optional(),
-  /** Set while `shots` is Mografy's guess; remove it after correcting the shots by hand. */
-  guessedFrom: z.enum(['storyboard', 'picture']).optional(),
-});
-export type Slides = z.infer<typeof slidesSchema>;
-export type SlidePage = z.infer<typeof slidePageSchema>;
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Colour must be #rrggbb').transform(v => v.toLowerCase());
+/** Colour swaps from the colour panel: a colour the scene draws with → the colour to draw instead. */
+export const colorSwapsSchema = z.record(hexColor, hexColor);
+
 /**
  * mografy.json stores project configuration only.
  * Animation content lives in the scene module; this file never stores layers or keyframes.
@@ -59,9 +41,11 @@ export const sceneProjectSchema = z.strictObject({
   params: z.record(z.string(), scalar).default({}),
   fonts: z.array(z.strictObject({ family: z.string().min(1), path: localPath, weight: z.number().int().min(1).max(1000).default(400) })).default([]),
   audio: audioSchema.optional(),
+  colors: colorSwapsSchema.optional(),
   render: renderSettingsSchema.default(renderSettingsSchema.parse({})),
   review: reviewSchema.default(reviewSchema.parse({})),
-  slides: slidesSchema.optional(),
+  /** Settings of the former Present mode. Kept when an older project has them, never read. */
+  slides: z.unknown().optional(),
 });
 export type SceneProject = z.infer<typeof sceneProjectSchema>;
 export type SceneProjectInput = z.input<typeof sceneProjectSchema>;

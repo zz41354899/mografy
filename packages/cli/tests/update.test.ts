@@ -123,7 +123,7 @@ test('another branch without an upstream gets the commands to switch back to mai
 test('a folder with no remote explains how to connect it to GitHub', async t => {
   const f = await fixture(t);
   await f.git(f.root, 'remote', 'remove', 'origin');
-  await assert.rejects(updateInstallation(f.root, true, f.services), /not connected to GitHub[\s\S]*git remote add origin https:\/\/github\.com\/zz41354899\/mografy\.git/);
+  await assert.rejects(updateInstallation(f.root, true, f.services), /not connected to GitHub[\s\S]*git remote add origin https:\/\/github\.com\/mografy\/mografy\.git/);
 });
 
 test('update rejects diverged history before stopping the player', async t => {

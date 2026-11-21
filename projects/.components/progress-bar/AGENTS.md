@@ -8,4 +8,4 @@ Codex storyboards use image generation; Claude uses Artifacts when available, ot
 
 Open the player with `mografy dev`. After scene edits, run `mografy check` and `mografy review`, then inspect the generated PNGs. Export with `mografy export --format mp4|webm|lottie|svga` when requested.
 
-Shared Skill: [Mografy](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/SKILL.md). For local work, use the current installation's outer `.agents/skills/mografy/` folder. If missing, run `pnpm build` and `pnpm sync:skills` from your Mografy checkout.
+Shared Skill: [Mografy](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/SKILL.md). Inside a Mografy checkout, use its outer `.agents/skills/mografy/` folder. Elsewhere, install it once with `npx skills add mografy/mografy -g` (and keep it current with `npx skills update`).

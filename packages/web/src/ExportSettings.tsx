@@ -44,6 +44,9 @@ export function ExportSettings({ snapshot, draft, busy, error, clearError, onSub
         </nav>
         <div className="export-settings">
           <h3>{t.xsSettings(formatTitle[format])}</h3>
+          {!raster ? <ExportPreview snapshot={snapshot} size={size} settings={settings} label={t.pvFrame(formatTitle[format])} /> : null}
+          <span className="xs-label">{t.xsFrame}</span>
+          <div className="xs-card">
           {!raster ? <div className="export-field"><span>{t.xpOrientation}</span><AspectRatioToggle label={t.xpOrientationOf(formatTitle[format])} value={height > width ? '9:16' : '16:9'} disabled={busy} onChange={ratio => {
             draft.setOrientation(ratio); clearError();
           }} /></div> : null}
@@ -51,11 +54,13 @@ export function ExportSettings({ snapshot, draft, busy, error, clearError, onSub
             const selected = presets.find(s => `${s.width}x${s.height}` === v)!;
             draft.setSize(selected); clearError();
           }} /></div>
-          {!raster ? <ExportPreview snapshot={snapshot} size={size} settings={settings} label={t.pvFrame(formatTitle[format])} /> : null}
           {differentRatio ? <>
             <div className="export-field"><span>{t.xpFit}</span><Choice label={t.xpFit} value={size.fit} options={[{ value: 'contain', label: t.xsFitContain }, { value: 'cover', label: t.xsFitCover }, { value: 'reflow', label: t.xsFitReflow }]} onChange={v => { draft.setFit(v as ExportSize['fit']); clearError(); }} /></div>
             <p className="export-note">{size.fit === 'reflow' ? t.xsReflowNote : size.fit === 'contain' ? t.xsContainNote : t.xsCoverNote}</p>
           </> : null}
+          </div>
+          <span className="xs-label">{t.xsOutput}</span>
+          <div className="xs-card">
           <div className="export-field"><span>{t.xpRate}</span><Choice label={t.xpRate} value={String(settings.fps)} options={choiceOptions(format === 'svga' ? SVGA_FRAME_RATES : [...new Set([12, 15, 20, 24, 25, 30, 60, settings.fps])].filter(fps => fps <= EXPORT_MAX_FPS[format]).sort((a,b) => a-b), ' fps')} onChange={v => patch({ fps: Number(v) })} /></div>
           <div className="export-field"><span>{t.xpQuality}</span><Choice label={t.xpQuality} value={draft.quality} options={[{ value: 'draft', label: t.xsDraft }, { value: 'standard', label: t.xsStandard }, { value: 'high', label: t.xsHigh }, ...(draft.quality === 'custom' ? [{ value: 'custom', label: t.custom }] : [])]} onChange={v => draft.setQuality(v as ExportQuality)} /></div>
           {format === 'mp4' ? (() => {
@@ -69,6 +74,7 @@ export function ExportSettings({ snapshot, draft, busy, error, clearError, onSub
           {format === 'mov' ? <p className="export-note">{t.xsMovNote}</p> : null}
           {format === 'webm' ? <p className="export-note">{t.xsWebmNote}</p> : null}
           {raster ? <p className="export-note">{t.xsRasterNote}</p> : null}
+          </div>
           <details className="export-advanced"><summary>{t.xpAdvanced}</summary>
             <div className="export-field"><span>{t.xpSamples}</span><Choice label={t.xpSamples} value={String(settings.samples)} options={choiceOptions([1, 2, 4, 8, 16])} onChange={v => patch({ samples: Number(v) })} /></div>
             <div className="export-field"><span>{t.xpMixing}</span><Choice label={t.xpMixing} value={settings.mixing} options={[{ value: 'srgb', label: 'sRGB' }, { value: 'linear', label: t.xpLinear }]} onChange={v => patch({ mixing: v as RenderSettings['mixing'] })} /></div>

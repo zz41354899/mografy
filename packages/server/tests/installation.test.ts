@@ -18,7 +18,7 @@ test('a checkout is a source installation whose paths all point into the reposit
   assert.ok(existsSync(join(installation.template, 'mografy.json')), installation.template);
   assert.ok(existsSync(join(installation.examples, 'catalog.json')), installation.examples);
   assert.ok(existsSync(installation.thumbnails), installation.thumbnails);
-  assert.ok(existsSync(join(installation.skill, 'SKILL.md')), installation.skill);
+  assert.ok(existsSync(join(installation.skill!, 'SKILL.md')), installation.skill);
   assert.equal(installation.runtimeTypes, join(repository, 'packages/runtime/dist/index.d.ts'));
 });
 
@@ -47,6 +47,7 @@ test('the npm package layout is recognised from its vendored server, and only wi
     assert.equal(layout.examples, join(root, 'examples'));
     assert.equal(layout.runtimeTypes, join(root, 'lib', 'node_modules', '@mografy', 'runtime', 'dist', 'index.d.ts'));
     assert.equal(layout.cliBin, join(root, 'bin', 'mografy.js'));
+    assert.equal(layout.skill, undefined, 'the npm package carries no Skill');
     await writeFile(join(root, 'package.json'), JSON.stringify({ name: 'something-else', mografy: { package: true } }));
     assert.equal(packageLayout(server), undefined);
     // A server that is not vendored under lib/node_modules/@mografy is never taken for the package.

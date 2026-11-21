@@ -7,8 +7,6 @@ export interface SceneInfo {
   sources: string[]; publishedAt: string;
   /** What published it: startup, a file change, or a verified HTTP source update. */
   reason: 'startup' | 'watch' | 'update';
-  /** The scene lists no shots, so `meta.shots` holds Mografy's guess from the storyboard or the picture. */
-  autoShots?: 'storyboard' | 'picture';
 }
 /** What frames cost to draw, measured by `mografy check` in Chromium at the project's own size. */
 export interface FrameCost {

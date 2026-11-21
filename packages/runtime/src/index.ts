@@ -3,5 +3,7 @@ export * from './motion.js';
 export * from './canvas.js';
 export * from './layers.js';
 export * from './film.js';
+export * from './colors.js';
+export * from './timeline.js';
 export type { DrawingApi, Paint, ColorStops } from './draw.js';
 export * from './post.js';

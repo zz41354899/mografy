@@ -1,6 +1,7 @@
 // `mografy check --motion`: find where a film's motion is choppy rather than slow. Frame cost cannot see
 // a jump, a hard start or a hard stop; the change between consecutive frames can.
-import type { MotionFrames } from './auto-shots.js';
+/** Tiny greyscale frames sampled every `step` seconds from 0 (see the render host's `motion`). */
+export interface MotionFrames { step: number; size: number; data: Uint8Array }
 
 /**
  * Limits on the mean change between consecutive tiny greyscale frames (0–255 per pixel, 1/30 s apart).

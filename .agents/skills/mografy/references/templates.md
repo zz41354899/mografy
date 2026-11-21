@@ -10,8 +10,8 @@ native aspect ratio and one look:
 | 16:9 | end in `-wide` | **Montage**: night, light or neon grounds; kinetic Inter type that sharpens out of a blur; the Mografy spectrum (teal, sky, violet, coral, amber) on a word, a pill rim or a comet of light; product windows on tilted planes. | Landing pages, YouTube, Product Hunt, decks |
 
 A template that exists in both ratios has a `pair` (`stat-count` ↔ `stat-count-wide`). Never put a template into a film of
-the other ratio. The sources live in [templates/](https://github.com/zz41354899/mografy/blob/main/templates), with the catalog in
-[templates/catalog.json](https://github.com/zz41354899/mografy/blob/main/templates/catalog.json); every template plays live at https://www.mografy.app/en/library/templates.
+the other ratio. The sources live in [templates/](https://github.com/mografy/mografy/blob/main/templates), with the catalog in
+[templates/catalog.json](https://github.com/mografy/mografy/blob/main/templates/catalog.json); every template plays live at https://www.mografy.app/en/library/templates.
 
 ## When to use them
 
@@ -72,7 +72,7 @@ cuts.
   critical copy inside `safeRect(aspect)` from the kit (`safeGuide: true` shows it in the preview, never in exports).
 - Screen templates draw a fictional stand-in product ("Northwind"): `editorialScreen` in 9:16, `appUI` in 16:9.
   Replace it with the real product: redraw the real screens in the same box (see
-  [product-walkthrough.md](https://github.com/zz41354899/mografy/blob/main/.agents/skills/mografy/references/product-walkthrough.md)), or load a screenshot in `setup` and draw it there. Editorial
+  [product-walkthrough.md](https://github.com/mografy/mografy/blob/main/.agents/skills/mografy/references/product-walkthrough.md)), or load a screenshot in `setup` and draw it there. Editorial
   templates that take pictures load `assets/<name>.jpg` with `loadPhoto` (black-and-white, like the look) when the file
   exists; the agent hint names the file.
 - Brand templates draw a placeholder mark. Replace it with the real logo (load `assets/logo.png` in `setup` and draw it
